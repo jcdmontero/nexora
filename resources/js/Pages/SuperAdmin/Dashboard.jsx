@@ -7,7 +7,7 @@ import {
 } from 'recharts'
 
 export default function SuperDashboard() {
-  const { stats, tenantGrowth = [] } = usePage().props
+  const { stats = {}, tenantGrowth = [] } = usePage().props
 
   const kpis = [
     { label: 'Empresas totales', value: stats.empresas, icon: Building2, accent: 'indigo', hint: 'Registradas' },

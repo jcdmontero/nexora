@@ -1,0 +1,27 @@
+{
+    "code": "sales",
+    "name": "Ventas / POS",
+    "version": "1.0.0",
+    "description": "Punto de venta, facturación y gestión de ventas.",
+    "icon": "ShoppingCart",
+    "core": false,
+    "dependencies": ["crm", "cash", "purchasing"],
+    "permissions": [
+        "sales:view",
+        "sales:create",
+        "sales:edit",
+        "sales:delete",
+        "sales:anular",
+        "sales:admin"
+    ],
+    "menus": [
+        {
+            "section": "VENTAS",
+            "icon": "ShoppingCart",
+            "items": [
+                { "label": "Punto de Venta", "route": "sales.pos.index", "permission": "sales:create" },
+                { "label": "Facturas", "route": "sales.facturas.index", "permission": "sales:view" }
+            ]
+        }
+    ]
+}

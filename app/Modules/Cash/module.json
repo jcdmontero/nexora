@@ -1,0 +1,33 @@
+{
+    "code": "cash",
+    "name": "Tesorería / Caja",
+    "version": "2.0.0",
+    "description": "Multicaja: apertura y cierre de turnos, arqueo con denominaciones, transferencias entre cajas, movimientos y reporte consolidado.",
+    "icon": "Wallet",
+    "core": false,
+    "dependencies": [],
+    "permissions": [
+        "cash:view",
+        "cash:create",
+        "cash:edit",
+        "cash:close",
+        "cash:manage",
+        "cash:transfer",
+        "cash:receipts"
+    ],
+    "menus": [
+        {
+            "section": "TESORERÍA",
+            "icon": "Wallet",
+            "items": [
+                { "label": "Mi Turno", "route": "cash.caja.index", "permission": "cash:view" },
+                { "label": "Cajas", "route": "cash.cajas.index", "permission": "cash:view" },
+                { "label": "Movimientos", "route": "cash.movimientos.index", "permission": "cash:view" },
+                { "label": "Recaudos", "route": "cash.recaudos.index", "permission": "accounting:view" },
+                { "label": "Pago Proveedores", "route": "cash.pagos-proveedores.index", "permission": "accounting:view" },
+                { "label": "Transferencias", "route": "cash.transferencias.index", "permission": "cash:transfer" },
+                { "label": "Reporte Consolidado", "route": "cash.reporte.consolidado", "permission": "cash:view" }
+            ]
+        }
+    ]
+}

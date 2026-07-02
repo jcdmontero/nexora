@@ -1,0 +1,24 @@
+{
+    "code": "notifications",
+    "name": "Notificaciones",
+    "version": "1.0.0",
+    "description": "Envío y seguimiento de notificaciones a clientes por WhatsApp, correo y Telegram.",
+    "icon": "Bell",
+    "core": false,
+    "dependencies": [],
+    "permissions": [
+        "notifications:view",
+        "notifications:send",
+        "notifications:manage"
+    ],
+    "menus": [
+        {
+            "section": "NOTIFICACIONES",
+            "icon": "Bell",
+            "items": [
+                { "label": "Bandeja", "route": "notifications.index", "permission": "notifications:view" },
+                { "label": "Plantillas", "route": "notifications.plantillas.index", "permission": "notifications:manage" }
+            ]
+        }
+    ]
+}

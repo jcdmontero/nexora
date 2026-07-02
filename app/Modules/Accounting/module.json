@@ -1,0 +1,29 @@
+{
+    "code": "accounting",
+    "name": "Contabilidad",
+    "version": "1.0.0",
+    "description": "Partida doble, plan de cuentas, libro diario y estados financieros.",
+    "icon": "Calculator",
+    "core": false,
+    "dependencies": [],
+    "permissions": [
+        "accounting:view",
+        "accounting:create",
+        "accounting:edit",
+        "accounting:report",
+        "accounting:admin"
+    ],
+    "menus": [
+        {
+            "section": "CONTABILIDAD",
+            "icon": "Calculator",
+            "items": [
+                { "label": "Asientos", "route": "accounting.asientos.index", "permission": "accounting:view" },
+                { "label": "Plan de Cuentas", "route": "accounting.cuentas.index", "permission": "accounting:view" },
+                { "label": "Balance de Prueba", "route": "accounting.reportes.index", "permission": "accounting:report" },
+                { "label": "Estado de Resultados", "route": "accounting.reportes.pyg", "permission": "accounting:report" },
+                { "label": "Balance General", "route": "accounting.reportes.balance", "permission": "accounting:report" }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nexora - El Software que se Adapta a tu Negocio</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css">
+    <style>
+        :root {
+            --bg: #0B0E14;
+            --bg2: #111827;
+            --card: rgba(17,24,39,0.7);
+            --text: #F9FAFB;
+            --muted: #9CA3AF;
+            --grad: linear-gradient(135deg, #6366F1, #8B5CF6, #A855F7);
+            --glass: rgba(255,255,255,0.1);
+        }
+        * { margin:0; padding:0; box-sizing:border-box; }
+        html { scroll-behavior:smooth; }
+        body { font-family:'Inter',sans-serif; background:var(--bg); color:var(--text); overflow-x:hidden; }
+
+        canvas#bg { position:fixed; inset:0; z-index:0; pointer-events:none; }
+
+        .hdr { position:fixed; top:0; left:0; right:0; z-index:100; padding:1rem 2rem; background:rgba(11,14,20,.85); backdrop-filter:blur(20px); border-bottom:1px solid var(--glass); }
+        .hdr-in { max-width:1200px; margin:0 auto; display:flex; align-items:center; justify-content:space-between; }
+        .logo { font-size:1.75rem; font-weight:800; background:var(--grad); -webkit-background-clip:text; -webkit-text-fill-color:transparent; text-decoration:none; }
+        .nav { display:flex; gap:2rem; }
+        .nav a { color:var(--muted); text-decoration:none; font-weight:500; transition:color .3s; }
+        .nav a:hover { color:var(--text); }
+        .hdr-btns { display:flex; gap:1rem; align-items:center; }
+        .btn { padding:.625rem 1.25rem; border-radius:.5rem; font-weight:600; font-size:.875rem; cursor:pointer; transition:all .3s; text-decoration:none; border:none; display:inline-flex; align-items:center; }
+        .btn-out { background:transparent; border:1px solid var(--glass); color:var(--text); }
+        .btn-out:hover { background:rgba(255,255,255,.05); }
+        .btn-grad { background:var(--grad); color:#fff; }
+        .btn-grad:hover { transform:translateY(-2px); box-shadow:0 10px 30px rgba(99,102,241,.3); }
+        .btn-lg { padding:.875rem 2rem; font-size:1rem; }
+
+        .hero { position:relative; z-index:1; min-height:100vh; display:flex; align-items:center; padding:8rem 2rem 4rem; }
+        .hero-in { max-width:1200px; margin:0 auto; width:100%; display:grid; grid-template-columns:1fr 1fr; gap:4rem; align-items:center; }
+        .hero-txt { max-width:600px; }
+        .badge { display:inline-flex; align-items:center; gap:.5rem; padding:.5rem 1rem; background:rgba(99,102,241,.1); border:1px solid rgba(99,102,241,.3); border-radius:2rem; font-size:.875rem; color:#A5B4FC; margin-bottom:1.5rem; }
+        h1 { font-size:clamp(2.5rem,5vw,4rem); font-weight:800; line-height:1.1; margin-bottom:1.5rem; }
+        .grad { background:var(--grad); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; background-size:200% 200%; animation:gs 3s ease infinite; }
+        @keyframes gs { 0%,100%{background-position:0% 50%} 50%{background-position:100% 50%} }
+        .hero-p { font-size:1.25rem; color:var(--muted); margin-bottom:2rem; }
+        .hero-acts { display:flex; gap:1rem; flex-wrap:wrap; }
+        .mock { width:100%; max-width:500px; aspect-ratio:4/3; background:var(--card); border:1px solid var(--glass); border-radius:1rem; backdrop-filter:blur(20px); display:grid; grid-template-columns:repeat(3,1fr); gap:1rem; padding:2rem; margin:0 auto; }
+        .mock-i { aspect-ratio:1; background:linear-gradient(135deg,rgba(99,102,241,.2),rgba(168,85,247,.2)); border-radius:.75rem; display:flex; align-items:center; justify-content:center; font-size:1.5rem; animation:fl 3s ease-in-out infinite; }
+        .mock-i:nth-child(2){animation-delay:.5s} .mock-i:nth-child(3){animation-delay:1s} .mock-i:nth-child(4){animation-delay:1.5s} .mock-i:nth-child(5){animation-delay:2s} .mock-i:nth-child(6){animation-delay:2.5s}
+        @keyframes fl { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
+
+        .sec { position:relative; z-index:1; padding:6rem 2rem; }
+        .sec-h { text-align:center; max-width:700px; margin:0 auto 4rem; }
+        .sec-t { font-size:clamp(2rem,4vw,3rem); font-weight:800; margin-bottom:1rem; }
+        .sec-sub { font-size:1.125rem; color:var(--muted); }
+
+        .mod-grid { max-width:1200px; margin:0 auto; display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:2rem; }
+        .mod-card { background:var(--card); border:1px solid var(--glass); border-radius:1rem; padding:2rem; backdrop-filter:blur(20px); transition:all .3s; }
+        .mod-card:hover { transform:translateY(-5px); border-color:rgba(99,102,241,.5); }
+        .mod-ico { width:60px; height:60px; background:var(--grad); border-radius:.75rem; display:flex; align-items:center; justify-content:center; font-size:1.75rem; margin-bottom:1.5rem; }
+        .mod-card h3 { font-size:1.5rem; font-weight:700; margin-bottom:.75rem; }
+        .mod-card p { color:var(--muted); margin-bottom:1.5rem; }
+        .mod-card ul { list-style:none; }
+        .mod-card li { padding:.5rem 0; color:var(--muted); display:flex; align-items:center; gap:.75rem; }
+        .mod-card li::before { content:"✓"; color:#10B981; font-weight:700; }
+
+        .test-sec { background:linear-gradient(180deg,var(--bg),var(--bg2),var(--bg)); }
+        .swiper { width:100%; padding:2rem 0; }
+        .swiper-slide { height:auto; }
+        .t-card { background:var(--card); border:1px solid var(--glass); border-radius:1rem; padding:2rem; backdrop-filter:blur(20px); height:100%; display:flex; flex-direction:column; }
+        .t-card p { font-size:1.125rem; line-height:1.8; font-style:italic; margin-bottom:1.5rem; }
+        .t-auth { display:flex; align-items:center; gap:1rem; margin-top:auto; }
+        .t-av { width:48px; height:48px; border-radius:50%; background:var(--grad); display:flex; align-items:center; justify-content:center; font-weight:700; }
+        .t-info h4 { font-weight:600; margin-bottom:.25rem; }
+        .t-info p { font-size:.875rem; color:var(--muted); font-style:normal; margin:0; }
+        .swiper-pagination-bullet { background:var(--muted) !important; }
+        .swiper-pagination-bullet-active { background:var(--grad) !important; }
+
+        .pr-grid { max-width:1200px; margin:0 auto; display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:2rem; }
+        .pr-card { background:var(--card); border:1px solid var(--glass); border-radius:1rem; padding:2.5rem; backdrop-filter:blur(20px); position:relative; transition:all .3s; }
+        .pr-card:hover { transform:translateY(-5px); }
+        .pr-card.feat { border-color:rgba(99,102,241,.5); background:linear-gradient(135deg,rgba(99,102,241,.1),rgba(168,85,247,.1)); }
+        .pr-badge { position:absolute; top:-12px; left:50%; transform:translateX(-50%); background:var(--grad); color:#fff; padding:.375rem 1rem; border-radius:2rem; font-size:.75rem; font-weight:600; }
+        .pr-card h3 { font-size:1.25rem; font-weight:600; margin-bottom:.5rem; }
+        .pr-price { font-size:3rem; font-weight:800; margin-bottom:.5rem; }
+        .pr-price span { font-size:1rem; font-weight:400; color:var(--muted); }
+        .pr-desc { color:var(--muted); margin-bottom:2rem; }
+        .pr-list { list-style:none; margin-bottom:2rem; }
+        .pr-list li { padding:.75rem 0; border-bottom:1px solid rgba(255,255,255,.05); display:flex; align-items:center; gap:.75rem; }
+        .pr-list li:last-child { border:none; }
+        .pr-list li::before { content:"✓"; color:#10B981; font-weight:700; }
+
+        .lead-sec { background:linear-gradient(135deg,rgba(99,102,241,.1),rgba(168,85,247,.1)); }
+        .lead-in { max-width:600px; margin:0 auto; text-align:center; }
+        .lead-form { display:flex; gap:1rem; margin-top:2rem; flex-wrap:wrap; justify-content:center; }
+        .lead-input { flex:1; min-width:280px; padding:1rem 1.25rem; background:var(--card); border:1px solid var(--glass); border-radius:.5rem; color:var(--text); font-size:1rem; outline:none; }
+        .lead-input:focus { border-color:rgba(99,102,241,.5); }
+        .lead-input::placeholder { color:var(--muted); }
+
+        .ftr { position:relative; z-index:1; padding:4rem 2rem 2rem; border-top:1px solid var(--glass); }
+        .ftr-in { max-width:1200px; margin:0 auto; display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:3rem; margin-bottom:3rem; }
+        .ftr-desc { color:var(--muted); margin:1rem 0; }
+        .ftr h4 { font-weight:600; margin-bottom:1rem; }
+        .ftr ul { list-style:none; }
+        .ftr li { margin-bottom:.5rem; }
+        .ftr a { color:var(--muted); text-decoration:none; transition:color .3s; }
+        .ftr a:hover { color:var(--text); }
+        .ftr-bot { text-align:center; padding-top:2rem; border-top:1px solid var(--glass); color:var(--muted); font-size:.875rem; }
+
+        .ov { position:fixed; inset:0; background:rgba(0,0,0,.7); backdrop-filter:blur(8px); display:flex; align-items:center; justify-content:center; z-index:200; opacity:0; visibility:hidden; transition:all .3s; }
+        .ov.on { opacity:1; visibility:visible; }
+        .mdl { background:var(--bg2); border:1px solid var(--glass); border-radius:1rem; padding:2.5rem; width:100%; max-width:420px; position:relative; transform:scale(.9) translateY(20px); transition:all .3s; }
+        .ov.on .mdl { transform:scale(1) translateY(0); }
+        .mdl-x { position:absolute; top:1rem; right:1rem; background:none; border:none; color:var(--muted); font-size:1.5rem; cursor:pointer; width:32px; height:32px; display:flex; align-items:center; justify-content:center; border-radius:.5rem; transition:all .3s; }
+        .mdl-x:hover { background:rgba(255,255,255,.1); color:var(--text); }
+        .mdl h2 { font-size:1.75rem; font-weight:700; margin-bottom:.5rem; }
+        .mdl .sub { color:var(--muted); margin-bottom:2rem; }
+        .fg { margin-bottom:1.25rem; }
+        .fg label { display:block; font-weight:500; margin-bottom:.5rem; font-size:.875rem; }
+        .inp-w { position:relative; }
+        .inp { width:100%; padding:.875rem 1rem; background:var(--card); border:1px solid var(--glass); border-radius:.5rem; color:var(--text); font-size:1rem; outline:none; transition:border-color .3s; }
+        .inp:focus { border-color:rgba(99,102,241,.5); }
+        .inp::placeholder { color:var(--muted); }
+        .pw-tog { position:absolute; right:.75rem; top:50%; transform:translateY(-50%); background:none; border:none; color:var(--muted); cursor:pointer; padding:.25rem; display:flex; align-items:center; transition:color .3s; }
+        .pw-tog:hover { color:var(--text); }
+        .pw-tog svg { width:20px; height:20px; }
+        .sub-btn { width:100%; padding:1rem; background:var(--grad); border:none; border-radius:.5rem; color:#fff; font-size:1rem; font-weight:600; cursor:pointer; transition:all .3s; margin-top:.5rem; }
+        .sub-btn:hover { transform:translateY(-2px); box-shadow:0 10px 30px rgba(99,102,241,.3); }
+        .forgot { display:block; text-align:center; margin-top:1rem; color:var(--muted); text-decoration:none; font-size:.875rem; transition:color .3s; }
+        .forgot:hover { color:var(--text); }
+
+        @media(max-width:1024px){.hero-in{grid-template-columns:1fr;text-align:center}.hero-txt{max-width:100%}.hero-p{max-width:100%;margin-left:auto;margin-right:auto}.hero-acts{justify-content:center}}
+        @media(max-width:768px){.nav{display:none}.hdr-btns .btn-out{display:none}.hero{padding-top:6rem}.sec{padding:4rem 1.5rem}.mod-grid{grid-template-columns:1fr}.pr-grid{grid-template-columns:1fr;max-width:400px;margin:0 auto}.mdl{margin:1rem;padding:2rem}.lead-form{flex-direction:column}.lead-input{min-width:100%}.lead-form .btn{width:100%}}
+    </style>
+</head>
+<body>
+    <canvas id="bg"></canvas>
+
+    <header class="hdr" id="hdr">
+        <div class="hdr-in">
+            <a href="#" class="logo">Nexora</a>
+            <nav class="nav">
+                <a href="#modules">Modulos</a>
+                <a href="#beneficios">Beneficios</a>
+                <a href="#testimonios">Testimonios</a>
+            </nav>
+            <div class="hdr-btns">
+                <button class="btn btn-out" id="loginBtn">Iniciar Sesion</button>
+                <a href="#" class="btn btn-grad">Probar Gratis</a>
+            </div>
+        </div>
+    </header>
+
+    <section class="hero">
+        <div class="hero-in">
+            <div class="hero-txt" data-aos="fade-up">
+                <div class="badge">Software modular para negocios modernos</div>
+                <h1>El Software que se Adapta a <span class="grad">tu Negocio</span>, No al Reves.</h1>
+                <p class="hero-p">Olvídate del software rigido. Con Nexora, activa solo lo que necesitas y crece a tu ritmo. Migracion automatica de datos con nuestro Setup Wizard.</p>
+                <div class="hero-acts">
+                    <a href="#" class="btn btn-grad btn-lg">Comenzar Ahora</a>
+                    <a href="#modules" class="btn btn-out btn-lg">Ver Modulos</a>
+                </div>
+            </div>
+            <div data-aos="fade-up" data-aos-delay="200">
+                <div class="mock">
+                    <div class="mock-i">📊</div>
+                    <div class="mock-i">📦</div>
+                    <div class="mock-i">🛒</div>
+                    <div class="mock-i">📋</div>
+                    <div class="mock-i">💼</div>
+                    <div class="mock-i">📈</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="sec" id="modules">
+        <div class="sec-h" data-aos="fade-up">
+            <h2 class="sec-t">Modulos <span class="grad">Potentes</span></h2>
+            <p class="sec-sub">Elige exactamente lo que tu negocio necesita. Sin pagar de mas.</p>
+        </div>
+        <div class="mod-grid">
+            <div class="mod-card" data-aos="fade-up">
+                <div class="mod-ico">🔧</div>
+                <h3>Taller</h3>
+                <p>Gestiona tu taller mecanico con control total de ordenes de trabajo, inventario de repuestos y seguimiento a clientes.</p>
+                <ul>
+                    <li>Ordenes de trabajo automatizadas</li>
+                    <li>Control de inventario en tiempo real</li>
+                    <li>Historial completo por cliente</li>
+                    <li>Cotizaciones instantaneas</li>
+                </ul>
+            </div>
+            <div class="mod-card" data-aos="fade-up" data-aos-delay="100">
+                <div class="mod-ico">📦</div>
+                <h3>Almacen</h3>
+                <p>Controla tu inventario con precision quirurgica. Nunca mas pierdas una venta por falta de stock.</p>
+                <ul>
+                    <li>Alertas de stock minimo</li>
+                    <li>Codigos de barras y QR</li>
+                    <li>Multiple ubicaciones</li>
+                    <li>Reportes de rotacion</li>
+                </ul>
+            </div>
+            <div class="mod-card" data-aos="fade-up" data-aos-delay="200">
+                <div class="mod-ico">🛒</div>
+                <h3>Punto de Venta</h3>
+                <p>Vende mas rapido y mejor. POS intuitivo que se integra perfectamente con tu inventario.</p>
+                <ul>
+                    <li>Interfaz tactil optimizada</li>
+                    <li>Multiple metodos de pago</li>
+                    <li>Corte de caja automatico</li>
+                    <li>Facturacion electronica</li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <section class="sec test-sec" id="testimonios">
+        <div class="sec-h" data-aos="fade-up">
+            <h2 class="sec-t">Lo que dicen nuestros <span class="grad">clientes</span></h2>
+            <p class="sec-sub">Mas de 500 negocios ya confian en Nexora para gestionar sus operaciones.</p>
+        </div>
+        <div class="swiper" data-aos="fade-up">
+            <div class="swiper-wrapper">
+                <div class="swiper-slide">
+                    <div class="t-card">
+                        <p>"Nexora transformo completamente nuestro taller. Pasamos de controlar todo en papel a tener visibilidad total. La migracion fue increiblemente facil con el Setup Wizard."</p>
+                        <div class="t-auth">
+                            <div class="t-av">CM</div>
+                            <div class="t-info"><h4>Carlos Mendoza</h4><p>Dueño, Taller Mendoza - Bogota</p></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="swiper-slide">
+                    <div class="t-card">
+                        <p>"Lo que mas me gusta es la flexibilidad. Solo pagamos por lo que usamos. El modulo de almacen nos ayudo a reducir perdidas en un 40% el primer trimestre."</p>
+                        <div class="t-auth">
+                            <div class="t-av">LR</div>
+                            <div class="t-info"><h4>Laura Rodriguez</h4><p>Gerente, Distribuidora Central - Medellin</p></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="swiper-slide">
+                    <div class="t-card">
+                        <p>"El POS es increiblemente rapido. Nuestros cajeros lo aprendieron en minutos. Y la facturacion electronica funciona perfecto con la DIAN."</p>
+                        <div class="t-auth">
+                            <div class="t-av">AP</div>
+                            <div class="t-info"><h4>Andres Perez</h4><p>Director, SuperMarket Plus - Cali</p></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="swiper-pagination"></div>
+        </div>
+    </section>
+
+    <section class="sec" id="precios">
+        <div class="sec-h" data-aos="fade-up">
+            <h2 class="sec-t">Planes <span class="grad">Flexibles</span></h2>
+            <p class="sec-sub">Escoge el plan perfecto para tu negocio. Sin contratos a largo plazo.</p>
+        </div>
+        <div class="pr-grid">
+            <div class="pr-card" data-aos="fade-up">
+                <h3>Starter</h3>
+                <div class="pr-price">$49<span>/mes</span></div>
+                <p class="pr-desc">Perfecto para negocios pequenos que estan comenzando.</p>
+                <ul class="pr-list">
+                    <li>1 modulo a tu eleccion</li>
+                    <li>Hasta 3 usuarios</li>
+                    <li>Soporte por email</li>
+                    <li>Actualizaciones incluidas</li>
+                </ul>
+                <a href="#" class="btn btn-out" style="width:100%;justify-content:center">Empezar Ahora</a>
+            </div>
+            <div class="pr-card feat" data-aos="fade-up" data-aos-delay="100">
+                <div class="pr-badge">Mas Popular</div>
+                <h3>Professional</h3>
+                <div class="pr-price">$129<span>/mes</span></div>
+                <p class="pr-desc">Para negocios en crecimiento que necesitan mas.</p>
+                <ul class="pr-list">
+                    <li>Hasta 3 modulos</li>
+                    <li>Hasta 10 usuarios</li>
+                    <li>Soporte prioritario 24/7</li>
+                    <li>API completa</li>
+                    <li>Personalizacion avanzada</li>
+                </ul>
+                <a href="#" class="btn btn-grad" style="width:100%;justify-content:center">Elegir Professional</a>
+            </div>
+            <div class="pr-card" data-aos="fade-up" data-aos-delay="200">
+                <h3>Enterprise</h3>
+                <div class="pr-price">Custom</div>
+                <p class="pr-desc">Soluciones a medida para grandes operaciones.</p>
+                <ul class="pr-list">
+                    <li>Modulos ilimitados</li>
+                    <li>Usuarios ilimitados</li>
+                    <li>Soporte dedicado</li>
+                    <li>On-premise disponible</li>
+                    <li>SLA garantizado</li>
+                </ul>
+                <a href="#" class="btn btn-out" style="width:100%;justify-content:center">Contactar Ventas</a>
+            </div>
+        </div>
+    </section>
+
+    <section class="sec lead-sec" id="beneficios">
+        <div class="lead-in" data-aos="fade-up">
+            <h2 class="sec-t">Listo para <span class="grad">transformar</span> tu negocio?</h2>
+            <p class="sec-sub">Descarga gratis nuestra guia "Como elegir el software perfecto para tu empresa" y recibe una demo personalizada.</p>
+            <form class="lead-form" id="leadForm">
+                <input type="email" class="lead-input" placeholder="Tu correo electronico" required>
+                <button type="submit" class="btn btn-grad btn-lg">Descargar Guia Gratis</button>
+            </form>
+        </div>
+    </section>
+
+    <footer class="ftr">
+        <div class="ftr-in">
+            <div>
+                <a href="#" class="logo">Nexora</a>
+                <p class="ftr-desc">El software que se adapta a tu negocio, no al reves.</p>
+            </div>
+            <div>
+                <h4>Producto</h4>
+                <ul>
+                    <li><a href="#modules">Modulos</a></li>
+                    <li><a href="#precios">Precios</a></li>
+                    <li><a href="#">Integraciones</a></li>
+                    <li><a href="#">API</a></li>
+                </ul>
+            </div>
+            <div>
+                <h4>Empresa</h4>
+                <ul>
+                    <li><a href="#">Sobre Nosotros</a></li>
+                    <li><a href="#">Blog</a></li>
+                    <li><a href="#">Carreras</a></li>
+                    <li><a href="#">Contacto</a></li>
+                </ul>
+            </div>
+            <div>
+                <h4>Soporte</h4>
+                <ul>
+                    <li><a href="#">Centro de Ayuda</a></li>
+                    <li><a href="#">Documentacion</a></li>
+                    <li><a href="#">Estado del Sistema</a></li>
+                    <li><a href="#">Comunidad</a></li>
+                </ul>
+            </div>
+        </div>
+        <div class="ftr-bot">
+            <p>&copy; 2026 Nexora. Todos los derechos reservados.</p>
+        </div>
+    </footer>
+
+    <div class="ov" id="ov">
+        <div class="mdl">
+            <button class="mdl-x" id="mdlX">&times;</button>
+            <h2>Bienvenido de vuelta</h2>
+            <p class="sub">Ingresa a tu panel de Nexora</p>
+            <form id="loginForm">
+                <div class="fg">
+                    <label for="email">Correo electronico</label>
+                    <input type="email" class="inp" id="email" placeholder="tu@empresa.com" required>
+                </div>
+                <div class="fg">
+                    <label for="password">Contrasena</label>
+                    <div class="inp-w">
+                        <input type="password" class="inp" id="password" placeholder="********" required>
+                        <button type="button" class="pw-tog" id="pwTog">
+                            <svg id="eyeOn" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                <circle cx="12" cy="12" r="3"></circle>
+                            </svg>
+                            <svg id="eyeOff" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none">
+                                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                                <line x1="1" y1="1" x2="23" y2="23"></line>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <button type="submit" class="sub-btn">Ingresar a mi cuenta</button>
+            </form>
+            <a href="#" class="forgot">Olvidaste tu contrasena?</a>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
+    <script>
+    (function(){
+        AOS.init({duration:800,easing:'ease-out-cubic',once:true,offset:50});
+
+        new Swiper('.swiper',{
+            slidesPerView:1,spaceBetween:30,
+            pagination:{el:'.swiper-pagination',clickable:true},
+            breakpoints:{640:{slidesPerView:2},1024:{slidesPerView:3}},
+            autoplay:{delay:5000,disableOnInteraction:false}
+        });
+
+        var c=document.getElementById('bg'),x=c.getContext('2d'),ps=[];
+        function rc(){c.width=window.innerWidth;c.height=window.innerHeight}
+        function cp(){return{x:Math.random()*c.width,y:Math.random()*c.height,s:Math.random()*2+.5,vx:(Math.random()-.5)*.5,vy:(Math.random()-.5)*.5,o:Math.random()*.5+.1}}
+        function init(){ps=[];var n=Math.min(80,Math.floor(c.width*c.height/15000));for(var i=0;i<n;i++)ps.push(cp())}
+        function draw(){x.clearRect(0,0,c.width,c.height);ps.forEach(function(p,i){x.beginPath();x.arc(p.x,p.y,p.s,0,Math.PI*2);x.fillStyle='rgba(99,102,241,'+p.o+')';x.fill();ps.forEach(function(q,j){if(i===j)return;var dx=p.x-q.x,dy=p.y-q.y,d=Math.sqrt(dx*dx+dy*dy);if(d<120){x.beginPath();x.strokeStyle='rgba(99,102,241,'+(0.1*(1-d/120))+')';x.lineWidth=.5;x.moveTo(p.x,p.y);x.lineTo(q.x,q.y);x.stroke()}});p.x+=p.vx;p.y+=p.vy;if(p.x<0)p.x=c.width;if(p.x>c.width)p.x=0;if(p.y<0)p.y=c.height;if(p.y>c.height)p.y=0});requestAnimationFrame(draw)}
+        rc();init();draw();
+        window.addEventListener('resize',function(){rc();init()});
+
+        var hdr=document.getElementById('hdr');
+        window.addEventListener('scroll',function(){hdr.style.background=window.scrollY>50?'rgba(11,14,20,.95)':'rgba(11,14,20,.85)'});
+
+        var ov=document.getElementById('ov'),mdlX=document.getElementById('mdlX'),loginBtn=document.getElementById('loginBtn');
+        var pwTog=document.getElementById('pwTog'),pw=document.getElementById('password');
+        var eyeOn=document.getElementById('eyeOn'),eyeOff=document.getElementById('eyeOff');
+
+        function openM(){ov.classList.add('on');document.body.style.overflow='hidden'}
+        function closeM(){ov.classList.remove('on');document.body.style.overflow=''}
+
+        loginBtn.addEventListener('click',openM);
+        mdlX.addEventListener('click',closeM);
+        ov.addEventListener('click',function(e){if(e.target===ov)closeM()});
+        document.addEventListener('keydown',function(e){if(e.key==='Escape'&&ov.classList.contains('on'))closeM()});
+
+        pwTog.addEventListener('click',function(){
+            var isPw=pw.type==='password';
+            pw.type=isPw?'text':'password';
+            eyeOn.style.display=isPw?'none':'block';
+            eyeOff.style.display=isPw?'block':'none';
+        });
+
+        document.getElementById('loginForm').addEventListener('submit',function(e){
+            e.preventDefault();
+            alert('Login conectado. En produccion enviaria datos al servidor.');
+            closeM();
+        });
+
+        document.getElementById('leadForm').addEventListener('submit',function(e){
+            e.preventDefault();
+            alert('Gracias! En produccion recibiras la guia por correo.');
+            e.target.reset();
+        });
+
+        document.querySelectorAll('a[href^="#"]').forEach(function(a){
+            a.addEventListener('click',function(e){
+                e.preventDefault();
+                var t=document.querySelector(this.getAttribute('href'));
+                if(t)t.scrollIntoView({behavior:'smooth',block:'start'});
+            });
+        });
+    })();
+    </script>
+</body>
+</html>

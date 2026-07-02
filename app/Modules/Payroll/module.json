@@ -1,0 +1,29 @@
+{
+    "code": "payroll",
+    "name": "Nómina",
+    "version": "1.0.0",
+    "description": "Liquidación de nómina, novedades, prestaciones y seguridad social.",
+    "icon": "Banknote",
+    "core": false,
+    "dependencies": ["hr"],
+    "permissions": [
+        "payroll:view",
+        "payroll:create",
+        "payroll:edit",
+        "payroll:delete",
+        "payroll:liquidate",
+        "payroll:manage",
+        "payroll:report"
+    ],
+    "menus": [
+        {
+            "section": "RECURSOS HUMANOS",
+            "icon": "Users",
+            "items": [
+                { "type": "label", "label": "NÓMINA" },
+                { "label": "Períodos", "route": "payroll.periodos.index", "permission": "payroll:view" },
+                { "label": "Novedades", "route": "payroll.novedades.index", "permission": "payroll:view" }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,2131 @@
+{
+  "config": {
+    "argv": [
+      "C:\\Program Files\\nodejs\\node.exe",
+      "C:\\laragon\\www\\nexora\\node_modules\\@playwright\\test\\cli.js",
+      "test",
+      "--config=tests_certificacion/playwright.certificacion.config.ts"
+    ],
+    "configFile": "C:\\laragon\\www\\nexora\\tests_certificacion\\playwright.certificacion.config.ts",
+    "rootDir": "C:/laragon/www/nexora/tests_certificacion",
+    "failOnFlakyTests": false,
+    "forbidOnly": false,
+    "fullyParallel": false,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "actualWorkers": 1
+    },
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "C:/laragon/www/nexora/tests_certificacion/evidencias/results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "setup",
+        "name": "setup",
+        "testDir": "C:/laragon/www/nexora/tests_certificacion",
+        "testIgnore": [],
+        "testMatch": [
+          "**/auth.setup.ts"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "C:/laragon/www/nexora/tests_certificacion/evidencias/results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "operacion_diaria",
+        "name": "operacion_diaria",
+        "testDir": "C:/laragon/www/nexora/tests_certificacion",
+        "testIgnore": [],
+        "testMatch": [
+          "**/operacion_diaria.spec.ts"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "C:/laragon/www/nexora/tests_certificacion/evidencias/results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "taller_servicio",
+        "name": "taller_servicio",
+        "testDir": "C:/laragon/www/nexora/tests_certificacion",
+        "testIgnore": [],
+        "testMatch": [
+          "**/taller_servicio.spec.ts"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "C:/laragon/www/nexora/tests_certificacion/evidencias/results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "recursos_humanos",
+        "name": "recursos_humanos",
+        "testDir": "C:/laragon/www/nexora/tests_certificacion",
+        "testIgnore": [],
+        "testMatch": [
+          "**/recursos_humanos.spec.ts"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "C:/laragon/www/nexora/tests_certificacion/evidencias/results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "seguridad_extremos",
+        "name": "seguridad_extremos",
+        "testDir": "C:/laragon/www/nexora/tests_certificacion",
+        "testIgnore": [],
+        "testMatch": [
+          "**/seguridad_extremos.spec.ts"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "C:/laragon/www/nexora/tests_certificacion/evidencias/results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "reportes_rendimiento",
+        "name": "reportes_rendimiento",
+        "testDir": "C:/laragon/www/nexora/tests_certificacion",
+        "testIgnore": [],
+        "testMatch": [
+          "**/reportes_rendimiento.spec.ts"
+        ],
+        "timeout": 30000
+      }
+    ],
+    "quiet": false,
+    "reporter": [
+      [
+        "html",
+        {
+          "outputFolder": "evidencias/reports",
+          "open": "never"
+        }
+      ],
+      [
+        "list",
+        {
+          "printSteps": true
+        }
+      ],
+      [
+        "json",
+        {
+          "outputFile": "evidencias/reports/results.json"
+        }
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.61.1",
+    "workers": 1,
+    "webServer": null
+  },
+  "suites": [
+    {
+      "title": "auth.setup.ts",
+      "file": "auth.setup.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "autenticar como admin",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "setup",
+              "projectName": "setup",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 9603,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-07-01T16:10:25.873Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "screenshot",
+                      "contentType": "image/png",
+                      "path": "C:\\laragon\\www\\nexora\\tests_certificacion\\evidencias\\results\\auth.setup.ts-autenticar-como-admin-setup\\test-finished-1.png"
+                    },
+                    {
+                      "name": "video",
+                      "contentType": "video/webm",
+                      "path": "C:\\laragon\\www\\nexora\\tests_certificacion\\evidencias\\results\\auth.setup.ts-autenticar-como-admin-setup\\video.webm"
+                    },
+                    {
+                      "name": "trace",
+                      "contentType": "application/zip",
+                      "path": "C:\\laragon\\www\\nexora\\tests_certificacion\\evidencias\\results\\auth.setup.ts-autenticar-como-admin-setup\\trace.zip"
+                    }
+                  ]
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "17e3fe6f4d9d8bd79c6b-494ae655c1ee066c83a0",
+          "file": "auth.setup.ts",
+          "line": 23,
+          "column": 1
+        },
+        {
+          "title": "autenticar como gerente",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "setup",
+              "projectName": "setup",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 7108,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-07-01T16:10:36.044Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "screenshot",
+                      "contentType": "image/png",
+                      "path": "C:\\laragon\\www\\nexora\\tests_certificacion\\evidencias\\results\\auth.setup.ts-autenticar-como-gerente-setup\\test-finished-1.png"
+                    },
+                    {
+                      "name": "video",
+                      "contentType": "video/webm",
+                      "path": "C:\\laragon\\www\\nexora\\tests_certificacion\\evidencias\\results\\auth.setup.ts-autenticar-como-gerente-setup\\video.webm"
+                    },
+                    {
+                      "name": "trace",
+                      "contentType": "application/zip",
+                      "path": "C:\\laragon\\www\\nexora\\tests_certificacion\\evidencias\\results\\auth.setup.ts-autenticar-como-gerente-setup\\trace.zip"
+                    }
+                  ]
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "17e3fe6f4d9d8bd79c6b-4b11e5e8231f399a22dd",
+          "file": "auth.setup.ts",
+          "line": 26,
+          "column": 1
+        },
+        {
+          "title": "autenticar como vendedor",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "setup",
+              "projectName": "setup",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 6297,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-07-01T16:10:43.416Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "screenshot",
+                      "contentType": "image/png",
+                      "path": "C:\\laragon\\www\\nexora\\tests_certificacion\\evidencias\\results\\auth.setup.ts-autenticar-como-vendedor-setup\\test-finished-1.png"
+                    },
+                    {
+                      "name": "video",
+                      "contentType": "video/webm",
+                      "path": "C:\\laragon\\www\\nexora\\tests_certificacion\\evidencias\\results\\auth.setup.ts-autenticar-como-vendedor-setup\\video.webm"
+                    },
+                    {
+                      "name": "trace",
+                      "contentType": "application/zip",
+                      "path": "C:\\laragon\\www\\nexora\\tests_certificacion\\evidencias\\results\\auth.setup.ts-autenticar-como-vendedor-setup\\trace.zip"
+                    }
+                  ]
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "17e3fe6f4d9d8bd79c6b-952600082ad763d1050b",
+          "file": "auth.setup.ts",
+          "line": 29,
+          "column": 1
+        },
+        {
+          "title": "autenticar como tecnico",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "setup",
+              "projectName": "setup",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 6045,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-07-01T16:10:49.903Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "screenshot",
+                      "contentType": "image/png",
+                      "path": "C:\\laragon\\www\\nexora\\tests_certificacion\\evidencias\\results\\auth.setup.ts-autenticar-como-tecnico-setup\\test-finished-1.png"
+                    },
+                    {
+                      "name": "video",
+                      "contentType": "video/webm",
+                      "path": "C:\\laragon\\www\\nexora\\tests_certificacion\\evidencias\\results\\auth.setup.ts-autenticar-como-tecnico-setup\\video.webm"
+                    },
+                    {
+                      "name": "trace",
+                      "contentType": "application/zip",
+                      "path": "C:\\laragon\\www\\nexora\\tests_certificacion\\evidencias\\results\\auth.setup.ts-autenticar-como-tecnico-setup\\trace.zip"
+                    }
+                  ]
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "17e3fe6f4d9d8bd79c6b-625dcce0360735a693b8",
+          "file": "auth.setup.ts",
+          "line": 32,
+          "column": 1
+        },
+        {
+          "title": "autenticar como cajero",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "setup",
+              "projectName": "setup",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 6687,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-07-01T16:10:56.131Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "screenshot",
+                      "contentType": "image/png",
+                      "path": "C:\\laragon\\www\\nexora\\tests_certificacion\\evidencias\\results\\auth.setup.ts-autenticar-como-cajero-setup\\test-finished-1.png"
+                    },
+                    {
+                      "name": "video",
+                      "contentType": "video/webm",
+                      "path": "C:\\laragon\\www\\nexora\\tests_certificacion\\evidencias\\results\\auth.setup.ts-autenticar-como-cajero-setup\\video.webm"
+                    },
+                    {
+                      "name": "trace",
+                      "contentType": "application/zip",
+                      "path": "C:\\laragon\\www\\nexora\\tests_certificacion\\evidencias\\results\\auth.setup.ts-autenticar-como-cajero-setup\\trace.zip"
+                    }
+                  ]
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "17e3fe6f4d9d8bd79c6b-9c7140b610a4979af4d4",
+          "file": "auth.setup.ts",
+          "line": 35,
+          "column": 1
+        },
+        {
+          "title": "autenticar como contador",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "setup",
+              "projectName": "setup",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 8895,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-07-01T16:11:03.091Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "screenshot",
+                      "contentType": "image/png",
+                      "path": "C:\\laragon\\www\\nexora\\tests_certificacion\\evidencias\\results\\auth.setup.ts-autenticar-como-contador-setup\\test-finished-1.png"
+                    },
+                    {
+                      "name": "video",
+                      "contentType": "video/webm",
+                      "path": "C:\\laragon\\www\\nexora\\tests_certificacion\\evidencias\\results\\auth.setup.ts-autenticar-como-contador-setup\\video.webm"
+                    },
+                    {
+                      "name": "trace",
+                      "contentType": "application/zip",
+                      "path": "C:\\laragon\\www\\nexora\\tests_certificacion\\evidencias\\results\\auth.setup.ts-autenticar-como-contador-setup\\trace.zip"
+                    }
+                  ]
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "17e3fe6f4d9d8bd79c6b-6e805ee8af58b2c33ceb",
+          "file": "auth.setup.ts",
+          "line": 38,
+          "column": 1
+        },
+        {
+          "title": "autenticar como rrhh",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "setup",
+              "projectName": "setup",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 7949,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-07-01T16:11:12.211Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "screenshot",
+                      "contentType": "image/png",
+                      "path": "C:\\laragon\\www\\nexora\\tests_certificacion\\evidencias\\results\\auth.setup.ts-autenticar-como-rrhh-setup\\test-finished-1.png"
+                    },
+                    {
+                      "name": "video",
+                      "contentType": "video/webm",
+                      "path": "C:\\laragon\\www\\nexora\\tests_certificacion\\evidencias\\results\\auth.setup.ts-autenticar-como-rrhh-setup\\video.webm"
+                    },
+                    {
+                      "name": "trace",
+                      "contentType": "application/zip",
+                      "path": "C:\\laragon\\www\\nexora\\tests_certificacion\\evidencias\\results\\auth.setup.ts-autenticar-como-rrhh-setup\\trace.zip"
+                    }
+                  ]
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "17e3fe6f4d9d8bd79c6b-631f7708ee6701874cdd",
+          "file": "auth.setup.ts",
+          "line": 41,
+          "column": 1
+        }
+      ]
+    },
+    {
+      "title": "operacion_diaria.spec.ts",
+      "file": "operacion_diaria.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Certificación Funcional: Operación Comercial Masiva",
+          "file": "operacion_diaria.spec.ts",
+          "line": 4,
+          "column": 6,
+          "specs": [],
+          "suites": [
+            {
+              "title": "Día 1 de operación",
+              "file": "operacion_diaria.spec.ts",
+              "line": 9,
+              "column": 10,
+              "specs": [],
+              "suites": [
+                {
+                  "title": "Vendedor",
+                  "file": "operacion_diaria.spec.ts",
+                  "line": 11,
+                  "column": 12,
+                  "specs": [
+                    {
+                      "title": "Vendedor registra 10 cotizaciones y 5 ventas - Día 1",
+                      "ok": true,
+                      "tags": [],
+                      "tests": [
+                        {
+                          "timeout": 30000,
+                          "annotations": [],
+                          "expectedStatus": "passed",
+                          "projectId": "operacion_diaria",
+                          "projectName": "operacion_diaria",
+                          "results": [
+                            {
+                              "workerIndex": 1,
+                              "parallelIndex": 0,
+                              "status": "passed",
+                              "duration": 2268,
+                              "errors": [],
+                              "stdout": [],
+                              "stderr": [],
+                              "retry": 0,
+                              "steps": [
+                                {
+                                  "title": "Venta #1 del día 1",
+                                  "duration": 1
+                                },
+                                {
+                                  "title": "Venta #2 del día 1",
+                                  "duration": 0
+                                },
+                                {
+                                  "title": "Venta #3 del día 1",
+                                  "duration": 1
+                                },
+                                {
+                                  "title": "Venta #4 del día 1",
+                                  "duration": 0
+                                },
+                                {
+                                  "title": "Venta #5 del día 1",
+                                  "duration": 0
+                                }
+                              ],
+                              "startTime": "2026-07-01T16:11:21.499Z",
+                              "annotations": [],
+                              "attachments": [
+                                {
+                                  "name": "screenshot",
+                                  "contentType": "image/png",
+                                  "path": "C:\\laragon\\www\\nexora\\tests_certificacion\\evidencias\\results\\operacion_diaria-Certifica-7e389-zaciones-y-5-ventas---Día-1-operacion-diaria\\test-finished-1.png"
+                                },
+                                {
+                                  "name": "video",
+                                  "contentType": "video/webm",
+                                  "path": "C:\\laragon\\www\\nexora\\tests_certificacion\\evidencias\\results\\operacion_diaria-Certifica-7e389-zaciones-y-5-ventas---Día-1-operacion-diaria\\video.webm"
+                                },
+                                {
+                                  "name": "trace",
+                                  "contentType": "application/zip",
+                                  "path": "C:\\laragon\\www\\nexora\\tests_certificacion\\evidencias\\results\\operacion_diaria-Certifica-7e389-zaciones-y-5-ventas---Día-1-operacion-diaria\\trace.zip"
+                                }
+                              ]
+                            }
+                          ],
+                          "status": "expected"
+                        }
+                      ],
+                      "id": "ce7b8aba9129c96592af-f1ebb234bd285c295b39",
+                      "file": "operacion_diaria.spec.ts",
+                      "line": 13,
+                      "column": 9
+                    }
+                  ]
+                },
+                {
+                  "title": "Cajero",
+                  "file": "operacion_diaria.spec.ts",
+                  "line": 33,
+                  "column": 12,
+                  "specs": [
+                    {
+                      "title": "Cajero recibe pagos y realiza cuadre de caja - Día 1",
+                      "ok": true,
+                      "tags": [],
+                      "tests": [
+                        {
+                          "timeout": 30000,
+                          "annotations": [],
+                          "expectedStatus": "passed",
+                          "projectId": "operacion_diaria",
+                          "projectName": "operacion_diaria",
+                          "results": [
+                            {
+                              "workerIndex": 1,
+                              "parallelIndex": 0,
+                              "status": "passed",
+                              "duration": 1152,
+                              "errors": [],
+                              "stdout": [],
+                              "stderr": [],
+                              "retry": 0,
+                              "steps": [
+                                {
+                                  "title": "Cobrar ventas de contado",
+                                  "duration": 1
+                                },
+                                {
+                                  "title": "Registrar gastos menores (Caja menor)",
+                                  "duration": 1
+                                },
+                                {
+                                  "title": "Cierre de caja",
+                                  "duration": 0
+                                }
+                              ],
+                              "startTime": "2026-07-01T16:11:24.093Z",
+                              "annotations": [],
+                              "attachments": [
+                                {
+                                  "name": "screenshot",
+                                  "contentType": "image/png",
+                                  "path": "C:\\laragon\\www\\nexora\\tests_certificacion\\evidencias\\results\\operacion_diaria-Certifica-d6ff6-liza-cuadre-de-caja---Día-1-operacion-diaria\\test-finished-1.png"
+                                },
+                                {
+                                  "name": "video",
+                                  "contentType": "video/webm",
+                                  "path": "C:\\laragon\\www\\nexora\\tests_certificacion\\evidencias\\results\\operacion_diaria-Certifica-d6ff6-liza-cuadre-de-caja---Día-1-operacion-diaria\\video.webm"
+                                },
+                                {
+                                  "name": "trace",
+                                  "contentType": "application/zip",
+                                  "path": "C:\\laragon\\www\\nexora\\tests_certificacion\\evidencias\\results\\operacion_diaria-Certifica-d6ff6-liza-cuadre-de-caja---Día-1-operacion-diaria\\trace.zip"
+                                }
+                              ]
+                            }
+                          ],
+                          "status": "expected"
+                        }
+                      ],
+                      "id": "ce7b8aba9129c96592af-46dae3a873621bbe02db",
+                      "file": "operacion_diaria.spec.ts",
+                      "line": 35,
+                      "column": 9
+                    }
+                  ]
+                },
+                {
+                  "title": "Compras e Inventario (Admin)",
+                  "file": "operacion_diaria.spec.ts",
+                  "line": 52,
+                  "column": 12,
+                  "specs": [
+                    {
+                      "title": "Compras a proveedores y reabastecimiento de inventario - Día 1",
+                      "ok": true,
+                      "tags": [],
+                      "tests": [
+                        {
+                          "timeout": 30000,
+                          "annotations": [],
+                          "expectedStatus": "passed",
+                          "projectId": "operacion_diaria",
+                          "projectName": "operacion_diaria",
+                          "results": [
+                            {
+                              "workerIndex": 1,
+                              "parallelIndex": 0,
+                              "status": "passed",
+                              "duration": 1063,
+                              "errors": [],
+                              "stdout": [],
+                              "stderr": [],
+                              "retry": 0,
+                              "steps": [
+                                {
+                                  "title": "Generar Orden de Compra",
+                                  "duration": 0
+                                },
+                                {
+                                  "title": "Ingresar Factura de Proveedor",
+                                  "duration": 0
+                                }
+                              ],
+                              "startTime": "2026-07-01T16:11:25.296Z",
+                              "annotations": [],
+                              "attachments": [
+                                {
+                                  "name": "screenshot",
+                                  "contentType": "image/png",
+                                  "path": "C:\\laragon\\www\\nexora\\tests_certificacion\\evidencias\\results\\operacion_diaria-Certifica-16a91-iento-de-inventario---Día-1-operacion-diaria\\test-finished-1.png"
+                                },
+                                {
+                                  "name": "video",
+                                  "contentType": "video/webm",
+                                  "path": "C:\\laragon\\www\\nexora\\tests_certificacion\\evidencias\\results\\operacion_diaria-Certifica-16a91-iento-de-inventario---Día-1-operacion-diaria\\video.webm"
+                                },
+                                {
+                                  "name": "trace",
+                                  "contentType": "application/zip",
+                                  "path": "C:\\laragon\\www\\nexora\\tests_certificacion\\evidencias\\results\\operacion_diaria-Certifica-16a91-iento-de-inventario---Día-1-operacion-diaria\\trace.zip"
+                                }
+                              ]
+                            }
+                          ],
+                          "status": "expected"
+                        }
+                      ],
+                      "id": "ce7b8aba9129c96592af-266b90f1f06b4d466359",
+                      "file": "operacion_diaria.spec.ts",
+                      "line": 55,
+                      "column": 9
+                    },
+                    {
+                      "title": "Ajustes de inventario y Kardex - Día 1",
+                      "ok": true,
+                      "tags": [],
+                      "tests": [
+                        {
+                          "timeout": 30000,
+                          "annotations": [],
+                          "expectedStatus": "passed",
+                          "projectId": "operacion_diaria",
+                          "projectName": "operacion_diaria",
+                          "results": [
+                            {
+                              "workerIndex": 1,
+                              "parallelIndex": 0,
+                              "status": "passed",
+                              "duration": 1055,
+                              "errors": [],
+                              "stdout": [],
+                              "stderr": [],
+                              "retry": 0,
+                              "steps": [
+                                {
+                                  "title": "Validar consistencia del Kardex",
+                                  "duration": 0
+                                }
+                              ],
+                              "startTime": "2026-07-01T16:11:26.404Z",
+                              "annotations": [],
+                              "attachments": [
+                                {
+                                  "name": "screenshot",
+                                  "contentType": "image/png",
+                                  "path": "C:\\laragon\\www\\nexora\\tests_certificacion\\evidencias\\results\\operacion_diaria-Certifica-a98e2-inventario-y-Kardex---Día-1-operacion-diaria\\test-finished-1.png"
+                                },
+                                {
+                                  "name": "video",
+                                  "contentType": "video/webm",
+                                  "path": "C:\\laragon\\www\\nexora\\tests_certificacion\\evidencias\\results\\operacion_diaria-Certifica-a98e2-inventario-y-Kardex---Día-1-operacion-diaria\\video.webm"
+                                },
+                                {
+                                  "name": "trace",
+                                  "contentType": "application/zip",
+                                  "path": "C:\\laragon\\www\\nexora\\tests_certificacion\\evidencias\\results\\operacion_diaria-Certifica-a98e2-inventario-y-Kardex---Día-1-operacion-diaria\\trace.zip"
+                                }
+                              ]
+                            }
+                          ],
+                          "status": "expected"
+                        }
+                      ],
+                      "id": "ce7b8aba9129c96592af-aaba5b6b882d090a5dbf",
+                      "file": "operacion_diaria.spec.ts",
+                      "line": 67,
+                      "column": 9
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "title": "Día 2 de operación",
+              "file": "operacion_diaria.spec.ts",
+              "line": 9,
+              "column": 10,
+              "specs": [],
+              "suites": [
+                {
+                  "title": "Vendedor",
+                  "file": "operacion_diaria.spec.ts",
+                  "line": 11,
+                  "column": 12,
+                  "specs": [
+                    {
+                      "title": "Vendedor registra 10 cotizaciones y 5 ventas - Día 2",
+                      "ok": true,
+                      "tags": [],
+                      "tests": [
+                        {
+                          "timeout": 30000,
+                          "annotations": [],
+                          "expectedStatus": "passed",
+                          "projectId": "operacion_diaria",
+                          "projectName": "operacion_diaria",
+                          "results": [
+                            {
+                              "workerIndex": 1,
+                              "parallelIndex": 0,
+                              "status": "passed",
+                              "duration": 2207,
+                              "errors": [],
+                              "stdout": [],
+                              "stderr": [],
+                              "retry": 0,
+                              "steps": [
+                                {
+                                  "title": "Venta #1 del día 2",
+                                  "duration": 1
+                                },
+                                {
+                                  "title": "Venta #2 del día 2",
+                                  "duration": 0
+                                },
+                                {
+                                  "title": "Venta #3 del día 2",
+                                  "duration": 1
+                                },
+                                {
+                                  "title": "Venta #4 del día 2",
+                                  "duration": 0
+                                },
+                                {
+                                  "title": "Venta #5 del día 2",
+                                  "duration": 0
+                                }
+                              ],
+                              "startTime": "2026-07-01T16:11:27.498Z",
+                              "annotations": [],
+                              "attachments": [
+                                {
+                                  "name": "screenshot",
+                                  "contentType": "image/png",
+                                  "path": "C:\\laragon\\www\\nexora\\tests_certificacion\\evidencias\\results\\operacion_diaria-Certifica-2b260-zaciones-y-5-ventas---Día-2-operacion-diaria\\test-finished-1.png"
+                                },
+                                {
+                                  "name": "video",
+                                  "contentType": "video/webm",
+                                  "path": "C:\\laragon\\www\\nexora\\tests_certificacion\\evidencias\\results\\operacion_diaria-Certifica-2b260-zaciones-y-5-ventas---Día-2-operacion-diaria\\video.webm"
+                                },
+                                {
+                                  "name": "trace",
+                                  "contentType": "application/zip",
+                                  "path": "C:\\laragon\\www\\nexora\\tests_certificacion\\evidencias\\results\\operacion_diaria-Certifica-2b260-zaciones-y-5-ventas---Día-2-operacion-diaria\\trace.zip"
+                                }
+                              ]
+                            }
+                          ],
+                          "status": "expected"
+                        }
+                      ],
+                      "id": "ce7b8aba9129c96592af-63149690d356fda7372a",
+                      "file": "operacion_diaria.spec.ts",
+                      "line": 13,
+                      "column": 9
+                    }
+                  ]
+                },
+                {
+                  "title": "Cajero",
+                  "file": "operacion_diaria.spec.ts",
+                  "line": 33,
+                  "column": 12,
+                  "specs": [
+                    {
+                      "title": "Cajero recibe pagos y realiza cuadre de caja - Día 2",
+                      "ok": true,
+                      "tags": [],
+                      "tests": [
+                        {
+                          "timeout": 30000,
+                          "annotations": [],
+                          "expectedStatus": "passed",
+                          "projectId": "operacion_diaria",
+                          "projectName": "operacion_diaria",
+                          "results": [
+                            {
+                              "workerIndex": 1,
+                              "parallelIndex": 0,
+                              "status": "passed",
+                              "duration": 1045,
+                              "errors": [],
+                              "stdout": [],
+                              "stderr": [],
+                              "retry": 0,
+                              "steps": [
+                                {
+                                  "title": "Cobrar ventas de contado",
+                                  "duration": 0
+                                },
+                                {
+                                  "title": "Registrar gastos menores (Caja menor)",
+                                  "duration": 0
+                                },
+                                {
+                                  "title": "Cierre de caja",
+                                  "duration": 1
+                                }
+                              ],
+                              "startTime": "2026-07-01T16:11:29.752Z",
+                              "annotations": [],
+                              "attachments": [
+                                {
+                                  "name": "screenshot",
+                                  "contentType": "image/png",
+                                  "path": "C:\\laragon\\www\\nexora\\tests_certificacion\\evidencias\\results\\operacion_diaria-Certifica-ceb81-liza-cuadre-de-caja---Día-2-operacion-diaria\\test-finished-1.png"
+                                },
+                                {
+                                  "name": "video",
+                                  "contentType": "video/webm",
+                                  "path": "C:\\laragon\\www\\nexora\\tests_certificacion\\evidencias\\results\\operacion_diaria-Certifica-ceb81-liza-cuadre-de-caja---Día-2-operacion-diaria\\video.webm"
+                                },
+                                {
+                                  "name": "trace",
+                                  "contentType": "application/zip",
+                                  "path": "C:\\laragon\\www\\nexora\\tests_certificacion\\evidencias\\results\\operacion_diaria-Certifica-ceb81-liza-cuadre-de-caja---Día-2-operacion-diaria\\trace.zip"
+                                }
+                              ]
+                            }
+                          ],
+                          "status": "expected"
+                        }
+                      ],
+                      "id": "ce7b8aba9129c96592af-aefa98debac85c7767cd",
+                      "file": "operacion_diaria.spec.ts",
+                      "line": 35,
+                      "column": 9
+                    }
+                  ]
+                },
+                {
+                  "title": "Compras e Inventario (Admin)",
+                  "file": "operacion_diaria.spec.ts",
+                  "line": 52,
+                  "column": 12,
+                  "specs": [
+                    {
+                      "title": "Compras a proveedores y reabastecimiento de inventario - Día 2",
+                      "ok": true,
+                      "tags": [],
+                      "tests": [
+                        {
+                          "timeout": 30000,
+                          "annotations": [],
+                          "expectedStatus": "passed",
+                          "projectId": "operacion_diaria",
+                          "projectName": "operacion_diaria",
+                          "results": [
+                            {
+                              "workerIndex": 1,
+                              "parallelIndex": 0,
+                              "status": "passed",
+                              "duration": 1046,
+                              "errors": [],
+                              "stdout": [],
+                              "stderr": [],
+                              "retry": 0,
+                              "steps": [
+                                {
+                                  "title": "Generar Orden de Compra",
+                                  "duration": 0
+                                },
+                                {
+                                  "title": "Ingresar Factura de Proveedor",
+                                  "duration": 0
+                                }
+                              ],
+                              "startTime": "2026-07-01T16:11:30.840Z",
+                              "annotations": [],
+                              "attachments": [
+                                {
+                                  "name": "screenshot",
+                                  "contentType": "image/png",
+                                  "path": "C:\\laragon\\www\\nexora\\tests_certificacion\\evidencias\\results\\operacion_diaria-Certifica-a3a35-iento-de-inventario---Día-2-operacion-diaria\\test-finished-1.png"
+                                },
+                                {
+                                  "name": "video",
+                                  "contentType": "video/webm",
+                                  "path": "C:\\laragon\\www\\nexora\\tests_certificacion\\evidencias\\results\\operacion_diaria-Certifica-a3a35-iento-de-inventario---Día-2-operacion-diaria\\video.webm"
+                                },
+                                {
+                                  "name": "trace",
+                                  "contentType": "application/zip",
+                                  "path": "C:\\laragon\\www\\nexora\\tests_certificacion\\evidencias\\results\\operacion_diaria-Certifica-a3a35-iento-de-inventario---Día-2-operacion-diaria\\trace.zip"
+                                }
+                              ]
+                            }
+                          ],
+                          "status": "expected"
+                        }
+                      ],
+                      "id": "ce7b8aba9129c96592af-535fb245d5a46c61098a",
+                      "file": "operacion_diaria.spec.ts",
+                      "line": 55,
+                      "column": 9
+                    },
+                    {
+                      "title": "Ajustes de inventario y Kardex - Día 2",
+                      "ok": true,
+                      "tags": [],
+                      "tests": [
+                        {
+                          "timeout": 30000,
+                          "annotations": [],
+                          "expectedStatus": "passed",
+                          "projectId": "operacion_diaria",
+                          "projectName": "operacion_diaria",
+                          "results": [
+                            {
+                              "workerIndex": 1,
+                              "parallelIndex": 0,
+                              "status": "passed",
+                              "duration": 1047,
+                              "errors": [],
+                              "stdout": [],
+                              "stderr": [],
+                              "retry": 0,
+                              "steps": [
+                                {
+                                  "title": "Validar consistencia del Kardex",
+                                  "duration": 0
+                                }
+                              ],
+                              "startTime": "2026-07-01T16:11:31.924Z",
+                              "annotations": [],
+                              "attachments": [
+                                {
+                                  "name": "screenshot",
+                                  "contentType": "image/png",
+                                  "path": "C:\\laragon\\www\\nexora\\tests_certificacion\\evidencias\\results\\operacion_diaria-Certifica-1e41a-inventario-y-Kardex---Día-2-operacion-diaria\\test-finished-1.png"
+                                },
+                                {
+                                  "name": "video",
+                                  "contentType": "video/webm",
+                                  "path": "C:\\laragon\\www\\nexora\\tests_certificacion\\evidencias\\results\\operacion_diaria-Certifica-1e41a-inventario-y-Kardex---Día-2-operacion-diaria\\video.webm"
+                                },
+                                {
+                                  "name": "trace",
+                                  "contentType": "application/zip",
+                                  "path": "C:\\laragon\\www\\nexora\\tests_certificacion\\evidencias\\results\\operacion_diaria-Certifica-1e41a-inventario-y-Kardex---Día-2-operacion-diaria\\trace.zip"
+                                }
+                              ]
+                            }
+                          ],
+                          "status": "expected"
+                        }
+                      ],
+                      "id": "ce7b8aba9129c96592af-f53188c11b35b8dc8e33",
+                      "file": "operacion_diaria.spec.ts",
+                      "line": 67,
+                      "column": 9
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "title": "Día 3 de operación",
+              "file": "operacion_diaria.spec.ts",
+              "line": 9,
+              "column": 10,
+              "specs": [],
+              "suites": [
+                {
+                  "title": "Vendedor",
+                  "file": "operacion_diaria.spec.ts",
+                  "line": 11,
+                  "column": 12,
+                  "specs": [
+                    {
+                      "title": "Vendedor registra 10 cotizaciones y 5 ventas - Día 3",
+                      "ok": true,
+                      "tags": [],
+                      "tests": [
+                        {
+                          "timeout": 30000,
+                          "annotations": [],
+                          "expectedStatus": "passed",
+                          "projectId": "operacion_diaria",
+                          "projectName": "operacion_diaria",
+                          "results": [
+                            {
+                              "workerIndex": 1,
+                              "parallelIndex": 0,
+                              "status": "passed",
+                              "duration": 1925,
+                              "errors": [],
+                              "stdout": [],
+                              "stderr": [],
+                              "retry": 0,
+                              "steps": [
+                                {
+                                  "title": "Venta #1 del día 3",
+                                  "duration": 0
+                                },
+                                {
+                                  "title": "Venta #2 del día 3",
+                                  "duration": 0
+                                },
+                                {
+                                  "title": "Venta #3 del día 3",
+                                  "duration": 0
+                                },
+                                {
+                                  "title": "Venta #4 del día 3",
+                                  "duration": 0
+                                },
+                                {
+                                  "title": "Venta #5 del día 3",
+                                  "duration": 0
+                                }
+                              ],
+                              "startTime": "2026-07-01T16:11:33.012Z",
+                              "annotations": [],
+                              "attachments": [
+                                {
+                                  "name": "screenshot",
+                                  "contentType": "image/png",
+                                  "path": "C:\\laragon\\www\\nexora\\tests_certificacion\\evidencias\\results\\operacion_diaria-Certifica-ce658-zaciones-y-5-ventas---Día-3-operacion-diaria\\test-finished-1.png"
+                                },
+                                {
+                                  "name": "video",
+                                  "contentType": "video/webm",
+                                  "path": "C:\\laragon\\www\\nexora\\tests_certificacion\\evidencias\\results\\operacion_diaria-Certifica-ce658-zaciones-y-5-ventas---Día-3-operacion-diaria\\video.webm"
+                                },
+                                {
+                                  "name": "trace",
+                                  "contentType": "application/zip",
+                                  "path": "C:\\laragon\\www\\nexora\\tests_certificacion\\evidencias\\results\\operacion_diaria-Certifica-ce658-zaciones-y-5-ventas---Día-3-operacion-diaria\\trace.zip"
+                                }
+                              ]
+                            }
+                          ],
+                          "status": "expected"
+                        }
+                      ],
+                      "id": "ce7b8aba9129c96592af-f989163fdcb5c4a91a63",
+                      "file": "operacion_diaria.spec.ts",
+                      "line": 13,
+                      "column": 9
+                    }
+                  ]
+                },
+                {
+                  "title": "Cajero",
+                  "file": "operacion_diaria.spec.ts",
+                  "line": 33,
+                  "column": 12,
+                  "specs": [
+                    {
+                      "title": "Cajero recibe pagos y realiza cuadre de caja - Día 3",
+                      "ok": true,
+                      "tags": [],
+                      "tests": [
+                        {
+                          "timeout": 30000,
+                          "annotations": [],
+                          "expectedStatus": "passed",
+                          "projectId": "operacion_diaria",
+                          "projectName": "operacion_diaria",
+                          "results": [
+                            {
+                              "workerIndex": 1,
+                              "parallelIndex": 0,
+                              "status": "passed",
+                              "duration": 1062,
+                              "errors": [],
+                              "stdout": [],
+                              "stderr": [],
+                              "retry": 0,
+                              "steps": [
+                                {
+                                  "title": "Cobrar ventas de contado",
+                                  "duration": 0
+                                },
+                                {
+                                  "title": "Registrar gastos menores (Caja menor)",
+                                  "duration": 0
+                                },
+                                {
+                                  "title": "Cierre de caja",
+                                  "duration": 0
+                                }
+                              ],
+                              "startTime": "2026-07-01T16:11:34.986Z",
+                              "annotations": [],
+                              "attachments": [
+                                {
+                                  "name": "screenshot",
+                                  "contentType": "image/png",
+                                  "path": "C:\\laragon\\www\\nexora\\tests_certificacion\\evidencias\\results\\operacion_diaria-Certifica-22770-liza-cuadre-de-caja---Día-3-operacion-diaria\\test-finished-1.png"
+                                },
+                                {
+                                  "name": "video",
+                                  "contentType": "video/webm",
+                                  "path": "C:\\laragon\\www\\nexora\\tests_certificacion\\evidencias\\results\\operacion_diaria-Certifica-22770-liza-cuadre-de-caja---Día-3-operacion-diaria\\video.webm"
+                                },
+                                {
+                                  "name": "trace",
+                                  "contentType": "application/zip",
+                                  "path": "C:\\laragon\\www\\nexora\\tests_certificacion\\evidencias\\results\\operacion_diaria-Certifica-22770-liza-cuadre-de-caja---Día-3-operacion-diaria\\trace.zip"
+                                }
+                              ]
+                            }
+                          ],
+                          "status": "expected"
+                        }
+                      ],
+                      "id": "ce7b8aba9129c96592af-12ab7ad6802968e26b1b",
+                      "file": "operacion_diaria.spec.ts",
+                      "line": 35,
+                      "column": 9
+                    }
+                  ]
+                },
+                {
+                  "title": "Compras e Inventario (Admin)",
+                  "file": "operacion_diaria.spec.ts",
+                  "line": 52,
+                  "column": 12,
+                  "specs": [
+                    {
+                      "title": "Compras a proveedores y reabastecimiento de inventario - Día 3",
+                      "ok": true,
+                      "tags": [],
+                      "tests": [
+                        {
+                          "timeout": 30000,
+                          "annotations": [],
+                          "expectedStatus": "passed",
+                          "projectId": "operacion_diaria",
+                          "projectName": "operacion_diaria",
+                          "results": [
+                            {
+                              "workerIndex": 1,
+                              "parallelIndex": 0,
+                              "status": "passed",
+                              "duration": 1039,
+                              "errors": [],
+                              "stdout": [],
+                              "stderr": [],
+                              "retry": 0,
+                              "steps": [
+                                {
+                                  "title": "Generar Orden de Compra",
+                                  "duration": 1
+                                },
+                                {
+                                  "title": "Ingresar Factura de Proveedor",
+                                  "duration": 0
+                                }
+                              ],
+                              "startTime": "2026-07-01T16:11:36.084Z",
+                              "annotations": [],
+                              "attachments": [
+                                {
+                                  "name": "screenshot",
+                                  "contentType": "image/png",
+                                  "path": "C:\\laragon\\www\\nexora\\tests_certificacion\\evidencias\\results\\operacion_diaria-Certifica-03df1-iento-de-inventario---Día-3-operacion-diaria\\test-finished-1.png"
+                                },
+                                {
+                                  "name": "video",
+                                  "contentType": "video/webm",
+                                  "path": "C:\\laragon\\www\\nexora\\tests_certificacion\\evidencias\\results\\operacion_diaria-Certifica-03df1-iento-de-inventario---Día-3-operacion-diaria\\video.webm"
+                                },
+                                {
+                                  "name": "trace",
+                                  "contentType": "application/zip",
+                                  "path": "C:\\laragon\\www\\nexora\\tests_certificacion\\evidencias\\results\\operacion_diaria-Certifica-03df1-iento-de-inventario---Día-3-operacion-diaria\\trace.zip"
+                                }
+                              ]
+                            }
+                          ],
+                          "status": "expected"
+                        }
+                      ],
+                      "id": "ce7b8aba9129c96592af-91e53a21af7c59bdb90c",
+                      "file": "operacion_diaria.spec.ts",
+                      "line": 55,
+                      "column": 9
+                    },
+                    {
+                      "title": "Ajustes de inventario y Kardex - Día 3",
+                      "ok": true,
+                      "tags": [],
+                      "tests": [
+                        {
+                          "timeout": 30000,
+                          "annotations": [],
+                          "expectedStatus": "passed",
+                          "projectId": "operacion_diaria",
+                          "projectName": "operacion_diaria",
+                          "results": [
+                            {
+                              "workerIndex": 1,
+                              "parallelIndex": 0,
+                              "status": "passed",
+                              "duration": 1037,
+                              "errors": [],
+                              "stdout": [],
+                              "stderr": [],
+                              "retry": 0,
+                              "steps": [
+                                {
+                                  "title": "Validar consistencia del Kardex",
+                                  "duration": 0
+                                }
+                              ],
+                              "startTime": "2026-07-01T16:11:37.157Z",
+                              "annotations": [],
+                              "attachments": [
+                                {
+                                  "name": "screenshot",
+                                  "contentType": "image/png",
+                                  "path": "C:\\laragon\\www\\nexora\\tests_certificacion\\evidencias\\results\\operacion_diaria-Certifica-b0eca-inventario-y-Kardex---Día-3-operacion-diaria\\test-finished-1.png"
+                                },
+                                {
+                                  "name": "video",
+                                  "contentType": "video/webm",
+                                  "path": "C:\\laragon\\www\\nexora\\tests_certificacion\\evidencias\\results\\operacion_diaria-Certifica-b0eca-inventario-y-Kardex---Día-3-operacion-diaria\\video.webm"
+                                },
+                                {
+                                  "name": "trace",
+                                  "contentType": "application/zip",
+                                  "path": "C:\\laragon\\www\\nexora\\tests_certificacion\\evidencias\\results\\operacion_diaria-Certifica-b0eca-inventario-y-Kardex---Día-3-operacion-diaria\\trace.zip"
+                                }
+                              ]
+                            }
+                          ],
+                          "status": "expected"
+                        }
+                      ],
+                      "id": "ce7b8aba9129c96592af-3422e7fcb5a4efdf5d0b",
+                      "file": "operacion_diaria.spec.ts",
+                      "line": 67,
+                      "column": 9
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "taller_servicio.spec.ts",
+      "file": "taller_servicio.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Certificación Funcional: Módulo de Taller (Service Desk)",
+          "file": "taller_servicio.spec.ts",
+          "line": 4,
+          "column": 6,
+          "specs": [],
+          "suites": [
+            {
+              "title": "Recepcionista (Vendedor)",
+              "file": "taller_servicio.spec.ts",
+              "line": 7,
+              "column": 8,
+              "specs": [
+                {
+                  "title": "Recepcionista crea 5 órdenes de servicio",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "taller_servicio",
+                      "projectName": "taller_servicio",
+                      "results": [
+                        {
+                          "workerIndex": 2,
+                          "parallelIndex": 0,
+                          "status": "passed",
+                          "duration": 1343,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "steps": [
+                            {
+                              "title": "Crear orden 1",
+                              "duration": 1
+                            },
+                            {
+                              "title": "Crear orden 2",
+                              "duration": 0
+                            },
+                            {
+                              "title": "Crear orden 3",
+                              "duration": 0
+                            },
+                            {
+                              "title": "Crear orden 4",
+                              "duration": 0
+                            },
+                            {
+                              "title": "Crear orden 5",
+                              "duration": 0
+                            }
+                          ],
+                          "startTime": "2026-07-01T16:11:39.243Z",
+                          "annotations": [],
+                          "attachments": [
+                            {
+                              "name": "screenshot",
+                              "contentType": "image/png",
+                              "path": "C:\\laragon\\www\\nexora\\tests_certificacion\\evidencias\\results\\taller_servicio-Certificac-a4d13--crea-5-órdenes-de-servicio-taller-servicio\\test-finished-1.png"
+                            },
+                            {
+                              "name": "video",
+                              "contentType": "video/webm",
+                              "path": "C:\\laragon\\www\\nexora\\tests_certificacion\\evidencias\\results\\taller_servicio-Certificac-a4d13--crea-5-órdenes-de-servicio-taller-servicio\\video.webm"
+                            },
+                            {
+                              "name": "trace",
+                              "contentType": "application/zip",
+                              "path": "C:\\laragon\\www\\nexora\\tests_certificacion\\evidencias\\results\\taller_servicio-Certificac-a4d13--crea-5-órdenes-de-servicio-taller-servicio\\trace.zip"
+                            }
+                          ]
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "d62f3418a3448061a079-04cd05eef9644dde7a26",
+                  "file": "taller_servicio.spec.ts",
+                  "line": 9,
+                  "column": 5
+                }
+              ]
+            },
+            {
+              "title": "Técnico",
+              "file": "taller_servicio.spec.ts",
+              "line": 20,
+              "column": 8,
+              "specs": [
+                {
+                  "title": "Técnico atiende múltiples órdenes",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "taller_servicio",
+                      "projectName": "taller_servicio",
+                      "results": [
+                        {
+                          "workerIndex": 2,
+                          "parallelIndex": 0,
+                          "status": "passed",
+                          "duration": 1074,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "steps": [
+                            {
+                              "title": "Revisar y diagnosticar",
+                              "duration": 0
+                            },
+                            {
+                              "title": "Adjuntar fotografías de evidencia",
+                              "duration": 0
+                            },
+                            {
+                              "title": "Cambiar estado a Reparado/Terminado",
+                              "duration": 0
+                            }
+                          ],
+                          "startTime": "2026-07-01T16:11:40.871Z",
+                          "annotations": [],
+                          "attachments": [
+                            {
+                              "name": "screenshot",
+                              "contentType": "image/png",
+                              "path": "C:\\laragon\\www\\nexora\\tests_certificacion\\evidencias\\results\\taller_servicio-Certificac-22e76-o-atiende-múltiples-órdenes-taller-servicio\\test-finished-1.png"
+                            },
+                            {
+                              "name": "video",
+                              "contentType": "video/webm",
+                              "path": "C:\\laragon\\www\\nexora\\tests_certificacion\\evidencias\\results\\taller_servicio-Certificac-22e76-o-atiende-múltiples-órdenes-taller-servicio\\video.webm"
+                            },
+                            {
+                              "name": "trace",
+                              "contentType": "application/zip",
+                              "path": "C:\\laragon\\www\\nexora\\tests_certificacion\\evidencias\\results\\taller_servicio-Certificac-22e76-o-atiende-múltiples-órdenes-taller-servicio\\trace.zip"
+                            }
+                          ]
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "d62f3418a3448061a079-ce02f38c3ae841d0d0b9",
+                  "file": "taller_servicio.spec.ts",
+                  "line": 22,
+                  "column": 5
+                }
+              ]
+            },
+            {
+              "title": "Cajero",
+              "file": "taller_servicio.spec.ts",
+              "line": 39,
+              "column": 8,
+              "specs": [
+                {
+                  "title": "Facturar orden de servicio finalizada",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "taller_servicio",
+                      "projectName": "taller_servicio",
+                      "results": [
+                        {
+                          "workerIndex": 2,
+                          "parallelIndex": 0,
+                          "status": "passed",
+                          "duration": 1058,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "steps": [
+                            {
+                              "title": "Generar factura desde orden",
+                              "duration": 0
+                            }
+                          ],
+                          "startTime": "2026-07-01T16:11:41.991Z",
+                          "annotations": [],
+                          "attachments": [
+                            {
+                              "name": "screenshot",
+                              "contentType": "image/png",
+                              "path": "C:\\laragon\\www\\nexora\\tests_certificacion\\evidencias\\results\\taller_servicio-Certificac-a2c64-rden-de-servicio-finalizada-taller-servicio\\test-finished-1.png"
+                            },
+                            {
+                              "name": "video",
+                              "contentType": "video/webm",
+                              "path": "C:\\laragon\\www\\nexora\\tests_certificacion\\evidencias\\results\\taller_servicio-Certificac-a2c64-rden-de-servicio-finalizada-taller-servicio\\video.webm"
+                            },
+                            {
+                              "name": "trace",
+                              "contentType": "application/zip",
+                              "path": "C:\\laragon\\www\\nexora\\tests_certificacion\\evidencias\\results\\taller_servicio-Certificac-a2c64-rden-de-servicio-finalizada-taller-servicio\\trace.zip"
+                            }
+                          ]
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "d62f3418a3448061a079-532e215355374d24b082",
+                  "file": "taller_servicio.spec.ts",
+                  "line": 41,
+                  "column": 5
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "recursos_humanos.spec.ts",
+      "file": "recursos_humanos.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Certificación Funcional: Recursos Humanos y Nómina",
+          "file": "recursos_humanos.spec.ts",
+          "line": 4,
+          "column": 6,
+          "specs": [],
+          "suites": [
+            {
+              "title": "Gestión de Personal (RRHH)",
+              "file": "recursos_humanos.spec.ts",
+              "line": 5,
+              "column": 8,
+              "specs": [
+                {
+                  "title": "Flujo completo del empleado",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "recursos_humanos",
+                      "projectName": "recursos_humanos",
+                      "results": [
+                        {
+                          "workerIndex": 3,
+                          "parallelIndex": 0,
+                          "status": "passed",
+                          "duration": 2041,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "steps": [
+                            {
+                              "title": "Contratar empleado",
+                              "duration": 0
+                            },
+                            {
+                              "title": "Registrar novedades (Incapacidades, Vacaciones)",
+                              "duration": 0
+                            },
+                            {
+                              "title": "Retiro de empleado",
+                              "duration": 0
+                            }
+                          ],
+                          "startTime": "2026-07-01T16:11:44.112Z",
+                          "annotations": [],
+                          "attachments": [
+                            {
+                              "name": "screenshot",
+                              "contentType": "image/png",
+                              "path": "C:\\laragon\\www\\nexora\\tests_certificacion\\evidencias\\results\\recursos_humanos-Certifica-3fed4-Flujo-completo-del-empleado-recursos-humanos\\test-finished-1.png"
+                            },
+                            {
+                              "name": "video",
+                              "contentType": "video/webm",
+                              "path": "C:\\laragon\\www\\nexora\\tests_certificacion\\evidencias\\results\\recursos_humanos-Certifica-3fed4-Flujo-completo-del-empleado-recursos-humanos\\video.webm"
+                            },
+                            {
+                              "name": "trace",
+                              "contentType": "application/zip",
+                              "path": "C:\\laragon\\www\\nexora\\tests_certificacion\\evidencias\\results\\recursos_humanos-Certifica-3fed4-Flujo-completo-del-empleado-recursos-humanos\\trace.zip"
+                            }
+                          ]
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "1fdf547c0a0508991057-20ec1a91c8bd2c9da988",
+                  "file": "recursos_humanos.spec.ts",
+                  "line": 8,
+                  "column": 5
+                }
+              ]
+            },
+            {
+              "title": "Liquidación (Contador)",
+              "file": "recursos_humanos.spec.ts",
+              "line": 25,
+              "column": 8,
+              "specs": [
+                {
+                  "title": "Generación de Nómina",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "recursos_humanos",
+                      "projectName": "recursos_humanos",
+                      "results": [
+                        {
+                          "workerIndex": 3,
+                          "parallelIndex": 0,
+                          "status": "passed",
+                          "duration": 1078,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "steps": [
+                            {
+                              "title": "Generar liquidación del período",
+                              "duration": 0
+                            },
+                            {
+                              "title": "Validar cálculos de devengos y deducciones",
+                              "duration": 1
+                            }
+                          ],
+                          "startTime": "2026-07-01T16:11:46.450Z",
+                          "annotations": [],
+                          "attachments": [
+                            {
+                              "name": "screenshot",
+                              "contentType": "image/png",
+                              "path": "C:\\laragon\\www\\nexora\\tests_certificacion\\evidencias\\results\\recursos_humanos-Certifica-039ba-ntador-Generación-de-Nómina-recursos-humanos\\test-finished-1.png"
+                            },
+                            {
+                              "name": "video",
+                              "contentType": "video/webm",
+                              "path": "C:\\laragon\\www\\nexora\\tests_certificacion\\evidencias\\results\\recursos_humanos-Certifica-039ba-ntador-Generación-de-Nómina-recursos-humanos\\video.webm"
+                            },
+                            {
+                              "name": "trace",
+                              "contentType": "application/zip",
+                              "path": "C:\\laragon\\www\\nexora\\tests_certificacion\\evidencias\\results\\recursos_humanos-Certifica-039ba-ntador-Generación-de-Nómina-recursos-humanos\\trace.zip"
+                            }
+                          ]
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "1fdf547c0a0508991057-bbf8a9d4c912f580c3bb",
+                  "file": "recursos_humanos.spec.ts",
+                  "line": 27,
+                  "column": 5
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "seguridad_extremos.spec.ts",
+      "file": "seguridad_extremos.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Certificación Funcional: Seguridad y Casos Extremos",
+          "file": "seguridad_extremos.spec.ts",
+          "line": 4,
+          "column": 6,
+          "specs": [],
+          "suites": [
+            {
+              "title": "Acceso limitado (Vendedor)",
+              "file": "seguridad_extremos.spec.ts",
+              "line": 6,
+              "column": 8,
+              "specs": [
+                {
+                  "title": "Prevención de accesos no autorizados",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "seguridad_extremos",
+                      "projectName": "seguridad_extremos",
+                      "results": [
+                        {
+                          "workerIndex": 4,
+                          "parallelIndex": 0,
+                          "status": "passed",
+                          "duration": 1368,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "steps": [
+                            {
+                              "title": "Intentar entrar a roles y permisos",
+                              "duration": 811
+                            }
+                          ],
+                          "startTime": "2026-07-01T16:11:48.590Z",
+                          "annotations": [],
+                          "attachments": [
+                            {
+                              "name": "screenshot",
+                              "contentType": "image/png",
+                              "path": "C:\\laragon\\www\\nexora\\tests_certificacion\\evidencias\\results\\seguridad_extremos-Certifi-1ba32-n-de-accesos-no-autorizados-seguridad-extremos\\test-finished-1.png"
+                            },
+                            {
+                              "name": "video",
+                              "contentType": "video/webm",
+                              "path": "C:\\laragon\\www\\nexora\\tests_certificacion\\evidencias\\results\\seguridad_extremos-Certifi-1ba32-n-de-accesos-no-autorizados-seguridad-extremos\\video.webm"
+                            },
+                            {
+                              "name": "trace",
+                              "contentType": "application/zip",
+                              "path": "C:\\laragon\\www\\nexora\\tests_certificacion\\evidencias\\results\\seguridad_extremos-Certifi-1ba32-n-de-accesos-no-autorizados-seguridad-extremos\\trace.zip"
+                            }
+                          ]
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "35313addbc29c1d79405-939dd287fd1fcbe0aca4",
+                  "file": "seguridad_extremos.spec.ts",
+                  "line": 9,
+                  "column": 5
+                }
+              ]
+            },
+            {
+              "title": "Acceso administrativo (Admin)",
+              "file": "seguridad_extremos.spec.ts",
+              "line": 20,
+              "column": 8,
+              "specs": [
+                {
+                  "title": "Validaciones extremas de formularios",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "seguridad_extremos",
+                      "projectName": "seguridad_extremos",
+                      "results": [
+                        {
+                          "workerIndex": 4,
+                          "parallelIndex": 0,
+                          "status": "passed",
+                          "duration": 5351,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "steps": [
+                            {
+                              "title": "Envío de formulario vacío",
+                              "duration": 3179
+                            },
+                            {
+                              "title": "Inyección XSS en nombre",
+                              "duration": 54
+                            },
+                            {
+                              "title": "Textos extremadamente largos y caracteres especiales (Emojis)",
+                              "duration": 179
+                            }
+                          ],
+                          "startTime": "2026-07-01T16:11:50.256Z",
+                          "annotations": [],
+                          "attachments": [
+                            {
+                              "name": "screenshot",
+                              "contentType": "image/png",
+                              "path": "C:\\laragon\\www\\nexora\\tests_certificacion\\evidencias\\results\\seguridad_extremos-Certifi-ccc23-nes-extremas-de-formularios-seguridad-extremos\\test-finished-1.png"
+                            },
+                            {
+                              "name": "video",
+                              "contentType": "video/webm",
+                              "path": "C:\\laragon\\www\\nexora\\tests_certificacion\\evidencias\\results\\seguridad_extremos-Certifi-ccc23-nes-extremas-de-formularios-seguridad-extremos\\video.webm"
+                            },
+                            {
+                              "name": "trace",
+                              "contentType": "application/zip",
+                              "path": "C:\\laragon\\www\\nexora\\tests_certificacion\\evidencias\\results\\seguridad_extremos-Certifi-ccc23-nes-extremas-de-formularios-seguridad-extremos\\trace.zip"
+                            }
+                          ]
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "35313addbc29c1d79405-e0b6397ea170a9a217f1",
+                  "file": "seguridad_extremos.spec.ts",
+                  "line": 23,
+                  "column": 5
+                },
+                {
+                  "title": "Chaos Monkey: Doble click en envío de formulario",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "seguridad_extremos",
+                      "projectName": "seguridad_extremos",
+                      "results": [
+                        {
+                          "workerIndex": 4,
+                          "parallelIndex": 0,
+                          "status": "passed",
+                          "duration": 421,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2026-07-01T16:11:55.837Z",
+                          "annotations": [],
+                          "attachments": [
+                            {
+                              "name": "screenshot",
+                              "contentType": "image/png",
+                              "path": "C:\\laragon\\www\\nexora\\tests_certificacion\\evidencias\\results\\seguridad_extremos-Certifi-661d3-lick-en-envío-de-formulario-seguridad-extremos\\test-finished-1.png"
+                            },
+                            {
+                              "name": "video",
+                              "contentType": "video/webm",
+                              "path": "C:\\laragon\\www\\nexora\\tests_certificacion\\evidencias\\results\\seguridad_extremos-Certifi-661d3-lick-en-envío-de-formulario-seguridad-extremos\\video.webm"
+                            },
+                            {
+                              "name": "trace",
+                              "contentType": "application/zip",
+                              "path": "C:\\laragon\\www\\nexora\\tests_certificacion\\evidencias\\results\\seguridad_extremos-Certifi-661d3-lick-en-envío-de-formulario-seguridad-extremos\\trace.zip"
+                            }
+                          ]
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "35313addbc29c1d79405-9f21b03c9e81c2522d2b",
+                  "file": "seguridad_extremos.spec.ts",
+                  "line": 47,
+                  "column": 5
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "reportes_rendimiento.spec.ts",
+      "file": "reportes_rendimiento.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Certificación Funcional: Reportes y Rendimiento",
+          "file": "reportes_rendimiento.spec.ts",
+          "line": 4,
+          "column": 6,
+          "specs": [
+            {
+              "title": "Apertura y exportación de todos los reportes",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "reportes_rendimiento",
+                  "projectName": "reportes_rendimiento",
+                  "results": [
+                    {
+                      "workerIndex": 5,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2307,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "steps": [
+                        {
+                          "title": "Validar reporte en /sales/reports",
+                          "duration": 669
+                        },
+                        {
+                          "title": "Validar reporte en /inventory/reports",
+                          "duration": 343
+                        },
+                        {
+                          "title": "Validar reporte en /accounting/reports",
+                          "duration": 631
+                        }
+                      ],
+                      "startTime": "2026-07-01T16:11:57.271Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "C:\\laragon\\www\\nexora\\tests_certificacion\\evidencias\\results\\reportes_rendimiento-Certi-a71ad-ación-de-todos-los-reportes-reportes-rendimiento\\test-finished-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "C:\\laragon\\www\\nexora\\tests_certificacion\\evidencias\\results\\reportes_rendimiento-Certi-a71ad-ación-de-todos-los-reportes-reportes-rendimiento\\video.webm"
+                        },
+                        {
+                          "name": "trace",
+                          "contentType": "application/zip",
+                          "path": "C:\\laragon\\www\\nexora\\tests_certificacion\\evidencias\\results\\reportes_rendimiento-Certi-a71ad-ación-de-todos-los-reportes-reportes-rendimiento\\trace.zip"
+                        }
+                      ]
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "87c178221ab50c17015f-25cd6a2686062dc101e9",
+              "file": "reportes_rendimiento.spec.ts",
+              "line": 7,
+              "column": 3
+            },
+            {
+              "title": "Validación de rendimiento y consultas SQL N+1",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "reportes_rendimiento",
+                  "projectName": "reportes_rendimiento",
+                  "results": [
+                    {
+                      "workerIndex": 5,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1628,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "steps": [
+                        {
+                          "title": "Navegar a vista de grilla con 1000 registros",
+                          "duration": 1192
+                        }
+                      ],
+                      "startTime": "2026-07-01T16:11:59.860Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "C:\\laragon\\www\\nexora\\tests_certificacion\\evidencias\\results\\reportes_rendimiento-Certi-9bceb-imiento-y-consultas-SQL-N-1-reportes-rendimiento\\test-finished-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "C:\\laragon\\www\\nexora\\tests_certificacion\\evidencias\\results\\reportes_rendimiento-Certi-9bceb-imiento-y-consultas-SQL-N-1-reportes-rendimiento\\video.webm"
+                        },
+                        {
+                          "name": "trace",
+                          "contentType": "application/zip",
+                          "path": "C:\\laragon\\www\\nexora\\tests_certificacion\\evidencias\\results\\reportes_rendimiento-Certi-9bceb-imiento-y-consultas-SQL-N-1-reportes-rendimiento\\trace.zip"
+                        }
+                      ]
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "87c178221ab50c17015f-da0380b4dd51fa803cb5",
+              "file": "reportes_rendimiento.spec.ts",
+              "line": 25,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-07-01T16:10:24.736Z",
+    "duration": 96939.61499999999,
+    "expected": 29,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  }
+}

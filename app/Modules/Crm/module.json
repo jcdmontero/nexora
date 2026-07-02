@@ -1,0 +1,25 @@
+{
+    "code": "crm",
+    "name": "CRM",
+    "version": "1.0.0",
+    "description": "Gestión de clientes, contactos y oportunidades comerciales.",
+    "icon": "Users",
+    "core": false,
+    "dependencies": [],
+    "permissions": [
+        "crm:view",
+        "crm:create",
+        "crm:edit",
+        "crm:delete"
+    ],
+    "menus": [
+        {
+            "section": "CRM",
+            "icon": "Users",
+            "items": [
+                { "label": "Clientes", "route": "crm.clientes.index", "permission": "crm:view" },
+                { "label": "Oportunidades", "route": "crm.oportunidades.index", "permission": "crm:view" }
+            ]
+        }
+    ]
+}

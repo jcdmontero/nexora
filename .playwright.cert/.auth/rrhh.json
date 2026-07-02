@@ -1,0 +1,35 @@
+{
+  "cookies": [
+    {
+      "name": "XSRF-TOKEN",
+      "value": "eyJpdiI6IkhHTWx6bzNxQnRWVThVdE51ZWdIOXc9PSIsInZhbHVlIjoib2Q0anhWRHYrR09HUXB4M3BZdGE3V0hHSzZ3dFBuTjhCWWNoYVpwWW42NmI5TE91Q25VenVsQWxJY0ozNUhMdGZqdEdPNERCVUdRVjk4NXJXaExXU05GWDJCY1JUVTEyWjVCV1VCZk9IUlpsV1NBRDBtR0lkMHdOYU1WRzVEQlEiLCJtYWMiOiJlMjU0OWQ1NmMzMGI0NDJjNDU1ODVmYzlmNDA3YzQzM2ZmMmI5MGFlOGNhMWViODQ2NzY5NjdlMzBhYzRhNTFhIiwidGFnIjoiIn0%3D",
+      "domain": "localhost",
+      "path": "/",
+      "expires": 1782929477.142786,
+      "httpOnly": false,
+      "secure": false,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "nexora-session",
+      "value": "eyJpdiI6ImxhSWZ5UXNEMEVtUEVxOGtQT21qZ3c9PSIsInZhbHVlIjoiMmpYOU1iLzFreGJEaXhlNkRvRFd4SjhOSlhRTi9sakxiVHBYSmRvdktaUG9WbzlQVjVCVTZXOWVtdEJhVVdoZk1BRzVCTyt1Wm1XZFRrN3dqenB5d2poaFk2cXpLQUFWZExoUFM0UkllV1lEMHVFb1RHMmRERVBYdHhDYnJnWDYiLCJtYWMiOiIzYmRiNmQ4YmVkM2VhZGIzMzNhY2E5OWI2MmY5YjU5OGE0OGYxYzk5Mjk0MDExNDYzYTI1OWE1NzMwMzE5MDI4IiwidGFnIjoiIn0%3D",
+      "domain": "localhost",
+      "path": "/",
+      "expires": 1782929477.142964,
+      "httpOnly": true,
+      "secure": false,
+      "sameSite": "Lax"
+    }
+  ],
+  "origins": [
+    {
+      "origin": "http://localhost:8001",
+      "localStorage": [
+        {
+          "name": "theme",
+          "value": "light"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,29 @@
+{
+    "code": "inventory",
+    "name": "Inventario",
+    "version": "1.0.0",
+    "description": "Catálogo de productos, control de stock y alertas de existencias.",
+    "icon": "Package",
+    "core": false,
+    "dependencies": [],
+    "permissions": [
+        "inventory:view",
+        "inventory:create",
+        "inventory:edit",
+        "inventory:delete"
+    ],
+    "menus": [
+        {
+            "section": "Inventario",
+            "icon": "Package",
+            "items": [
+                { "label": "Productos", "route": "inventory.productos.index", "permission": "inventory:view" },
+                { "label": "Entradas y Salidas", "route": "inventory.ajustes.create", "permission": "inventory:view" },
+                { "label": "Kardex", "route": "inventory.kardex.index", "permission": "inventory:view" },
+                { "label": "Traslados", "route": "inventory.traslados.index", "permission": "inventory:view" },
+                { "label": "Categorías", "route": "inventory.categorias.index", "permission": "inventory:view" },
+                { "label": "Marcas", "route": "inventory.marcas.index", "permission": "inventory:view" }
+            ]
+        }
+    ]
+}

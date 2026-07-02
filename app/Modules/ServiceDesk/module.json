@@ -1,0 +1,56 @@
+{
+    "code": "service-desk",
+    "name": "Servicio Técnico",
+    "version": "1.0.0",
+    "description": "Órdenes de trabajo, diagnóstico, garantías y seguimiento de reparaciones.",
+    "icon": "Wrench",
+    "core": false,
+    "dependencies": ["crm", "cash", "purchasing", "notifications"],
+
+    "// NOTA DE DISEÑO (cambio respecto al legacy servicemanager) //": "",
+    "// En el legacy, los técnicos eran usuarios (users) con rol TECNICO o empleados (rh_empleados)": "",
+    "// con cargo productivo (es_productivo = true). Ambas opciones REQUERÍAN RRHH activo.": "",
+    "// ": "",
+    "// En Nexora creamos sd_prestadores como la entidad única de técnicos, que permite:": "",
+    "// - CONTRATISTA: externo, se le paga por comisión (sin RRHH).": "",
+    "// - EMPLEADO: vinculado a hr_empleados (si RRHH está activo).": "",
+    "// - FREELANCE / COMISIONISTA: otras modalidades.": "",
+    "// ": "",
+    "// ServiceDesk NO depende de RRHH. Puede funcionar completamente independiente.": "",
+    "// Las comisiones se liquidan por período y generan cuentas por pagar.": "",
+    "// ": "",
+    "// ═══════════════════════════════════════════════════════════════": "",
+    "// Este cambio fue implementado el 2026-06-21 como parte de la": "",
+    "// Fase 1.5 del desarrollo de Nexora. No existe en el código": "",
+    "// original de servicemanager.": "",
+    "// ═══════════════════════════════════════════════════════════════": "",
+
+    "permissions": [
+        "service-desk:view",
+        "service-desk:create",
+        "service-desk:edit",
+        "service-desk:delete",
+        "service-desk:assign"
+    ],
+    "menus": [
+        {
+            "section": "SERVICIO TÉCNICO",
+            "icon": "Wrench",
+            "items": [
+                { "label": "Órdenes", "route": "service-desk.ordenes.index", "permission": "service-desk:view" },
+                { "label": "Garantías", "route": "service-desk.garantias.index", "permission": "service-desk:view" },
+                { "type": "separator" },
+                { "type": "label", "label": "TÉCNICOS" },
+                { "label": "Prestadores", "route": "service-desk.prestadores.index", "permission": "service-desk:view" },
+                { "label": "Comisiones", "route": "service-desk.comisiones.index", "permission": "service-desk:view" },
+                { "type": "separator" },
+                { "type": "label", "label": "CATÁLOGOS" },
+                { "label": "Tipos de equipo", "route": "service-desk.tipos-equipo.index", "permission": "service-desk:view" },
+                { "label": "Marcas de equipo", "route": "service-desk.marcas.index", "permission": "service-desk:view" },
+                { "label": "Modelos de equipo", "route": "service-desk.modelos.index", "permission": "service-desk:view" },
+                { "label": "Servicios", "route": "service-desk.servicios.index", "permission": "service-desk:view" },
+                { "label": "Checklist de recepción", "route": "service-desk.checklist.index", "permission": "service-desk:view" }
+            ]
+        }
+    ]
+}

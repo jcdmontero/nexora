@@ -1,0 +1,76 @@
+# Dependencies
+/node_modules
+/vendor
+/.bundle
+
+# Build artifacts
+/public/build
+/public/hot
+/public/storage
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# IDE files
+/.idea
+/.vscode
+/*.swp
+/*.swo
+
+# Git
+.git
+.gitignore
+
+# Testing
+/tests
+/phpunit.xml
+/playwright.config.ts
+/tests/
+/tests_certificacion/
+
+# Documentation
+*.md
+!README.md
+
+# Docker files
+/docker
+/docker-compose.yml
+/Dockerfile
+
+# Service Manager (legacy)
+/servicemanager
+
+# Logs
+/storage/logs/*
+!storage/logs/.gitkeep
+
+# Cache
+/storage/framework/cache/*
+!storage/framework/cache/.gitkeep
+/storage/framework/sessions/*
+!storage/framework/sessions/.gitkeep
+/storage/framework/views/*
+!storage/framework/views/.gitkeep
+
+# Temporary files
+/tmp
+/temp
+*.tmp
+*.temp
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Agent configs
+.opencode
+.agents
+.claude
+.codex
+.mimocode
+
+# Playwright auth
+.playwright
+.playwright.cert

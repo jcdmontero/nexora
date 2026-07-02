@@ -1,0 +1,25 @@
+{
+    "code": "purchasing",
+    "name": "Compras",
+    "version": "1.0.0",
+    "description": "Gestión de proveedores, órdenes de compra y recepción de mercancía.",
+    "icon": "Truck",
+    "core": false,
+    "dependencies": ["inventory"],
+    "permissions": [
+        "purchasing:view",
+        "purchasing:create",
+        "purchasing:edit",
+        "purchasing:delete"
+    ],
+    "menus": [
+        {
+            "section": "COMPRAS",
+            "icon": "Truck",
+            "items": [
+                { "label": "Proveedores", "route": "purchasing.proveedores.index", "permission": "purchasing:view" },
+                { "label": "Órdenes de Compra", "route": "purchasing.ordenes.index", "permission": "purchasing:view" }
+            ]
+        }
+    ]
+}

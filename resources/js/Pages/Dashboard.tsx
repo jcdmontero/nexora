@@ -116,11 +116,26 @@ export default function Dashboard() {
 
   const qAccess = (quickAccess && quickAccess.length > 0) ? quickAccess : [
     { label: 'Nuevo usuario', route: 'core.users.create', icon: 'user-plus', color: 'indigo' },
-    { label: 'Abrir Caja', route: 'cash.arqueo.index', icon: 'wallet', color: 'emerald' },
+    { label: 'Abrir Caja', route: 'cash.caja.index', icon: 'wallet', color: 'emerald' },
     { label: 'Ver usuarios', route: 'core.users.index', icon: 'users', color: 'emerald' },
     { label: 'Roles y Permisos', route: 'core.roles.index', icon: 'shield-lock', color: 'pro' },
     { label: 'Configuración', route: 'core.tenant.edit', icon: 'settings', color: 'default' },
   ]
+
+  const getModuleRoute = (section: string): string => {
+    const lbl = section.toLowerCase()
+    if (lbl.includes('conta')) return 'accounting.periodos.index'
+    if (lbl.includes('tesor') || lbl.includes('caja')) return 'cash.caja.index'
+    if (lbl.includes('crm')) return 'crm.clientes.index'
+    if (lbl.includes('inv')) return 'inventory.productos.index'
+    if (lbl.includes('compra')) return 'purchasing.ordenes.index'
+    if (lbl.includes('venta')) return 'sales.facturas.index'
+    if (lbl.includes('serv')) return 'service-desk.ordenes.index'
+    if (lbl.includes('recursos') || lbl.includes('hr')) return 'hr.dashboard'
+    if (lbl.includes('nómina') || lbl.includes('payroll')) return 'payroll.periodos.index'
+    if (lbl.includes('notif')) return 'notifications.index'
+    return ''
+  }
   
   const personalTasks = Array.isArray(props.personalTasks) ? props.personalTasks : []
   const allTasks = [
@@ -206,16 +221,27 @@ export default function Dashboard() {
           <span className="quick-label">Acceso rápido</span>
           <div className="quick-divider"></div>
           
-          {qAccess.map((item) => (
-            <Link 
-              key={item.label} 
-              href={item.route ? (route().has(item.route) ? route(item.route) : '#') : '#'} 
-              className={getBtnClass(item.color)} 
-              onClick={() => toast(`Abriendo ${item.label}`, 'info')}
-            >
-              <i className={`ti ti-${getIcon(item.icon)}`}></i> {item.label}
-            </Link>
-          ))}
+          {qAccess.map((item) => {
+            const hasRoute = item.route && route().has(item.route);
+            const href = hasRoute ? route(item.route!) : '#';
+            return (
+              <Link 
+                key={item.label} 
+                href={href} 
+                className={getBtnClass(item.color)} 
+                onClick={(e) => {
+                  if (!hasRoute) {
+                    e.preventDefault();
+                    toast(`El acceso a "${item.label}" no está disponible en este momento`, 'warning');
+                  } else {
+                    toast(`Abriendo ${item.label}`, 'info');
+                  }
+                }}
+              >
+                <i className={`ti ti-${getIcon(item.icon)}`}></i> {item.label}
+              </Link>
+            );
+          })}
           
           <button 
             type="button" 
@@ -272,7 +298,14 @@ export default function Dashboard() {
           <div className="card">
             <div className="card-header">
               <div className="card-title"><i className="ti ti-chart-line"></i> Actividad de la semana</div>
-              <div className="card-action">Ver detalles <i className="ti ti-arrow-right" style={{ fontSize: 12 }}></i></div>
+              <button 
+                type="button"
+                className="card-action" 
+                onClick={() => toast('Cargando detalles de actividad semanal...', 'info')}
+                style={{ background: 'none', border: 'none', font: 'inherit', color: 'var(--text-accent)', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}
+              >
+                Ver detalles <i className="ti ti-arrow-right" style={{ fontSize: 12 }}></i>
+              </button>
             </div>
             <div className="chart-wrap">
               <ResponsiveContainer width="100%" height="100%">
@@ -314,14 +347,28 @@ export default function Dashboard() {
                 if (lbl.includes('compra')) { icon = 'ti-shopping-cart'; bg = 'var(--bg-danger)'; tc = 'var(--text-danger)' }
                 if (lbl.includes('venta')) { icon = 'ti-chart-bar'; bg = 'var(--bg-success)'; tc = 'var(--text-success)' }
                 if (lbl.includes('serv')) { icon = 'ti-tool'; bg = 'var(--bg-accent)'; tc = 'var(--text-accent)' }
+                if (lbl.includes('recursos') || lbl.includes('hr')) { icon = 'ti-user'; bg = 'var(--bg-accent)'; tc = 'var(--text-accent)' }
+                if (lbl.includes('nómina') || lbl.includes('payroll')) { icon = 'ti-receipt'; bg = 'var(--bg-success)'; tc = 'var(--text-success)' }
+                if (lbl.includes('notif')) { icon = 'ti-bell'; bg = 'var(--bg-warning)'; tc = 'var(--text-warning)' }
+
+                const routeName = getModuleRoute(mod.section);
+                const hasRoute = routeName && route().has(routeName);
+                const href = hasRoute ? route(routeName) : '#';
 
                 return (
-                  <button 
+                  <Link 
                     key={mod.section} 
+                    href={href}
                     className="mod-item" 
-                    onClick={() => toast(`Abriendo ${mod.section}`, 'info')}
-                    type="button"
-                    style={{ background: 'none', border: '0.5px solid var(--border)', textAlign: 'left', font: 'inherit', width: '100%' }}
+                    onClick={(e) => {
+                      if (!hasRoute) {
+                        e.preventDefault();
+                        toast(`El módulo ${mod.section} no tiene una ruta principal configurada en este momento`, 'warning');
+                      } else {
+                        toast(`Abriendo ${mod.section}`, 'info');
+                      }
+                    }}
+                    style={{ border: '0.5px solid var(--border)', textAlign: 'left', font: 'inherit', width: '100%', textDecoration: 'none' }}
                   >
                     <div className="mod-icon" style={{ background: bg }}>
                       <i className={`ti ${icon}`} style={{ color: tc }}></i>
@@ -331,7 +378,7 @@ export default function Dashboard() {
                       <div className="mod-count">Activo</div>
                     </div>
                     <i className="ti ti-chevron-right mod-arrow"></i>
-                  </button>
+                  </Link>
                 )
               })}
             </div>
@@ -343,7 +390,14 @@ export default function Dashboard() {
           <div className="card">
             <div className="card-header">
               <div className="card-title"><i className="ti ti-activity"></i> Actividad reciente</div>
-              <div className="card-action">Ver todo <i className="ti ti-arrow-right" style={{ fontSize: 12 }}></i></div>
+              <button 
+                type="button"
+                className="card-action" 
+                onClick={() => toast('Cargando el registro completo de actividad...', 'info')}
+                style={{ background: 'none', border: 'none', font: 'inherit', color: 'var(--text-accent)', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}
+              >
+                Ver todo <i className="ti ti-arrow-right" style={{ fontSize: 12 }}></i>
+              </button>
             </div>
             <div>
               {recentActivity.length === 0 && (

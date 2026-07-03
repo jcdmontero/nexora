@@ -3,6 +3,8 @@
 namespace App\Jobs;
 
 use App\Core\Models\Tenant;
+use App\Modules\Hr\Models\ConfiguracionLegal;
+use App\Modules\Hr\Models\Empleado;
 use App\Modules\Payroll\Services\NominaService;
 use App\Modules\Payroll\Models\PeriodoNomina;
 use Illuminate\Bus\Batchable;
@@ -18,20 +20,19 @@ class LiquidarNominaJob implements ShouldQueue
     use Batchable, Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public $tries = 2;
-    public $timeout = 300; // 5 minutes per employee batch
+    public $timeout = 300;
     public $maxExceptions = 2;
 
     public function __construct(
         public int $periodoId,
         public int $tenantId,
-        public ?int $empleadoId = null // null = liquidar todos
+        public ?int $empleadoId = null,
     ) {
         $this->onQueue('payroll');
     }
 
     public function handle(NominaService $nominaService): void
     {
-        // If part of a batch and batch was cancelled, stop
         if ($this->batch()?->cancelled()) {
             return;
         }
@@ -56,19 +57,35 @@ class LiquidarNominaJob implements ShouldQueue
             ]);
 
             if ($this->empleadoId) {
-                // Liquidate single employee
-                $nominaService->liquidarEmpleado($this->empleadoId, $periodo, $tenant);
+                $empleado = Empleado::find($this->empleadoId);
+                if (!$empleado) {
+                    Log::error("Employee not found", ['empleado_id' => $this->empleadoId]);
+                    return;
+                }
+
+                $ano = (int) date('Y', strtotime($periodo->fecha_inicio));
+                $configLegal = ConfiguracionLegal::where('ano_vigencia', $ano)
+                    ->where('tenant_id', $this->tenantId)
+                    ->first();
+
+                if (!$configLegal) {
+                    Log::error("ConfiguracionLegal not found", ['ano' => $ano, 'tenant_id' => $this->tenantId]);
+                    return;
+                }
+
+                $resultado = $nominaService->liquidarEmpleado($empleado, $periodo, $configLegal);
+                Log::info("Employee liquidation completed", [
+                    'empleado_id' => $this->empleadoId,
+                    'neto_pagar' => $resultado['resumen']['neto_pagar'],
+                ]);
             } else {
-                // Liquidate all employees in the period
-                $nominaService->liquidarPeriodo($periodo, $tenant);
+                $total = $nominaService->liquidarPeriodo($periodo);
+                Log::info("Period liquidation completed", [
+                    'periodo_id' => $this->periodoId,
+                    'total_liquidados' => $total,
+                ]);
             }
 
-            Log::info("Payroll liquidation completed", [
-                'periodo_id' => $this->periodoId,
-                'empleado_id' => $this->empleadoId,
-            ]);
-
-            // Track progress if in batch
             if ($this->batch()) {
                 $this->batch()->increment('progress');
             }
@@ -78,9 +95,7 @@ class LiquidarNominaJob implements ShouldQueue
                 'periodo_id' => $this->periodoId,
                 'empleado_id' => $this->empleadoId,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
             ]);
-
             throw $e;
         }
     }

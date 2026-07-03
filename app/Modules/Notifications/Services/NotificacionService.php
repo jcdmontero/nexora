@@ -92,7 +92,7 @@ class NotificacionService
         return $noti;
     }
 
-    /** Intenta enviar la notificación por todos sus canales pendientes. */
+    /** Despacha jobs asíncronos para cada canal pendiente de la notificación. */
     public function enviar(Notificacion $noti, ?User $enviadoPor = null): void
     {
         $estados = $noti->canal_estados ?? [];
@@ -101,12 +101,10 @@ class NotificacionService
             if (($estados[$canal] ?? null) === 'enviada') {
                 continue;
             }
-            $estados[$canal] = $this->enviarCanal($canal, $noti) ? 'enviada' : 'error';
+            \App\Jobs\EnviarNotificacionJob::dispatch($noti->id, $canal)
+                ->onQueue('notifications');
         }
 
-        $noti->canal_estados = $estados;
-        $noti->sincronizarEstado();
-        $noti->fecha_envio = now();
         $noti->enviado_por = $enviadoPor?->id;
         $noti->save();
     }

@@ -6,25 +6,16 @@ namespace App\Modules\Payroll\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Modules\Payroll\Models\PeriodoNomina;
-use App\Modules\Payroll\Services\NominaService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
 /**
  * Controlador de Liquidaciones de Nómina.
  *
- * Migrated to NominaService — previous implementation used the deprecated
- * PayrollLiquidator. Now delegates all liquidation logic to NominaService
- * which handles full Colombian payroll calculation (devengados, deducciones,
- * provisiones, aportes patronales).
+ * La liquidación se procesa de forma asíncrona vía LiquidarNominaJob.
  */
 class LiquidacionController extends Controller
 {
-    public function __construct(
-        private readonly NominaService $nominaService,
-    ) {}
-
     /**
      * Listar períodos de nómina.
      */
@@ -102,11 +93,7 @@ class LiquidacionController extends Controller
     }
 
     /**
-     * Crear un período y liquidar todos los empleados activos en una sola transacción.
-     *
-     * Delega la liquidación completa a NominaService::liquidarPeriodo() que
-     * calcula devengados, deducciones, provisiones y aportes patronales
-     * según la legislación laboral colombiana.
+     * Crear un período y despachar liquidación asíncrona.
      */
     public function store(Request $request)
     {
@@ -114,13 +101,12 @@ class LiquidacionController extends Controller
 
         $validated = $request->validate([
             'codigo'       => 'required|string|max:30',
-            'mes_contable' => 'required|string|size:7', // YYYY-MM
+            'mes_contable' => 'required|string|size:7',
             'fecha_inicio' => 'required|date',
             'fecha_fin'    => 'required|date|after_or_equal:fecha_inicio',
             'observaciones'=> 'nullable|string|max:500',
         ]);
 
-        // Validar duplicado de mes_contable por tenant
         $exists = PeriodoNomina::where('tenant_id', $tenantId)
             ->where('mes_contable', $validated['mes_contable'])
             ->exists();
@@ -129,37 +115,21 @@ class LiquidacionController extends Controller
             return back()->with('error', 'Ya existe un período para el mes contable seleccionado.');
         }
 
-        DB::beginTransaction();
-        try {
-            $periodo = PeriodoNomina::create([
-                'tenant_id'    => $tenantId,
-                'codigo'       => $validated['codigo'],
-                'fecha_inicio' => $validated['fecha_inicio'],
-                'fecha_fin'    => $validated['fecha_fin'],
-                'mes_contable' => $validated['mes_contable'],
-                'estado'       => 'BORRADOR',
-                'observaciones'=> $validated['observaciones'] ?? null,
-                'created_by'   => auth()->id(),
-            ]);
+        $periodo = PeriodoNomina::create([
+            'tenant_id'    => $tenantId,
+            'codigo'       => $validated['codigo'],
+            'fecha_inicio' => $validated['fecha_inicio'],
+            'fecha_fin'    => $validated['fecha_fin'],
+            'mes_contable' => $validated['mes_contable'],
+            'estado'       => 'BORRADOR',
+            'observaciones'=> $validated['observaciones'] ?? null,
+            'created_by'   => auth()->id(),
+        ]);
 
-            // Liquidar todos los empleados activos del período.
-            // NominaService::liquidarPeriodo() crea las Nóminas individuales,
-            // persiste los detalles por concepto, aplica cuotas de préstamo
-            // y actualiza provisiones acumuladas — todo dentro de una transacción.
-            $totalLiquidados = $this->nominaService->liquidarPeriodo($periodo);
+        \App\Jobs\LiquidarNominaJob::dispatch($periodo->id, $tenantId)
+            ->onQueue('payroll');
 
-            DB::commit();
-
-            if ($totalLiquidados === 0) {
-                return back()->with('warning', 'Período creado pero no se encontraron empleados activos para liquidar.');
-            }
-
-            return redirect()->route('payroll.liquidaciones.show', $periodo->id)
-                ->with('success', "Período liquidado exitosamente. {$totalLiquidados} empleado(s) procesado(s).");
-
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return back()->with('error', 'Error al liquidar el período: ' . $e->getMessage());
-        }
+        return redirect()->route('payroll.liquidaciones.show', $periodo->id)
+            ->with('success', 'Período creado. Liquidación enviada a cola de procesamiento.');
     }
 }

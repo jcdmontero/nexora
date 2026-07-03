@@ -15,14 +15,14 @@ class CerrarAnioContableJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public $tries = 1; // Only try once - manual intervention needed on failure
-    public $timeout = 600; // 10 minutes
+    public $tries = 1;
+    public $timeout = 600;
     public $maxExceptions = 1;
 
     public function __construct(
         public int $anio,
         public int $tenantId,
-        public int $userId // User who initiated the closure
+        public int $userId,
     ) {
         $this->onQueue('accounting');
     }
@@ -42,21 +42,21 @@ class CerrarAnioContableJob implements ShouldQueue
                 'user_id' => $this->userId,
             ]);
 
-            $result = $cierreService->cerrarAnio($this->anio, $tenant);
+            $result = $cierreService->cerrarAnio($this->anio);
 
             Log::info("Annual accounting closure completed", [
                 'anio' => $this->anio,
-                'result' => $result,
+                'asiento' => $result['asiento_numero'] ?? null,
+                'utilidad_neta' => $result['utilidad_neta'] ?? null,
             ]);
 
-            // Notify user via notification service
             \App\Jobs\EnviarNotificacionJob::dispatch(
+                $this->crearNotificacionId(
+                    'Cierre Anual Completado',
+                    "El cierre contable del año {$this->anio} se completado exitosamente. Asiento: {$result['asiento_numero']}",
+                    $this->tenantId,
+                ),
                 'email',
-                auth()->user()->email ?? 'admin@nexora.com',
-                "Cierre Anual {$this->anio} Completado",
-                "El cierre contable del año {$this->anio} se ha completado exitosamente.",
-                ['anio' => $this->anio, 'tenant' => $tenant->name],
-                $this->tenantId
             )->onQueue('notifications');
 
         } catch (\Exception $e) {
@@ -64,21 +64,36 @@ class CerrarAnioContableJob implements ShouldQueue
                 'anio' => $this->anio,
                 'tenant_id' => $this->tenantId,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
             ]);
 
-            // Notify user of failure
             \App\Jobs\EnviarNotificacionJob::dispatch(
+                $this->crearNotificacionId(
+                    "Error en Cierre Anual {$this->anio}",
+                    "El cierre contable del año {$this->anio} ha fallado: {$e->getMessage()}",
+                    $this->tenantId,
+                ),
                 'email',
-                auth()->user()->email ?? 'admin@nexora.com',
-                "Error en Cierre Anual {$this->anio}",
-                "El cierre contable del año {$this->anio} ha fallado: {$e->getMessage()}",
-                ['error' => $e->getMessage()],
-                $this->tenantId
             )->onQueue('notifications');
 
             throw $e;
         }
+    }
+
+    private function crearNotificacionId(string $asunto, string $mensaje, int $tenantId): int
+    {
+        $user = \App\Models\User::find($this->userId);
+        $noti = \App\Modules\Notifications\Models\Notificacion::create([
+            'tenant_id' => $tenantId,
+            'evento' => 'cierre_anual',
+            'destinatario_nombre' => $user?->name ?? 'Admin',
+            'destinatario_email' => $user?->email ?? 'admin@nexora.com',
+            'titulo' => $asunto,
+            'mensaje' => $mensaje,
+            'canales' => ['email'],
+            'canal_estados' => ['email' => 'pendiente'],
+            'estado' => 'pendiente',
+        ]);
+        return $noti->id;
     }
 
     public function failed(\Throwable $exception): void

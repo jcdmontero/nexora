@@ -43,6 +43,12 @@ class MultimediaController extends Controller
             'descripcion' => $request->input('descripcion'),
         ]);
 
+        if ($datos['tipo'] === 'video') {
+            $storagePath = str_replace('/storage/', '', $datos['ruta']);
+            \App\Jobs\ProcesarMultimediaJob::dispatch($storagePath, 'public', $multimedia->id, $orden->id)
+                ->onQueue('media');
+        }
+
         return response()->json([
             'success' => true,
             'multimedia' => $multimedia,

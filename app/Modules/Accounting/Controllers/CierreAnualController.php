@@ -36,24 +36,12 @@ class CierreAnualController extends Controller
         ]);
 
         $anio = (int) $validated['anio'];
+        $tenantId = auth()->user()->tenant_id;
+        $userId = auth()->id();
 
-        try {
-            $resultado = $this->cierreAnualService->cerrarAnio($anio);
+        \App\Jobs\CerrarAnioContableJob::dispatch($anio, $tenantId, $userId)
+            ->onQueue('accounting');
 
-            Log::info("Cierre anual {$anio} ejecutado", [
-                'asiento' => $resultado['asiento_numero'],
-                'utilidad_neta' => $resultado['utilidad_neta'],
-            ]);
-
-            return back()->with('success', "Año {$anio} cerrado exitosamente. Asiento {$resultado['asiento_numero']} registrado.");
-
-        } catch (\RuntimeException $e) {
-            return back()->with('error', $e->getMessage());
-
-        } catch (\Exception $e) {
-            Log::error("Error en cierre anual {$anio}: {$e->getMessage()}");
-
-            return back()->with('error', 'Ocurrió un error inesperado al ejecutar el cierre anual. Intente de nuevo.');
-        }
+        return back()->with('success', "Cierre anual del año {$anio} enviado a cola de procesamiento. Se notificará al finalizar.");
     }
 }

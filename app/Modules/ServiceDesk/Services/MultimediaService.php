@@ -48,10 +48,11 @@ class MultimediaService
         $ruta = "{$directorio}/{$tenantId}/" . now()->format('Y/m');
         $rutaCompleta = $file->storeAs($ruta, $nombre, 'public');
 
-        // Para videos, intentar obtener duración
-        $duracion = null;
+        // Para videos, programar extracción de duración en background
         if ($esVideo) {
-            $duracion = $this->getVideoDuration($file);
+            $rutaFinal = $ruta . '/' . $nombre;
+            \App\Jobs\ProcesarMultimediaJob::dispatch($rutaFinal, 'public')
+                ->onQueue('media');
         }
 
         return [
@@ -59,7 +60,7 @@ class MultimediaService
             'tipo' => $esVideo ? 'video' : 'imagen',
             'mime_type' => $mimeType,
             'tamaño' => $file->getSize(),
-            'duracion' => $duracion,
+            'duracion' => null,
             'nombre_original' => $file->getClientOriginalName(),
         ];
     }

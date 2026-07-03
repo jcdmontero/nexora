@@ -179,24 +179,13 @@ class PeriodoController extends Controller
             return back()->with('error', 'El período no está en estado BORRADOR. No se puede liquidar.');
         }
 
-        DB::beginTransaction();
-        try {
-            $totalLiquidados = $this->nominaService->liquidarPeriodo($periodo);
+        $tenantId = auth()->user()->tenant_id;
 
-            DB::commit();
+        \App\Jobs\LiquidarNominaJob::dispatch($periodo->id, $tenantId)
+            ->onQueue('payroll');
 
-            if ($totalLiquidados === 0) {
-                return back()->with('error', 'No hay empleados activos con contrato vigente para liquidar.');
-            }
-
-            $msg = "Período liquidado exitosamente. {$totalLiquidados} empleado(s) procesado(s).";
-            return redirect()->route('payroll.periodos.show', $periodo->id)
-                ->with('success', $msg);
-
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return back()->with('error', 'Error al liquidar el período: ' . $e->getMessage());
-        }
+        return redirect()->route('payroll.periodos.show', $periodo->id)
+            ->with('success', 'Liquidación enviada a cola de procesamiento. Se notificará al finalizar.');
     }
 
     /**

@@ -823,12 +823,7 @@ class FacturaService
             return;
         }
 
-        try {
-            $this->dianService->emitirFactura($factura);
-            $factura->refresh();
-        } catch (\Exception $e) {
-            Log::error("Error al emitir DIAN para {$factura->numero}: {$e->getMessage()}");
-            $factura->update(['dian_estado' => 'error', 'dian_mensaje' => $e->getMessage()]);
-        }
+        \App\Jobs\EmitirFacturaDianJob::dispatch($factura->id, $tenantId)
+            ->onQueue('dian');
     }
 }

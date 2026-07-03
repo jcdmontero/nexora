@@ -2,6 +2,8 @@ import React from 'react'
 import { Link, Head } from '@inertiajs/react'
 import { ArrowLeft, Calendar, FileText, Settings, ShieldCheck, Tag } from 'lucide-react'
 
+type EstadoTipo = { value: string; label: string } | string
+
 interface OrdenDetail {
   id: number
   numero_orden: string
@@ -10,7 +12,7 @@ interface OrdenDetail {
   condicion_inicial: string
   observaciones_equipo: string
   fallas_checklist: string[]
-  estado: any
+  estado: EstadoTipo
   precio_cliente: number
   mano_obra_descripcion: string
   created_at: string
@@ -22,7 +24,7 @@ interface OrdenDetailProps {
 }
 
 export default function OrdenDetail({ orden }: OrdenDetailProps) {
-  const getEstadoBadge = (estado: any) => {
+  const getEstadoBadge = (estado: EstadoTipo) => {
     const value = typeof estado === 'object' ? estado.value : estado
     const label = typeof estado === 'object' ? estado.label : estado
 

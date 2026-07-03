@@ -23,8 +23,15 @@ interface DashboardProps {
   ordenesRecientes: RecentOrder[]
 }
 
+interface PageProps {
+  auth: { user: { name: string; email: string; cliente?: { nombre_completo?: string } } }
+  tenant?: { name?: string }
+}
+
+type EstadoTipo = { value: string; label: string } | string
+
 export default function Dashboard({ metrics, ordenesRecientes }: DashboardProps) {
-  const { auth, tenant } = usePage().props as any
+  const { auth, tenant } = usePage().props as PageProps
   const cliente = auth.cliente
 
   const handleLogout = () => {
@@ -32,7 +39,7 @@ export default function Dashboard({ metrics, ordenesRecientes }: DashboardProps)
   }
 
   // Traducción y badges de estado
-  const getEstadoBadge = (estado: any) => {
+  const getEstadoBadge = (estado: EstadoTipo) => {
     const value = typeof estado === 'object' ? estado.value : estado
     const label = typeof estado === 'object' ? estado.label : estado
 

@@ -4,6 +4,8 @@ import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tool
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import { useToast } from '@/Components/toasts/ToastProvider'
 import { useTheme } from '@/Hooks/useTheme'
+import { routeExistsSafe } from '@/lib/utils'
+import { KPISkeleton, ChartSkeleton, WidgetSkeleton } from '@/Widgets/WidgetSkeleton'
 import '@/../css/dashboard.css'
 
 interface DashboardProps {
@@ -29,10 +31,13 @@ export default function Dashboard() {
   const { props } = usePage()
   const { auth, stats = {}, alertsSummary } = props as DashboardProps
   const moduleMenus = Array.isArray(props.moduleMenus) ? props.moduleMenus : []
-  const recentActivity = Array.isArray(props.recentActivity) ? props.recentActivity : []
-  const activitySeries = Array.isArray(props.activitySeries) ? props.activitySeries : []
-  const pendingTasks = Array.isArray(props.pendingTasks) ? props.pendingTasks : []
-  const quickAccess = Array.isArray(props.quickAccess) ? props.quickAccess : []
+  const recentActivity = Array.isArray(props.recentActivity) ? props.recentActivity : null
+  const activitySeries = Array.isArray(props.activitySeries) ? props.activitySeries : null
+  const pendingTasks = Array.isArray(props.pendingTasks) ? props.pendingTasks : null
+  const quickAccess = Array.isArray(props.quickAccess) ? props.quickAccess : null
+  const personalTasks = Array.isArray(props.personalTasks) ? props.personalTasks : null
+
+  const isLoadingDeferred = recentActivity === null || activitySeries === null || pendingTasks === null || quickAccess === null
   
   const { theme } = useTheme()
   const { toast } = useToast()
@@ -137,9 +142,9 @@ export default function Dashboard() {
     return ''
   }
   
-  const personalTasks = Array.isArray(props.personalTasks) ? props.personalTasks : []
+  const personalTasksArr = personalTasks ?? []
   const allTasks = [
-    ...pendingTasks.map((t, idx) => ({
+    ...(pendingTasks ?? []).map((t, idx) => ({
       keyId: `pending-${idx}`,
       id: idx,
       title: t.label,
@@ -149,7 +154,7 @@ export default function Dashboard() {
       fecha_limite: undefined,
       estado: 'pendiente'
     })), 
-    ...personalTasks.map((t) => ({
+    ...personalTasksArr.map((t) => ({
       keyId: `personal-${t.id}`,
       id: t.id,
       title: t.titulo,
@@ -222,7 +227,7 @@ export default function Dashboard() {
           <div className="quick-divider"></div>
           
           {qAccess.map((item) => {
-            const hasRoute = item.route && route().has(item.route);
+            const hasRoute = item.route && routeExistsSafe(item.route);
             const href = hasRoute ? route(item.route!) : '#';
             return (
               <Link 
@@ -254,6 +259,9 @@ export default function Dashboard() {
         </div>
 
         {/* KPIs */}
+        {isLoadingDeferred ? (
+          <KPISkeleton />
+        ) : (
         <section className="kpi-row">
           <div className="kpi-card">
             <div className="kpi-label">
@@ -292,9 +300,13 @@ export default function Dashboard() {
             </div>
           </div>
         </section>
+        )}
 
         {/* Chart + Modules */}
         <div className="grid-2">
+          {isLoadingDeferred ? (
+            <ChartSkeleton />
+          ) : (
           <div className="card">
             <div className="card-header">
               <div className="card-title"><i className="ti ti-chart-line"></i> Actividad de la semana</div>
@@ -326,6 +338,7 @@ export default function Dashboard() {
               </ResponsiveContainer>
             </div>
           </div>
+          )}
 
           <div className="card">
             <div className="card-header">
@@ -352,7 +365,7 @@ export default function Dashboard() {
                 if (lbl.includes('notif')) { icon = 'ti-bell'; bg = 'var(--bg-warning)'; tc = 'var(--text-warning)' }
 
                 const routeName = getModuleRoute(mod.section);
-                const hasRoute = routeName && route().has(routeName);
+                const hasRoute = routeName && routeExistsSafe(routeName);
                 const href = hasRoute ? route(routeName) : '#';
 
                 return (
@@ -386,6 +399,12 @@ export default function Dashboard() {
         </div>
 
         {/* Activity + Tasks */}
+        {isLoadingDeferred ? (
+          <div className="row-bottom">
+            <WidgetSkeleton lines={5} />
+            <WidgetSkeleton lines={5} />
+          </div>
+        ) : (
         <div className="row-bottom">
           <div className="card">
             <div className="card-header">
@@ -462,6 +481,7 @@ export default function Dashboard() {
             </div>
           </div>
         </div>
+        )}
 
         {/* Alerts Section */}
         <div className="row-bottom" style={{ marginTop: '16px' }}>

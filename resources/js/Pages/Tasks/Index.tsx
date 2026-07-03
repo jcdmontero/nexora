@@ -2,23 +2,35 @@ import { Head, usePage, Link, router } from '@inertiajs/react'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import { useState } from 'react'
 
+interface Task {
+  id: number
+  titulo: string
+  departamento?: string
+  estado?: string
+  fecha_limite?: string
+}
+
+interface TasksPageProps {
+  tasks: Task[]
+}
+
 export default function Index() {
-  const { props } = usePage() as any
+  const { props } = usePage().props as TasksPageProps
   const tasks = Array.isArray(props.tasks) ? props.tasks : []
 
   const [filterDepto, setFilterDepto] = useState('')
 
-  const pending = tasks.filter((t: any) => t.estado === 'pendiente' && (!filterDepto || t.departamento === filterDepto))
-  const inProgress = tasks.filter((t: any) => t.estado === 'en_progreso' && (!filterDepto || t.departamento === filterDepto))
-  const completed = tasks.filter((t: any) => t.estado === 'completada' && (!filterDepto || t.departamento === filterDepto))
+  const pending = tasks.filter((t) => t.estado === 'pendiente' && (!filterDepto || t.departamento === filterDepto))
+  const inProgress = tasks.filter((t) => t.estado === 'en_progreso' && (!filterDepto || t.departamento === filterDepto))
+  const completed = tasks.filter((t) => t.estado === 'completada' && (!filterDepto || t.departamento === filterDepto))
 
-  const moveTask = (task: any, newState: string) => {
+  const moveTask = (task: Task, newState: string) => {
     router.put(route('core.tasks.update', task.id), {
       estado: newState
     }, { preserveScroll: true })
   }
 
-  const deleteTask = (task: any) => {
+  const deleteTask = (task: Task) => {
     if (confirm('¿Estás seguro de eliminar esta tarea?')) {
       router.delete(route('core.tasks.destroy', task.id), { preserveScroll: true })
     }
@@ -60,7 +72,7 @@ export default function Index() {
               <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'var(--text-warning)' }}></span> Pendientes ({pending.length})
             </h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {pending.map((t: any) => (
+              {pending.map((t) => (
                 <TaskCard key={t.id} task={t} onMove={(state) => moveTask(t, state)} onDelete={() => deleteTask(t)} />
               ))}
               {pending.length === 0 && <div style={{ fontSize: '13px', color: 'var(--text-muted)', textAlign: 'center', padding: '20px 0' }}>No hay tareas pendientes</div>}
@@ -73,7 +85,7 @@ export default function Index() {
               <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'var(--text-accent)' }}></span> En Progreso ({inProgress.length})
             </h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {inProgress.map((t: any) => (
+              {inProgress.map((t) => (
                 <TaskCard key={t.id} task={t} onMove={(state) => moveTask(t, state)} onDelete={() => deleteTask(t)} />
               ))}
               {inProgress.length === 0 && <div style={{ fontSize: '13px', color: 'var(--text-muted)', textAlign: 'center', padding: '20px 0' }}>No hay tareas en progreso</div>}
@@ -86,7 +98,7 @@ export default function Index() {
               <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'var(--text-success)' }}></span> Completadas ({completed.length})
             </h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {completed.map((t: any) => (
+              {completed.map((t) => (
                 <TaskCard key={t.id} task={t} onMove={(state) => moveTask(t, state)} onDelete={() => deleteTask(t)} />
               ))}
               {completed.length === 0 && <div style={{ fontSize: '13px', color: 'var(--text-muted)', textAlign: 'center', padding: '20px 0' }}>No hay tareas completadas</div>}
@@ -99,7 +111,7 @@ export default function Index() {
   )
 }
 
-function TaskCard({ task, onMove, onDelete }: { task: any, onMove: (state: string) => void, onDelete: () => void }) {
+function TaskCard({ task, onMove, onDelete }: { task: Task, onMove: (state: string) => void, onDelete: () => void }) {
   const isOverdue = task.fecha_limite && new Date(task.fecha_limite) < new Date() && task.estado !== 'completada'
 
   return (

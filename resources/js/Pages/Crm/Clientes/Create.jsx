@@ -1,4 +1,6 @@
 import { useForm, Link } from '@inertiajs/react'
+import { useState } from 'react'
+import { z } from 'zod'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import ClienteForm from './ClienteForm'
 import { Button } from '@/Components/ui/button'
@@ -6,7 +8,7 @@ import { ArrowLeft, CheckCircle2, Building2, Lightbulb } from 'lucide-react'
 
 export default function ClienteCreate() {
   const { data, setData, post, processing, errors } = useForm({
-    tipo: 'juridico', // Defecto Empresa según mockup
+    tipo: 'juridico',
     tipo_documento: 'NIT',
     numero_documento: '',
     nombres: '',
@@ -26,8 +28,29 @@ export default function ClienteCreate() {
     password: '',
   })
 
+  const [clientErrors, setClientErrors] = useState({})
+
+  const clienteSchema = z.object({
+    numero_documento: z.string().min(1, 'El número de documento es obligatorio'),
+    razon_social: z.string().min(2, 'La razón social es obligatoria'),
+    email: z.string().email('Ingresa un correo válido').optional().or(z.literal('')),
+  })
+
   const submit = (e) => {
     e.preventDefault()
+    setClientErrors({})
+
+    const result = clienteSchema.safeParse(data)
+    if (!result.success) {
+      const fieldErrors = {}
+      for (const issue of result.error.issues) {
+        const field = issue.path[0]
+        if (!fieldErrors[field]) fieldErrors[field] = issue.message
+      }
+      setClientErrors(fieldErrors)
+      return
+    }
+
     post(route('crm.clientes.store'))
   }
 
@@ -69,7 +92,7 @@ export default function ClienteCreate() {
           
           {/* Columna Izquierda: Formulario */}
           <div className="lg:col-span-2 space-y-6">
-            <ClienteForm data={data} setData={setData} errors={errors} />
+            <ClienteForm data={data} setData={setData} errors={{ ...errors, ...clientErrors }} />
           </div>
 
           {/* Columna Derecha: Panel Informativo */}

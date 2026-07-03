@@ -1,4 +1,4 @@
-import { createInertiaApp } from '@inertiajs/react'
+import { createInertiaApp, router } from '@inertiajs/react'
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers'
 import { createRoot, hydrateRoot } from 'react-dom/client'
 import { ToastProvider } from '@/Components/toasts/ToastProvider'
@@ -66,6 +66,56 @@ createInertiaApp({
   progress: {
     color: '#2563eb',
   },
+})
+
+// Handler global de errores de red y respuestas inválidas
+function showErrorBanner(message, type = 'error') {
+  const existing = document.getElementById('global-error-banner')
+  if (existing) existing.remove()
+
+  const banner = document.createElement('div')
+  banner.id = 'global-error-banner'
+  banner.style.cssText = `
+    position: fixed; top: 0; left: 0; right: 0; z-index: 99999;
+    padding: 12px 20px; font-size: 14px; font-weight: 500;
+    display: flex; align-items: center; justify-content: space-between;
+    animation: slideDown 0.3s ease-out;
+  `
+  if (type === 'error') {
+    banner.style.backgroundColor = '#fee2e2'
+    banner.style.color = '#991b1b'
+    banner.style.borderBottom = '2px solid #f87171'
+  } else {
+    banner.style.backgroundColor = '#fef3c7'
+    banner.style.color = '#92400e'
+    banner.style.borderBottom = '2px solid #fbbf24'
+  }
+
+  banner.innerHTML = `
+    <span>${message}</span>
+    <button onclick="this.parentElement.remove()" style="background:none;border:none;cursor:pointer;font-size:18px;color:inherit;padding:0 4px">&times;</button>
+  `
+  document.body.prepend(banner)
+  setTimeout(() => banner.remove(), 8000)
+}
+
+router.on('invalid', (event) => {
+  const status = event.detail?.response?.status
+  if (status === 403) {
+    showErrorBanner('No tienes permiso para acceder a esta sección.', 'warning')
+  } else if (status === 404) {
+    showErrorBanner('El recurso solicitado no fue encontrado.', 'warning')
+  } else if (status >= 500) {
+    showErrorBanner('Error del servidor. Por favor, intenta de nuevo.', 'error')
+  }
+})
+
+router.on('error', (event) => {
+  if (!navigator.onLine) {
+    showErrorBanner('Sin conexión a internet. Tus cambios se enviarán cuando se restablezca la conexión.', 'warning')
+  } else {
+    showErrorBanner('Error de conexión. Verifica tu red e intenta de nuevo.', 'error')
+  }
 })
 
 // PWA: registrar service worker + manejar operaciones offline

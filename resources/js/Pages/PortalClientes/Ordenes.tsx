@@ -7,20 +7,26 @@ interface Orden {
   numero_orden: string
   tipo_equipo_manual: string
   numero_serie: string
-  estado: any
+  estado: EstadoTipo
   precio_cliente: number
   created_at: string
   verification_token: string
 }
 
+type EstadoTipo = { value: string; label: string } | string
+
 interface OrdenesProps {
   ordenes: Orden[]
 }
 
-export default function Ordenes({ ordenes }: OrdenesProps) {
-  const { tenant } = usePage().props as any
+interface PageProps {
+  tenant?: { name?: string }
+}
 
-  const getEstadoBadge = (estado: any) => {
+export default function Ordenes({ ordenes }: OrdenesProps) {
+  const { tenant } = usePage().props as PageProps
+
+  const getEstadoBadge = (estado: EstadoTipo) => {
     const value = typeof estado === 'object' ? estado.value : estado
     const label = typeof estado === 'object' ? estado.label : estado
 

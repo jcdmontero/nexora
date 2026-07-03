@@ -1,5 +1,6 @@
-import { Link, useForm } from '@inertiajs/react'
-import { Building2, Loader2 } from 'lucide-react'
+import { Link, useForm, router } from '@inertiajs/react'
+import { useEffect, useState, useCallback } from 'react'
+import { Building2, Loader2, AlertTriangle } from 'lucide-react'
 import LandingLayout from '@/Layouts/LandingLayout'
 import { Button } from '@/Components/ui/button'
 import { Input } from '@/Components/ui/input'
@@ -9,17 +10,98 @@ interface LoginProps {
   tenantName?: string
 }
 
+const MAX_ATTEMPTS = 5
+const COOLDOWN_BASE_MS = 15_000
+const STORAGE_KEY = 'nexora_login_attempts'
+
+function getAttemptData(): { count: number; lockedUntil: number } {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    if (!raw) return { count: 0, lockedUntil: 0 }
+    const data = JSON.parse(raw)
+    if (data.lockedUntil && Date.now() > data.lockedUntil) {
+      localStorage.removeItem(STORAGE_KEY)
+      return { count: 0, lockedUntil: 0 }
+    }
+    return data
+  } catch {
+    return { count: 0, lockedUntil: 0 }
+  }
+}
+
+function recordAttempt(): { count: number; lockedUntil: number } {
+  const data = getAttemptData()
+  const newCount = data.count + 1
+  const lockedUntil = newCount >= MAX_ATTEMPTS
+    ? Date.now() + COOLDOWN_BASE_MS * Math.min(newCount - MAX_ATTEMPTS + 1, 5)
+    : 0
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({ count: newCount, lockedUntil }))
+  return { count: newCount, lockedUntil }
+}
+
+function resetAttempts() {
+  localStorage.removeItem(STORAGE_KEY)
+}
+
 export default function Login({ tenantName }: LoginProps) {
-  const { data, setData, post, processing, errors } = useForm({
+  const { data, setData, post, processing, errors, setError } = useForm({
     email: '',
     password: '',
     remember: false,
   })
 
-  const submit = (e: React.FormEvent) => {
+  const [cooldown, setCooldown] = useState(0)
+  const [attemptCount, setAttemptCount] = useState(0)
+
+  useEffect(() => {
+    const saved = getAttemptData()
+    setAttemptCount(saved.count)
+    if (saved.lockedUntil > Date.now()) {
+      setCooldown(Math.ceil((saved.lockedUntil - Date.now()) / 1000))
+    }
+  }, [])
+
+  useEffect(() => {
+    if (cooldown <= 0) return
+    const timer = setInterval(() => {
+      const remaining = Math.ceil((getAttemptData().lockedUntil - Date.now()) / 1000)
+      if (remaining <= 0) {
+        setCooldown(0)
+        clearInterval(timer)
+      } else {
+        setCooldown(remaining)
+      }
+    }, 1000)
+    return () => clearInterval(timer)
+  }, [cooldown > 0])
+
+  const submit = useCallback((e: React.FormEvent) => {
     e.preventDefault()
-    post(route('core.login'))
-  }
+
+    const current = getAttemptData()
+    if (current.lockedUntil > Date.now()) {
+      const secs = Math.ceil((current.lockedUntil - Date.now()) / 1000)
+      setCooldown(secs)
+      setError('email', `Demasiados intentos. Espera ${secs} segundos.`)
+      return
+    }
+
+    post(route('core.login'), {
+      onStart: () => {},
+      onError: () => {
+        const result = recordAttempt()
+        setAttemptCount(result.count)
+        if (result.lockedUntil > 0) {
+          setCooldown(Math.ceil((result.lockedUntil - Date.now()) / 1000))
+        }
+      },
+      onSuccess: () => {
+        resetAttempts()
+      },
+    })
+  }, [post, processing, setError])
+
+  const isLocked = cooldown > 0
 
   return (
     <LandingLayout>
@@ -53,6 +135,12 @@ export default function Login({ tenantName }: LoginProps) {
               </CardDescription>
             </CardHeader>
             <CardContent>
+              {isLocked && (
+                <div className="mb-4 flex items-center gap-2 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800 dark:bg-amber-950 dark:text-amber-200 dark:border-amber-700">
+                  <AlertTriangle className="h-4 w-4 shrink-0" />
+                  <span>Demasiados intentos fallidos. Espera {cooldown}s antes de intentar de nuevo.</span>
+                </div>
+              )}
               <form onSubmit={submit} className="space-y-4">
                 <div className="space-y-2">
                   <label
@@ -67,7 +155,7 @@ export default function Login({ tenantName }: LoginProps) {
                     placeholder="tu@empresa.com"
                     value={data.email}
                     onChange={(e) => setData('email', e.target.value)}
-                    disabled={processing}
+                    disabled={processing || isLocked}
                     required
                     autoFocus
                     className={errors.email ? 'border-destructive' : ''}
@@ -90,7 +178,7 @@ export default function Login({ tenantName }: LoginProps) {
                     placeholder="••••••••"
                     value={data.password}
                     onChange={(e) => setData('password', e.target.value)}
-                    disabled={processing}
+                    disabled={processing || isLocked}
                     required
                     className={errors.password ? 'border-destructive' : ''}
                   />
@@ -105,7 +193,7 @@ export default function Login({ tenantName }: LoginProps) {
                     type="checkbox"
                     checked={data.remember}
                     onChange={(e) => setData('remember', e.target.checked)}
-                    disabled={processing}
+                    disabled={processing || isLocked}
                     className="h-4 w-4 rounded border-border bg-background text-primary focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                   />
                   <label
@@ -118,7 +206,7 @@ export default function Login({ tenantName }: LoginProps) {
 
                 <Button
                   type="submit"
-                  disabled={processing}
+                  disabled={processing || isLocked}
                   className="w-full"
                   size="lg"
                 >
@@ -127,6 +215,8 @@ export default function Login({ tenantName }: LoginProps) {
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       Ingresando...
                     </>
+                  ) : isLocked ? (
+                    `Espera ${cooldown}s`
                   ) : (
                     'Ingresar'
                   )}

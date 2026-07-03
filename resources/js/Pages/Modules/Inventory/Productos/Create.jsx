@@ -1,4 +1,6 @@
 import { Head, Link, useForm } from '@inertiajs/react'
+import { useState, useEffect } from 'react'
+import { z } from 'zod'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import { Card } from '@/Components/ui/card'
 import { Input } from '@/Components/ui/input'
@@ -6,7 +8,6 @@ import { Label } from '@/Components/ui/label'
 import { Button } from '@/Components/ui/button'
 import { Checkbox } from '@/Components/ui/checkbox'
 import { ArrowLeft, Save, Plus, Trash2, PackagePlus } from 'lucide-react'
-import { useState, useEffect } from 'react'
 import CategoriaFormModal from '../Categorias/CategoriaFormModal'
 import MarcaFormModal from '../Marcas/MarcaFormModal'
 import { CurrencyInput } from '@/Components/ui/currency-input'
@@ -31,6 +32,8 @@ export default function ProductoCreate({ categorias, marcas }) {
   const [previews, setPreviews] = useState([null, null, null, null])
   const [isCategoriaModalOpen, setIsCategoriaModalOpen] = useState(false)
   const [isMarcaModalOpen, setIsMarcaModalOpen] = useState(false)
+  const [clientErrors, setClientErrors] = useState({})
+  const allErrors = { ...errors, ...clientErrors }
 
   // Configura la transformación de Inertia para subir solo las imágenes reales (sin nulls)
   useEffect(() => {
@@ -71,8 +74,31 @@ export default function ProductoCreate({ categorias, marcas }) {
     setData('imagenes', newImages)
   }
 
+  const productoSchema = z.object({
+    codigo: z.string().min(1, 'El código es obligatorio'),
+    nombre: z.string().min(2, 'El nombre debe tener al menos 2 caracteres'),
+    categoria_id: z.string().min(1, 'Selecciona una categoría'),
+    precio_venta: z.number().min(0, 'El precio de venta no puede ser negativo'),
+  })
+
   const handleSubmit = (e) => {
     e.preventDefault()
+    setClientErrors({})
+
+    const result = productoSchema.safeParse({
+      ...data,
+      precio_venta: Number(data.precio_venta) || 0,
+    })
+    if (!result.success) {
+      const fieldErrors = {}
+      for (const issue of result.error.issues) {
+        const field = issue.path[0]
+        if (!fieldErrors[field]) fieldErrors[field] = issue.message
+      }
+      setClientErrors(fieldErrors)
+      return
+    }
+
     post(route('inventory.productos.store'))
   }
 
@@ -133,9 +159,9 @@ export default function ProductoCreate({ categorias, marcas }) {
                       value={data.codigo}
                       onChange={e => setData('codigo', e.target.value)}
                       placeholder="Ej. REF-001"
-                      className={errors.codigo ? 'border-destructive' : ''}
+                      className={allErrors.codigo ? 'border-destructive' : ''}
                     />
-                    {errors.codigo && <p className="text-xs text-destructive">{errors.codigo}</p>}
+                    {allErrors.codigo && <p className="text-xs text-destructive">{allErrors.codigo}</p>}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="nombre">Nombre del Producto</Label>
@@ -145,9 +171,9 @@ export default function ProductoCreate({ categorias, marcas }) {
                       value={data.nombre}
                       onChange={e => setData('nombre', e.target.value)}
                       placeholder="Ej. Taladro Percutor 1/2'' 800W"
-                      className={errors.nombre ? 'border-destructive' : ''}
+                      className={allErrors.nombre ? 'border-destructive' : ''}
                     />
-                    {errors.nombre && <p className="text-xs text-destructive">{errors.nombre}</p>}
+                    {allErrors.nombre && <p className="text-xs text-destructive">{allErrors.nombre}</p>}
                     <p className="text-xs text-muted-foreground">El nombre comercial con el que aparecerá en ventas.</p>
                   </div>
                 </div>
@@ -162,7 +188,7 @@ export default function ProductoCreate({ categorias, marcas }) {
                     className="flex min-h-[80px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                     placeholder="Ej. Taladro de uso profesional, incluye 3 brocas y maletín de transporte."
                   />
-                  {errors.descripcion && <p className="text-xs text-destructive">{errors.descripcion}</p>}
+                  {allErrors.descripcion && <p className="text-xs text-destructive">{allErrors.descripcion}</p>}
                 </div>
               </div>
             </Card>
@@ -228,8 +254,8 @@ export default function ProductoCreate({ categorias, marcas }) {
                   )
                 })}
               </div>
-              {errors.imagenes && (
-                <p className="text-xs text-destructive mt-2">{errors.imagenes}</p>
+              {allErrors.imagenes && (
+                <p className="text-xs text-destructive mt-2">{allErrors.imagenes}</p>
               )}
             </Card>
 
@@ -244,7 +270,7 @@ export default function ProductoCreate({ categorias, marcas }) {
                     onValueChange={(val) => setData('precio_venta', val)}
                     placeholder="Ej. 150000"
                   />
-                  {errors.precio_venta && <p className="text-xs text-destructive">{errors.precio_venta}</p>}
+                  {allErrors.precio_venta && <p className="text-xs text-destructive">{allErrors.precio_venta}</p>}
                   <p className="text-xs text-muted-foreground">Precio final al público.</p>
                 </div>
                 <div className="space-y-2">

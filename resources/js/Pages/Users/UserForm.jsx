@@ -1,4 +1,6 @@
 import { useForm, Link } from '@inertiajs/react'
+import { useState } from 'react'
+import { z } from 'zod'
 import { Input } from '@/Components/ui/input'
 import { FormSection, Field } from '@/Components/ui/form-section'
 import { roleLabel } from '@/lib/permissions'
@@ -16,7 +18,7 @@ const selectClass =
 export default function UserForm({ mode = 'create', user = null, roles = [], sedes = [] }) {
   const isEdit = mode === 'edit'
 
-  const { data, setData, post, put, processing, errors } = useForm({
+  const { data, setData, post, put, processing, errors, setError, clearErrors } = useForm({
     name: user?.name ?? '',
     email: user?.email ?? '',
     password: '',
@@ -26,8 +28,39 @@ export default function UserForm({ mode = 'create', user = null, roles = [], sed
     is_active: isEdit ? Boolean(user?.is_active) : true,
   })
 
+  const [clientErrors, setClientErrors] = useState({})
+
+  const userSchema = z.object({
+    name: z.string().min(2, 'El nombre debe tener al menos 2 caracteres').max(100),
+    email: z.string().email('Ingresa un correo electrónico válido'),
+    password: isEdit
+      ? z.string().optional()
+      : z.string().min(8, 'La contraseña debe tener al menos 8 caracteres'),
+    password_confirmation: isEdit
+      ? z.string().optional()
+      : z.string(),
+    role: z.string().min(1, 'Selecciona un rol'),
+  }).refine(
+    (d) => d.password === d.password_confirmation,
+    { message: 'Las contraseñas no coinciden', path: ['password_confirmation'] }
+  )
+
   const submit = (e) => {
     e.preventDefault()
+    clearErrors()
+    setClientErrors({})
+
+    const result = userSchema.safeParse(data)
+    if (!result.success) {
+      const fieldErrors = {}
+      for (const issue of result.error.issues) {
+        const field = issue.path[0]
+        if (!fieldErrors[field]) fieldErrors[field] = issue.message
+      }
+      setClientErrors(fieldErrors)
+      return
+    }
+
     if (isEdit) put(route('core.users.update', user.id))
     else post(route('core.users.store'))
   }
@@ -43,7 +76,7 @@ export default function UserForm({ mode = 'create', user = null, roles = [], sed
           description="Datos básicos de identificación del usuario."
           icon={UserIcon}
         >
-          <Field label="Nombre completo" htmlFor="name" required error={errors.name} full>
+          <Field label="Nombre completo" htmlFor="name" required error={errors.name || clientErrors.name} full>
             <Input
               id="name"
               name="name"
@@ -53,7 +86,7 @@ export default function UserForm({ mode = 'create', user = null, roles = [], sed
               required
             />
           </Field>
-          <Field label="Correo electrónico" htmlFor="email" required error={errors.email} full>
+          <Field label="Correo electrónico" htmlFor="email" required error={errors.email || clientErrors.email} full>
             <div className="relative">
               <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
@@ -75,7 +108,7 @@ export default function UserForm({ mode = 'create', user = null, roles = [], sed
           description="Define el rol y la sede del usuario dentro de la empresa."
           icon={ShieldCheck}
         >
-          <Field label="Rol" htmlFor="role" required error={errors.role}
+          <Field label="Rol" htmlFor="role" required error={errors.role || clientErrors.role}
                  hint="Determina los permisos del usuario.">
             <select
               id="role"
@@ -135,7 +168,7 @@ export default function UserForm({ mode = 'create', user = null, roles = [], sed
           icon={KeyRound}
         >
           <Field label={isEdit ? 'Nueva contraseña' : 'Contraseña'} htmlFor="password"
-                 required={!isEdit} error={errors.password}>
+                 required={!isEdit} error={errors.password || clientErrors.password}>
             <Input
               id="password"
               name="password"
@@ -147,7 +180,7 @@ export default function UserForm({ mode = 'create', user = null, roles = [], sed
               required={!isEdit}
             />
           </Field>
-          <Field label="Confirmar contraseña" htmlFor="password_confirmation">
+          <Field label="Confirmar contraseña" htmlFor="password_confirmation" error={clientErrors.password_confirmation}>
             <Input
               id="password_confirmation"
               name="password_confirmation"

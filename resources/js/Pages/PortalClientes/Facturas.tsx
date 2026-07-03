@@ -17,8 +17,12 @@ interface FacturasProps {
   facturas: Factura[]
 }
 
+interface PageProps {
+  tenant?: { name?: string }
+}
+
 export default function Facturas({ facturas }: FacturasProps) {
-  const { tenant } = usePage().props as any
+  const { tenant } = usePage().props as PageProps
 
   const getEstadoBadge = (estado: string) => {
     switch (estado) {

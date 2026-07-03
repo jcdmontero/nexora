@@ -4,6 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card'
 import { Button } from '@/Components/ui/button'
 import { Input } from '@/Components/ui/input'
 import { Label } from '@/Components/ui/label'
+import { useToast } from '@/Components/toasts/ToastProvider'
+import { enqueue } from '@/lib/sync-queue'
 import { ArrowLeft, Wrench, Save } from 'lucide-react'
 
 const selectClass =
@@ -20,9 +22,21 @@ export default function OrdenCreate({ clientes = [], tipos = [], marcas = [], mo
         accesorios_equipo: '',
         observaciones_equipo: '',
     })
+    const { toast } = useToast()
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault()
+        if (!navigator.onLine) {
+            await enqueue({
+                type: 'service-desk.order',
+                endpoint: route('service-desk.ordenes.store'),
+                method: 'POST',
+                data,
+            })
+            toast('Orden guardada offline. Se sincronizará cuando vuelva internet.', 'info')
+            router.visit(route('service-desk.ordenes.index'))
+            return
+        }
         post(route('service-desk.ordenes.store'))
     }
 

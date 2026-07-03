@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'nexora-v1'
+const CACHE_VERSION = 'nexora-v2'
 const STATIC_CACHE = `${CACHE_VERSION}-static`
 const PAGE_CACHE = `${CACHE_VERSION}-pages`
 
@@ -28,6 +28,19 @@ self.addEventListener('activate', (event) => {
   )
 })
 
+// Helper: guardar operación offline en IndexedDB vía el client
+async function saveOfflineOperation(request) {
+  const clone = request.clone()
+  const body = await clone.json()
+  const clients = await self.clients.matchAll()
+  clients.forEach((client) => {
+    client.postMessage({
+      type: 'OFFLINE_OPERATION',
+      payload: body,
+    })
+  })
+}
+
 // Fetch: estrategia según tipo de recurso
 self.addEventListener('fetch', (event) => {
   const { request } = event
@@ -35,6 +48,31 @@ self.addEventListener('fetch', (event) => {
 
   // Solo manejar requests del mismo origen
   if (url.origin !== location.origin) return
+
+  // POST/PUT/PATCH a rutas de datos: interceptar si offline
+  if (
+    (request.method === 'POST' || request.method === 'PUT' || request.method === 'PATCH') &&
+    !url.pathname.startsWith('/build/') &&
+    !url.pathname.startsWith('/icons/')
+  ) {
+    event.respondWith(
+      fetch(request).catch(async () => {
+        // Offline: guardar en cola vía message al client
+        try {
+          await saveOfflineOperation(request)
+        } catch {}
+        // Retornar respuesta synthetic
+        return new Response(
+          JSON.stringify({ queued: true, message: 'Operación encolada para sincronización offline' }),
+          {
+            status: 202,
+            headers: { 'Content-Type': 'application/json' },
+          }
+        )
+      })
+    )
+    return
+  }
 
   // Navegación (HTML): Network First
   if (request.mode === 'navigate') {

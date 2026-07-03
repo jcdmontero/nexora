@@ -5,6 +5,7 @@ import { Sidebar } from '@/Components/Sidebar/Sidebar'
 import { GlobalSearch } from '@/Components/GlobalSearch'
 import { UserDropdown } from '@/Components/UserDropdown'
 import { HeaderContextualAction } from '@/Components/HeaderContextualAction'
+import { NetworkStatusBar } from '@/Components/NetworkStatusBar'
 import { useTheme } from '@/Hooks/useTheme'
 import { useBreadcrumbs } from '@/Hooks/useBreadcrumbs'
 
@@ -15,6 +16,9 @@ export default function AuthenticatedLayout({ children }) {
 
   return (
     <div className="min-h-screen flex bg-background">
+      {/* Network Status Bar (offline/syncing) */}
+      <NetworkStatusBar />
+
       {/* Sidebar Premium */}
       <Sidebar user={auth.user} tenant={tenant} />
 

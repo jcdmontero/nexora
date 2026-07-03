@@ -28,6 +28,11 @@ Route::prefix('api/performance')->name('api.performance.')->middleware(['auth', 
     Route::get('health', [\App\Http\Controllers\Api\PerformanceController::class, 'health'])->name('health');
 });
 
+// ─── Offline Sync API ───
+Route::prefix('api/v1/offline')->name('api.offline.')->middleware(['auth', 'tenant'])->group(function () {
+    Route::post('sync', [\App\Http\Controllers\Api\OfflineSyncController::class, 'sync'])->name('sync');
+});
+
 // ─── SuperAdmin ───
 Route::prefix('superadmin')->name('superadmin.')->group(function () {
     Route::get('/login', [LoginController::class, 'create'])->name('login');

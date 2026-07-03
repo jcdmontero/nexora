@@ -7,9 +7,10 @@ import { Input } from '@/Components/ui/input'
 import { Badge } from '@/Components/ui/badge'
 import { Label } from '@/Components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/Components/ui/select'
-import { Search, ShoppingCart, Trash2, CreditCard, LockOpen, Wrench } from 'lucide-react'
+import { Search, ShoppingCart, Trash2, CreditCard, LockOpen, Wrench, WifiOff } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/Components/ui/dialog'
 import { useToast } from '@/Components/toasts/ToastProvider'
+import { enqueue } from '@/lib/sync-queue'
 
 export default function PosIndex({ productos, clientes, sesionActiva, serviciosCatalogo = [] }) {
   const [search, setSearch] = useState('')
@@ -106,8 +107,29 @@ export default function PosIndex({ productos, clientes, sesionActiva, serviciosC
       setIsCheckoutOpen(true)
   }
 
-  const processPayment = (e) => {
+  const processPayment = async (e) => {
       e.preventDefault()
+      if (!navigator.onLine) {
+          await enqueue({
+              type: 'pos.sale',
+              endpoint: route('sales.pos.store'),
+              method: 'POST',
+              data: {
+                  ...data,
+                  items: cart.map(i => ({
+                      id: i.id,
+                      nombre: i.nombre,
+                      tipo: i.tipo,
+                      precio_venta: i.precio_venta,
+                      qty: i.qty,
+                  })),
+              },
+          })
+          flash('Venta guardada offline. Se sincronizará cuando vuelva internet.', 'info')
+          setIsCheckoutOpen(false)
+          setCart([])
+          return
+      }
       post(route('sales.pos.store'), {
           onSuccess: () => {
               setIsCheckoutOpen(false)

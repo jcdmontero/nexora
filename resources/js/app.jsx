@@ -2,6 +2,7 @@ import { createInertiaApp } from '@inertiajs/react'
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers'
 import { createRoot, hydrateRoot } from 'react-dom/client'
 import { ToastProvider } from '@/Components/toasts/ToastProvider'
+import { enqueue } from '@/lib/sync-queue'
 import React from 'react'
 import './../css/app.css'
 
@@ -67,9 +68,22 @@ createInertiaApp({
   },
 })
 
-// PWA: registrar service worker
+// PWA: registrar service worker + manejar operaciones offline
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js').catch(() => {})
+
+    // Escuchar mensajes del SW (operaciones interceptadas offline)
+    navigator.serviceWorker.addEventListener('message', async (event) => {
+      if (event.data?.type === 'OFFLINE_OPERATION') {
+        const payload = event.data.payload
+        await enqueue({
+          type: payload.type || 'unknown',
+          endpoint: payload.endpoint || '/',
+          method: payload.method || 'POST',
+          data: payload.data || payload,
+        })
+      }
+    })
   })
 }

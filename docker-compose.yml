@@ -32,6 +32,7 @@ services:
     depends_on:
       - postgres
       - redis
+      - websocket
     networks:
       - nexora-network
     restart: unless-stopped
@@ -67,6 +68,22 @@ services:
       - nexora-network
     restart: unless-stopped
 
+  # WebSocket Server (Soketi - Pusher-compatible)
+  websocket:
+    image: quay.io/soketi/soketi:latest
+    container_name: nexora-websocket
+    environment:
+      SOKETI_DEFAULT_APP_ID: nexora
+      SOKETI_DEFAULT_APP_KEY: nexora-key
+      SOKETI_DEFAULT_APP_SECRET: nexora-secret
+      SOKETI_DEFAULT_APP_ENABLE_CLIENT_MESSAGES: "true"
+      SOKETI_PORT: 6001
+    ports:
+      - "6001:6001"
+    networks:
+      - nexora-network
+    restart: unless-stopped
+
   # Queue Worker
   queue-worker:
     build:
@@ -79,6 +96,7 @@ services:
     depends_on:
       - redis
       - postgres
+      - websocket
     networks:
       - nexora-network
     restart: unless-stopped

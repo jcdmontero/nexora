@@ -107,6 +107,15 @@ class HandleInertiaRequests extends Middleware
                 'error' => fn () => $request->session()->get('error'),
             ],
             'nuevo_recibo_id' => fn () => $request->session()->get('nuevo_recibo_id'),
+            'notifications_count' => ($tenant && $user && $isUserInstance)
+                ? Cache::remember(
+                    "tenant_{$tenant->id}_user_{$user->id}_notifications_count",
+                    30,
+                    fn () => \App\Modules\Notifications\Models\Notificacion::where('tenant_id', $tenant->id)
+                        ->where('estado', '!=', 'enviada')
+                        ->count()
+                )
+                : 0,
             'config' => $tenant ? Configuracion::allForTenant($tenant->id) : [],
             'quickAccess' => ($tenant && $user && $isUserInstance)
                 ? Inertia::defer(fn () => app(DashboardDataService::class)

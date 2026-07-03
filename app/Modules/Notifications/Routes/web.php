@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use App\Modules\Notifications\Controllers\NotificacionController;
 use App\Modules\Notifications\Controllers\PlantillaController;
+use App\Modules\Notifications\Controllers\ChatController;
 
 Route::middleware(['web', 'auth', 'tenant', 'module:notifications'])->group(function () {
     Route::prefix('notificaciones')->name('notifications.')->group(function () {
@@ -17,5 +18,12 @@ Route::middleware(['web', 'auth', 'tenant', 'module:notifications'])->group(func
             Route::put('plantillas/{plantilla}', [PlantillaController::class, 'update'])->name('plantillas.update');
             Route::delete('plantillas/{plantilla}', [PlantillaController::class, 'destroy'])->name('plantillas.destroy');
         });
+    });
+
+    Route::prefix('chat')->name('chat.')->group(function () {
+        Route::get('/conversaciones', [ChatController::class, 'index'])->name('index');
+        Route::post('/conversaciones', [ChatController::class, 'store'])->name('store');
+        Route::get('/{conversacionId}/mensajes', [ChatController::class, 'mensajes'])->name('mensajes');
+        Route::post('/{conversacionId}/mensajes', [ChatController::class, 'enviar'])->name('enviar');
     });
 });

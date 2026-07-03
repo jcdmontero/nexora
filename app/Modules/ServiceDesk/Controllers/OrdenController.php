@@ -379,6 +379,8 @@ class OrdenController extends Controller
             $notas[$validated['estado']] = $validated['nota'];
         }
 
+        $estadoAnterior = is_string($orden->estado) ? $orden->estado : $orden->estado->value;
+
         $orden->update([
             'estado' => $validated['estado'],
             'notas_fases' => $notas,
@@ -386,6 +388,12 @@ class OrdenController extends Controller
             'fecha_entregado' => $validated['estado'] === OrdenEstado::Entregado->value ? now() : $orden->fecha_entregado,
             'updated_by' => $request->user()->id,
         ]);
+
+        \App\Events\OrdenEstadoActualizado::dispatch(
+            $orden->fresh(),
+            $estadoAnterior,
+            $validated['estado'],
+        );
 
         if ($validated['estado'] === OrdenEstado::Cancelado->value) {
             $this->ordenService->cancelar($orden);

@@ -89,6 +89,8 @@ class NotificacionService
 
         $this->enviar($noti, $enviadoPor);
 
+        \App\Events\NotificacionCreada::dispatch($noti);
+
         return $noti;
     }
 

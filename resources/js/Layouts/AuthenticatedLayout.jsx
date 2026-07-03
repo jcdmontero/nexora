@@ -1,11 +1,13 @@
 import { Link, usePage } from '@inertiajs/react'
 import { Fragment } from 'react'
-import { Bell, HelpCircle, Sun, Moon } from 'lucide-react'
+import { HelpCircle, Sun, Moon } from 'lucide-react'
 import { Sidebar } from '@/Components/Sidebar/Sidebar'
 import { GlobalSearch } from '@/Components/GlobalSearch'
 import { UserDropdown } from '@/Components/UserDropdown'
 import { HeaderContextualAction } from '@/Components/HeaderContextualAction'
 import { NetworkStatusBar } from '@/Components/NetworkStatusBar'
+import { NotificationBell } from '@/Components/notifications/NotificationBell'
+import { ChatWidget } from '@/Components/chat/ChatWidget'
 import { useTheme } from '@/Hooks/useTheme'
 import { useBreadcrumbs } from '@/Hooks/useBreadcrumbs'
 
@@ -71,10 +73,8 @@ export default function AuthenticatedLayout({ children }) {
                     ? <Sun className="w-5 h-5" />
                     : <Moon className="w-5 h-5" />}
                </button>
-               <button aria-label="Notificaciones" className="relative p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-full transition-colors">
-                  <Bell className="w-5 h-5" />
-                  <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-red-500 ring-2 ring-card"></span>
-               </button>
+               <NotificationBell />
+               <ChatWidget />
                <button aria-label="Ayuda" className="hidden sm:block p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-full transition-colors">
                   <HelpCircle className="w-5 h-5" />
                </button>

@@ -32,10 +32,10 @@ let reactRoot = null
 createInertiaApp({
   resolve: (name) => {
     const pages = import.meta.glob('./Pages/**/*.{jsx,tsx}')
-    // Try .tsx first, then .jsx — avoids stale .jsx shadowing newer .tsx files
-    return resolvePageComponent(`./Pages/${name}.tsx`, pages).catch(() =>
-      resolvePageComponent(`./Pages/${name}.jsx`, pages),
-    )
+    const tsxPath = `./Pages/${name}.tsx`
+    const jsxPath = `./Pages/${name}.jsx`
+    const key = tsxPath in pages ? tsxPath : jsxPath
+    return resolvePageComponent(key, pages)
   },
   setup({ el, App, props }) {
     const root = (
@@ -50,16 +50,17 @@ createInertiaApp({
       </ErrorBoundary>
     )
 
-    // Inertia calls setup() on every page visit. Use a module-level ref to
-    // avoid calling createRoot/hydrateRoot on an already-managed container.
     if (reactRoot) {
       reactRoot.render(root)
       return
     }
 
-    const isSsr = el.hasAttribute('data-page')
-    reactRoot = isSsr ? hydrateRoot(el, root) : createRoot(el)
-    reactRoot.render(root)
+    if (el.hasChildNodes()) {
+      reactRoot = hydrateRoot(el, root)
+    } else {
+      reactRoot = createRoot(el)
+      reactRoot.render(root)
+    }
   },
   progress: {
     color: '#2563eb',

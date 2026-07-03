@@ -1,5 +1,8 @@
 export { Sidebar } from './Sidebar'
 export { SidebarHeader } from './SidebarHeader'
+export { SidebarQuickCreate } from './SidebarQuickCreate'
+export { SidebarFavorites } from './SidebarFavorites'
 export { SidebarNav } from './SidebarNav'
+export { SidebarOperationalStatus } from './SidebarOperationalStatus'
 export { SidebarUser } from './SidebarUser'
 export { SidebarFooter } from './SidebarFooter'

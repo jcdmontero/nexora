@@ -305,7 +305,7 @@ class DashboardDataService
         foreach ($access as $modCode => $items) {
             if ($moduleCodes->contains($modCode)) {
                 foreach ($items as $item) {
-                    if ($user->can($item['permission']) && route_exists($item['route'])) {
+                    if ($user->can($item['permission']) && \Illuminate\Support\Facades\Route::has($item['route'])) {
                         $quickAccess[] = $item;
                     }
                 }

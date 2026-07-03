@@ -2,8 +2,9 @@ import { Link, usePage } from '@inertiajs/react'
 import { Fragment } from 'react'
 import { Bell, HelpCircle, Sun, Moon } from 'lucide-react'
 import { Sidebar } from '@/Components/Sidebar/Sidebar'
-import { GlobalSearch } from '@/Components/GlobalSearch' // .tsx — siempre este casing
+import { GlobalSearch } from '@/Components/GlobalSearch'
 import { UserDropdown } from '@/Components/UserDropdown'
+import { HeaderContextualAction } from '@/Components/HeaderContextualAction'
 import { useTheme } from '@/Hooks/useTheme'
 import { useBreadcrumbs } from '@/Hooks/useBreadcrumbs'
 
@@ -47,8 +48,10 @@ export default function AuthenticatedLayout({ children }) {
               })}
             </nav>
 
-            {/* Global Search — un solo componente (evita doble listener Cmd+K).
-                Visible siempre: en móvil trigger compacto, en desktop ancho completo. */}
+            {/* Acción contextual según la sección activa */}
+            <HeaderContextualAction />
+
+            {/* Global Search */}
             <div className="flex items-center mx-auto md:flex-1 md:max-w-xl">
               <GlobalSearch />
             </div>

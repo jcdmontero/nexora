@@ -106,6 +106,14 @@ export interface DashboardGridProps {
 
 // ── Datos del dashboard (respuesta del controlador) ──
 
+export interface OperationalPulse {
+  ordenes_activas?: number
+  facturas_pendientes?: number
+  stock_bajo?: number
+  compras_pendientes?: number
+  cajas_abiertas?: number
+}
+
 export interface DashboardStats {
   // Sistema
   usuarios: number

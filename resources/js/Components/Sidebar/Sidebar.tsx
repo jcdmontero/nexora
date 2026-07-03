@@ -3,8 +3,11 @@ import { X, Menu, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/Components/ui/button'
 import { SidebarHeader } from './SidebarHeader'
+import { SidebarQuickCreate } from './SidebarQuickCreate'
+import { SidebarFavorites } from './SidebarFavorites'
 import { SidebarNav } from './SidebarNav'
-import { SidebarFooter } from './SidebarFooter'
+import { SidebarOperationalStatus } from './SidebarOperationalStatus'
+import { useSidebarFavorites } from '@/Hooks/useSidebarFavorites'
 
 const COLLAPSE_KEY = 'sidebar:collapsed'
 
@@ -30,6 +33,8 @@ export function Sidebar({ user, tenant }: SidebarProps) {
     return localStorage.getItem(COLLAPSE_KEY) === 'true'
   })
 
+  const { favorites, toggleFavorite, removeFavorite, isFavorite } = useSidebarFavorites()
+
   const toggleCollapsed = () => {
     setCollapsed((prev) => {
       const next = !prev
@@ -38,8 +43,6 @@ export function Sidebar({ user, tenant }: SidebarProps) {
     })
   }
 
-  // El colapso solo aplica en desktop. Al abrir el drawer móvil (260px) se
-  // muestra siempre expandido para no dejar el panel con iconos sueltos.
   const effectiveCollapsed = collapsed && !mobileOpen
 
   return (
@@ -73,11 +76,30 @@ export function Sidebar({ user, tenant }: SidebarProps) {
         {/* Header */}
         <SidebarHeader tenant={tenant} collapsed={effectiveCollapsed} />
 
-        {/* Navigation */}
-        <SidebarNav collapsed={effectiveCollapsed} />
+        {/* Botón Crear Nuevo */}
+        <SidebarQuickCreate collapsed={effectiveCollapsed} />
 
-        {/* Footer */}
-        <SidebarFooter collapsed={effectiveCollapsed} />
+        {/* Favoritos */}
+        <SidebarFavorites
+          collapsed={effectiveCollapsed}
+          favorites={favorites}
+          onRemove={removeFavorite}
+        />
+
+        {/* Separador entre favoritos y navegación */}
+        {!effectiveCollapsed && favorites.length > 0 && (
+          <div className="mx-6 h-px bg-border/60" />
+        )}
+
+        {/* Navegación */}
+        <SidebarNav
+          collapsed={effectiveCollapsed}
+          onToggleFavorite={toggleFavorite}
+          isFavorite={isFavorite}
+        />
+
+        {/* Estado Operativo (reemplaza al footer anterior) */}
+        <SidebarOperationalStatus collapsed={effectiveCollapsed} />
 
         {/* Toggle colapsar/expandir (solo desktop) */}
         <button

@@ -1,6 +1,8 @@
 import { Link, usePage } from '@inertiajs/react'
-import { cn } from '@/lib/utils'
+import { cn, routeExistsSafe } from '@/lib/utils'
 import { usePermissions } from '@/Hooks/usePermissions'
+import { resolveIcon } from '@/lib/sidebar-icons'
+import type { FavoriteItem } from '@/Hooks/useSidebarFavorites'
 import {
   LayoutDashboard,
   Users,
@@ -21,6 +23,7 @@ import {
   IdCard,
   Banknote,
   Truck,
+  Star,
   type LucideIcon,
 } from 'lucide-react'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/Components/ui/collapsible'
@@ -42,7 +45,6 @@ interface NavSection {
   items: (NavItem | MenuSeparator | MenuLabel)[]
 }
 
-// ─── Prioridad de módulos (basado en dependencias y flujo de negocio) ───
 const MODULE_PRIORITY: Record<string, number> = {
   'CONTABILIDAD': 1,
   'INVENTARIOS': 2,
@@ -61,17 +63,6 @@ const getPriority = (sectionName?: string) => {
   return MODULE_PRIORITY[normalized] || 100
 }
 
-const iconMap: Record<string, LucideIcon> = {
-  LayoutDashboard, Users, Package, FileSearch, ShoppingCart,
-  Wrench, UserCog, DollarSign, ClipboardList, Calculator,
-  Building2, Wallet, Shield, Settings, IdCard, Banknote, Truck,
-}
-
-function resolveIcon(name?: string, itemIcon?: string): LucideIcon {
-  return (itemIcon && iconMap[itemIcon]) || (name && iconMap[name]) || Package
-}
-
-// ─── Tipos de items especiales ───
 interface MenuSeparator {
   type: 'separator'
 }
@@ -83,68 +74,100 @@ interface MenuLabel {
 
 type MenuEntry = NavItem | MenuSeparator | MenuLabel
 
-// ─── Componente que renderiza cada item del menú ───
-// Diseño monocromático tipo Linear/Vercel: el color se reserva para el item
-// activo (acento + barra primaria). En reposo todo es neutro para reducir ruido.
-function MenuItem({ item, active, collapsed }: { item: NavItem; active: boolean; collapsed?: boolean }) {
+function MenuItem({
+  item,
+  active,
+  collapsed,
+  isFavorite,
+  onToggleFavorite,
+}: {
+  item: NavItem
+  active: boolean
+  collapsed?: boolean
+  isFavorite?: boolean
+  onToggleFavorite?: (fav: FavoriteItem) => void
+}) {
   const Icon = item.icon
 
   return (
-    <Link
-      href={route(item.route)}
-      title={collapsed ? item.label : undefined}
-      className={cn(
-        'group relative flex items-center rounded-lg text-sm font-medium transition-colors duration-200',
-        collapsed ? 'justify-center px-0 py-2.5' : 'gap-3 px-3 py-2',
-        active
-          ? 'bg-accent text-accent-foreground'
-          : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground'
-      )}
-    >
-      {/* Barra indicadora activa */}
-      {active && (
-        <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-primary rounded-r-full animate-in fade-in slide-in-from-left-1 duration-300" />
-      )}
-
-      {/* Icono monocromático: hereda el color del texto (acento si activo) */}
-      <Icon
+    <div className="group/fav relative flex items-center">
+      <Link
+        href={route(item.route)}
+        title={collapsed ? item.label : undefined}
         className={cn(
-          'w-[18px] h-[18px] shrink-0 transition-colors duration-200',
-          active ? 'text-primary' : 'text-muted-foreground group-hover:text-foreground'
+          'group relative flex items-center rounded-lg text-sm font-medium transition-colors duration-200 flex-1',
+          collapsed ? 'justify-center px-0 py-2.5' : 'gap-3 px-3 py-2',
+          active
+            ? 'bg-accent text-accent-foreground'
+            : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground'
         )}
-        strokeWidth={2}
-      />
+      >
+        {active && (
+          <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-primary rounded-r-full animate-in fade-in slide-in-from-left-1 duration-300" />
+        )}
 
-      {/* Nombre del menú (oculto al colapsar) */}
-      {!collapsed && <span className="flex-1 truncate">{item.label}</span>}
-
-      {/* Flecha indicadora en hover */}
-      {!collapsed && (
-        <ChevronRight
+        <Icon
           className={cn(
-            'w-4 h-4 opacity-0 -translate-x-2 transition-all duration-200',
-            'group-hover:opacity-100 group-hover:translate-x-0',
-            active && 'opacity-100 translate-x-0'
+            'w-[18px] h-[18px] shrink-0 transition-colors duration-200',
+            active ? 'text-primary' : 'text-muted-foreground group-hover:text-foreground'
           )}
+          strokeWidth={2}
         />
-      )}
 
-      {/* Tooltip flotante cuando está colapsado */}
-      {collapsed && (
-        <span className="pointer-events-none absolute left-full ml-3 z-50 hidden whitespace-nowrap rounded-md bg-popover px-2.5 py-1.5 text-xs font-medium text-popover-foreground shadow-md ring-1 ring-border group-hover:block">
-          {item.label}
-        </span>
+        {!collapsed && <span className="flex-1 truncate">{item.label}</span>}
+
+        {!collapsed && !onToggleFavorite && (
+          <ChevronRight
+            className={cn(
+              'w-4 h-4 opacity-0 -translate-x-2 transition-all duration-200',
+              'group-hover:opacity-100 group-hover:translate-x-0',
+              active && 'opacity-100 translate-x-0'
+            )}
+          />
+        )}
+
+        {collapsed && (
+          <span className="pointer-events-none absolute left-full ml-3 z-50 hidden whitespace-nowrap rounded-md bg-popover px-2.5 py-1.5 text-xs font-medium text-popover-foreground shadow-md ring-1 ring-border group-hover:block">
+            {item.label}
+          </span>
+        )}
+      </Link>
+
+      {/* Estrella de favoritos (solo expandido y con handler) */}
+      {!collapsed && onToggleFavorite && (
+        <button
+          onClick={(e) => {
+            e.preventDefault()
+            e.stopPropagation()
+            onToggleFavorite({
+              route: item.route,
+              label: item.label,
+              icon: item.iconColor || 'Package',
+              section: undefined,
+            })
+          }}
+          className={cn(
+            'absolute right-1 p-1 rounded-md transition-all',
+            isFavorite
+              ? 'text-amber-500 opacity-100'
+              : 'text-muted-foreground opacity-0 group-hover/fav:opacity-100 hover:text-amber-500'
+          )}
+          title={isFavorite ? 'Quitar de favoritos' : 'Agregar a favoritos'}
+        >
+          <Star
+            className="w-3.5 h-3.5"
+            fill={isFavorite ? 'currentColor' : 'none'}
+          />
+        </button>
       )}
-    </Link>
+    </div>
   )
 }
 
-/** Renderiza un separador visual */
 function MenuSeparatorLine() {
   return <div className="my-2 mx-3 h-px bg-border" />
 }
 
-/** Renderiza una etiqueta de subgrupo */
 function MenuGroupLabel({ label }: { label: string }) {
   return (
     <div className="px-3 py-1.5 text-[11px] font-semibold tracking-widest text-muted-foreground uppercase">
@@ -153,32 +176,58 @@ function MenuGroupLabel({ label }: { label: string }) {
   )
 }
 
-/** Renderiza un item del menú según su tipo */
-function RenderNavItem({ entry, isActivePath, collapsed }: { entry: MenuEntry; isActivePath: (p: string) => boolean; collapsed?: boolean }) {
-  // Separador
+function RenderNavItem({
+  entry,
+  isActivePath,
+  collapsed,
+  isFavorite,
+  onToggleFavorite,
+}: {
+  entry: MenuEntry
+  isActivePath: (p: string) => boolean
+  collapsed?: boolean
+  isFavorite?: (route: string) => boolean
+  onToggleFavorite?: (fav: FavoriteItem) => void
+}) {
   if ('type' in entry && entry.type === 'separator') {
     return <MenuSeparatorLine />
   }
 
-  // Etiqueta de subgrupo (se oculta al colapsar)
   if ('type' in entry && entry.type === 'label') {
     return collapsed ? null : <MenuGroupLabel label={entry.label} />
   }
 
-  // Item de navegación normal
   const navItem = entry as NavItem
-  return <MenuItem item={navItem} active={isActivePath(navItem.pattern)} collapsed={collapsed} />
+  return (
+    <MenuItem
+      item={navItem}
+      active={isActivePath(navItem.pattern)}
+      collapsed={collapsed}
+      isFavorite={isFavorite?.(navItem.route)}
+      onToggleFavorite={onToggleFavorite}
+    />
+  )
 }
 
-// ─── Grupo de navegación (con o sin título colapsable) ───
-function NavGroup({ section, isActivePath, collapsed }: { section: NavSection; isActivePath: (p: string) => boolean; collapsed?: boolean }) {
+function NavGroup({
+  section,
+  isActivePath,
+  collapsed,
+  isFavorite,
+  onToggleFavorite,
+}: {
+  section: NavSection
+  isActivePath: (p: string) => boolean
+  collapsed?: boolean
+  isFavorite?: (route: string) => boolean
+  onToggleFavorite?: (fav: FavoriteItem) => void
+}) {
   const isSectionActive = section.items.some((item) => {
-    if (item.type === 'separator' || item.type === 'label') return false
+    if ('type' in item) return false
     return isActivePath((item as NavItem).pattern)
   })
   const [isOpen, setIsOpen] = useState(isSectionActive)
 
-  // Colapsado: lista plana de iconos, sin título ni colapsable.
   if (collapsed) {
     return (
       <div className="space-y-0.5">
@@ -189,18 +238,22 @@ function NavGroup({ section, isActivePath, collapsed }: { section: NavSection; i
     )
   }
 
-  // Sin título: items sueltos (ej: Dashboard)
   if (!section.title) {
     return (
       <div className="space-y-0.5">
         {section.items.map((entry, idx) => (
-          <RenderNavItem key={idx} entry={entry} isActivePath={isActivePath} />
+          <RenderNavItem
+            key={idx}
+            entry={entry}
+            isActivePath={isActivePath}
+            isFavorite={isFavorite}
+            onToggleFavorite={onToggleFavorite}
+          />
         ))}
       </div>
     )
   }
 
-  // Con título: sección colapsable con icono (ej: módulos, configuración)
   const SectionIcon = section.icon
 
   return (
@@ -217,15 +270,26 @@ function NavGroup({ section, isActivePath, collapsed }: { section: NavSection; i
       </CollapsibleTrigger>
       <CollapsibleContent className="space-y-0.5 overflow-hidden transition-all data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down">
         {section.items.map((entry, idx) => (
-          <RenderNavItem key={idx} entry={entry} isActivePath={isActivePath} />
+          <RenderNavItem
+            key={idx}
+            entry={entry}
+            isActivePath={isActivePath}
+            isFavorite={isFavorite}
+            onToggleFavorite={onToggleFavorite}
+          />
         ))}
       </CollapsibleContent>
     </Collapsible>
   )
 }
 
-// ─── Componente principal ───
-export function SidebarNav({ collapsed }: { collapsed?: boolean }) {
+interface SidebarNavProps {
+  collapsed?: boolean
+  onToggleFavorite?: (item: FavoriteItem) => void
+  isFavorite?: (route: string) => boolean
+}
+
+export function SidebarNav({ collapsed, onToggleFavorite, isFavorite }: SidebarNavProps) {
   const page = usePage()
   const url = page.url
   const moduleMenus = (page.props.moduleMenus || []) as {
@@ -264,20 +328,13 @@ export function SidebarNav({ collapsed }: { collapsed?: boolean }) {
     }
   }
 
-  // ── Secciones fijas ──
-  const coreSections: NavSection[] = [
-    {
-      items: [
-        {
-          label: 'Dashboard',
-          route: 'core.dashboard',
-          icon: LayoutDashboard,
-          iconColor: 'LayoutDashboard',
-          pattern: 'core.dashboard',
-        },
-      ],
-    },
-  ]
+  const dashboardItem: NavItem = {
+    label: 'Dashboard',
+    route: 'core.dashboard',
+    icon: LayoutDashboard,
+    iconColor: 'LayoutDashboard',
+    pattern: 'core.dashboard',
+  }
 
   const { can } = usePermissions()
 
@@ -329,20 +386,6 @@ export function SidebarNav({ collapsed }: { collapsed?: boolean }) {
     ].filter((item) => !item.permission || can(item.permission)),
   }
 
-  // ── Secciones de módulos (dinámicas) ──
-  // Verifica que la ruta exista Y se pueda construir sin parámetros. Las rutas
-  // que requieren parámetros (p.ej. ...multimedia.destroy con {multimedia})
-  // harían lanzar a route() durante el render y romperían toda la app.
-  const routeExists = (name: string): boolean => {
-    try {
-      if (!route().has(name)) return false
-      route(name) // lanza si la ruta requiere parámetros → la excluimos del menú
-      return true
-    } catch {
-      return false
-    }
-  }
-
   const moduleSections: NavSection[] = [...moduleMenus]
     .sort((a, b) => getPriority(a.section) - getPriority(b.section))
     .map((menu) => ({
@@ -350,16 +393,12 @@ export function SidebarNav({ collapsed }: { collapsed?: boolean }) {
       icon: resolveIcon(menu.icon),
       iconColor: menu.icon || 'Package',
       items: (menu.items || []).filter((item) => {
-        // Items especiales (separador, etiqueta) siempre se muestran
         if ('type' in item) return true
-        // Items normales: deben tener ruta existente y permiso
-        if (!routeExists(item.route)) return false
+        if (!routeExistsSafe(item.route)) return false
         if (item.permission && !can(item.permission)) return false
         return true
       }).map((item) => {
-        // Items especiales se pasan tal cual
         if ('type' in item) return item
-        // Items normales se transforman a NavItem
         const rawItem = item as Record<string, unknown>
         return {
           label: item.label,
@@ -372,26 +411,32 @@ export function SidebarNav({ collapsed }: { collapsed?: boolean }) {
     }))
     .filter((section) => section.items.length > 0)
 
-  const allSections = [...coreSections, ...moduleSections, adminSection]
-
   return (
-    <nav className={cn('flex-1 py-4 overflow-y-auto', collapsed ? 'px-2 space-y-2' : 'px-3 space-y-8')}>
-      {/* Zona: Acceso Rápido */}
-      <div className={collapsed ? 'space-y-0.5' : 'space-y-4'}>
-        {!collapsed && <MenuGroupLabel label="Acceso Rápido" />}
-        {coreSections.map((section, idx) => (
-          <NavGroup key={`core-${idx}`} section={section} isActivePath={isActive} collapsed={collapsed} />
-        ))}
+    <nav className={cn('flex-1 py-4 overflow-y-auto', collapsed ? 'px-2 space-y-2' : 'px-3 space-y-6')}>
+      {/* Dashboard como primer item directo */}
+      <div className="space-y-0.5">
+        <MenuItem
+          item={dashboardItem}
+          active={isActive('core.dashboard')}
+          collapsed={collapsed}
+        />
       </div>
 
       {collapsed && <MenuSeparatorLine />}
 
-      {/* Zona: Operaciones */}
+      {/* Zona: Operaciones (módulos dinámicos) */}
       {moduleSections.length > 0 && (
         <div className={collapsed ? 'space-y-0.5' : 'space-y-4'}>
           {!collapsed && <MenuGroupLabel label="Operaciones" />}
           {moduleSections.map((section, idx) => (
-            <NavGroup key={`mod-${idx}`} section={section} isActivePath={isActive} collapsed={collapsed} />
+            <NavGroup
+              key={`mod-${idx}`}
+              section={section}
+              isActivePath={isActive}
+              collapsed={collapsed}
+              isFavorite={isFavorite}
+              onToggleFavorite={onToggleFavorite}
+            />
           ))}
         </div>
       )}
@@ -401,7 +446,13 @@ export function SidebarNav({ collapsed }: { collapsed?: boolean }) {
       {/* Zona: Sistema */}
       <div className={collapsed ? 'space-y-0.5' : 'space-y-4'}>
         {!collapsed && <MenuGroupLabel label="Sistema" />}
-        <NavGroup section={adminSection} isActivePath={isActive} collapsed={collapsed} />
+        <NavGroup
+          section={adminSection}
+          isActivePath={isActive}
+          collapsed={collapsed}
+          isFavorite={isFavorite}
+          onToggleFavorite={onToggleFavorite}
+        />
       </div>
     </nav>
   )

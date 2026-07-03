@@ -4,10 +4,12 @@ namespace App\Http\Middleware;
 
 use App\Core\Models\Configuracion;
 use App\Core\Models\TenantModule;
+use App\Core\Services\DashboardDataService;
 use App\Core\Services\ModuleRegistry;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
+use Inertia\Inertia;
 use Inertia\Middleware;
 
 class HandleInertiaRequests extends Middleware
@@ -106,6 +108,14 @@ class HandleInertiaRequests extends Middleware
             ],
             'nuevo_recibo_id' => fn () => $request->session()->get('nuevo_recibo_id'),
             'config' => $tenant ? Configuracion::allForTenant($tenant->id) : [],
+            'quickAccess' => ($tenant && $user && $isUserInstance)
+                ? Inertia::defer(fn () => app(DashboardDataService::class)
+                    ->getQuickAccess($tenant->id, $user, $activeModules->pluck('module_code')))
+                : [],
+            'operationalPulse' => ($tenant && $user && $isUserInstance)
+                ? Inertia::defer(fn () => app(DashboardDataService::class)
+                    ->getOperationalPulse($tenant->id, $activeModules->pluck('module_code')))
+                : null,
         ];
     }
 }

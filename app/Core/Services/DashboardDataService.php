@@ -305,7 +305,7 @@ class DashboardDataService
         foreach ($access as $modCode => $items) {
             if ($moduleCodes->contains($modCode)) {
                 foreach ($items as $item) {
-                    if ($user->can($item['permission']) && route_exists($item['route'])) {
+                    if ($user->can($item['permission']) && \Illuminate\Support\Facades\Route::has($item['route'])) {
                         $quickAccess[] = $item;
                     }
                 }
@@ -674,6 +674,54 @@ class DashboardDataService
         });
     }
 
+    public function getOperationalPulse(int $tenantId, $moduleCodes): array
+    {
+        $cacheKey = "sidebar:{$tenantId}:pulse";
+
+        return Cache::remember($cacheKey, 120, function () use ($tenantId, $moduleCodes) {
+            $pulse = [];
+
+            if ($moduleCodes->contains('service-desk')) {
+                $pulse['ordenes_activas'] = $this->safeCount(fn () => DB::table('sd_ordenes')
+                    ->where('tenant_id', $tenantId)
+                    ->whereIn('estado', ['recibido', 'diagnosticado', 'en_proceso'])
+                    ->whereNull('deleted_at')
+                    ->count());
+            }
+
+            if ($moduleCodes->contains('sales')) {
+                $pulse['facturas_pendientes'] = $this->safeCount(fn () => DB::table('sales_facturas')
+                    ->where('tenant_id', $tenantId)
+                    ->where('estado', 'pendiente')
+                    ->count());
+            }
+
+            if ($moduleCodes->contains('inventory')) {
+                $pulse['stock_bajo'] = $this->safeCount(fn () => DB::table('inventory_productos')
+                    ->where('tenant_id', $tenantId)
+                    ->where('is_active', true)
+                    ->whereColumn('stock_actual', '<=', 'stock_minimo')
+                    ->count());
+            }
+
+            if ($moduleCodes->contains('purchasing')) {
+                $pulse['compras_pendientes'] = $this->safeCount(fn () => DB::table('purchasing_ordenes_compra')
+                    ->where('tenant_id', $tenantId)
+                    ->whereIn('estado', ['pendiente', 'enviada', 'parcial'])
+                    ->count());
+            }
+
+            if ($moduleCodes->contains('cash')) {
+                $pulse['cajas_abiertas'] = $this->safeCount(fn () => DB::table('cash_caja_sesiones')
+                    ->where('tenant_id', $tenantId)
+                    ->where('estado', 'abierta')
+                    ->count());
+            }
+
+            return $pulse;
+        });
+    }
+
     public function invalidateCache(int $tenantId): void
     {
         Cache::forget("dashboard:{$tenantId}:stats");
@@ -683,6 +731,7 @@ class DashboardDataService
         Cache::forget("dashboard:{$tenantId}:widget:service-desk");
         Cache::forget("dashboard:{$tenantId}:widget:sales");
         Cache::forget("dashboard:{$tenantId}:widget:cash");
+        Cache::forget("sidebar:{$tenantId}:pulse");
     }
 
     private function periodRange(string $period): array

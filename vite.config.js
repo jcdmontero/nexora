@@ -50,7 +50,8 @@ export default defineConfig({
                         if (
                             normalizedId.includes('node_modules/react/') ||
                             normalizedId.includes('node_modules/react-dom/') ||
-                            normalizedId.includes('node_modules/@inertiajs/react/')
+                            normalizedId.includes('node_modules/@inertiajs/react/') ||
+                            normalizedId.includes('node_modules/use-sync-external-store/')
                         ) {
                             return 'vendor-react';
                         }
@@ -107,10 +108,9 @@ export default defineConfig({
             'lucide-react',
             'clsx',
             'tailwind-merge',
-        ],
-        exclude: [
-            // Exclude heavy libraries that should be lazy loaded
             'recharts',
+            'use-sync-external-store',
+            'use-sync-external-store/shim/with-selector',
         ],
     },
     // CSS configuration

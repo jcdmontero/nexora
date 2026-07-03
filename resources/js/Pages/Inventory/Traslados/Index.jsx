@@ -5,10 +5,12 @@ import { Button } from '@/Components/ui/button';
 import { Plus, ArrowRightLeft, Eye } from 'lucide-react';
 import { DataTable } from '@/Components/ui/data-table';
 import EmptyState from '@/Components/ui/empty-state';
+import { TableSkeleton } from '@/Components/ui/skeleton';
 import { usePermissions } from '@/Hooks/usePermissions';
 
 export default function Index({ traslados }) {
     const { can } = usePermissions();
+    const loading = traslados == null;
 
     const columns = [
         {
@@ -63,7 +65,9 @@ export default function Index({ traslados }) {
                         )}
                     </div>
 
-                    {!traslados || traslados.length === 0 ? (
+                    {loading ? (
+                        <TableSkeleton rows={5} cols={4} />
+                    ) : !traslados || traslados.length === 0 ? (
                         <EmptyState
                             icon={ArrowRightLeft}
                             title="No hay traslados registrados"

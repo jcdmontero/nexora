@@ -3,6 +3,7 @@ import { Head, Link, router } from '@inertiajs/react'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import { DataTable } from '@/Components/ui/data-table'
 import { EmptyState } from '@/Components/ui/empty-state'
+import { TableSkeleton } from '@/Components/ui/skeleton'
 import { PageHeader } from '@/Components/ui/page-header'
 import { ListToolbar, FilterSelect } from '@/Components/ui/list-toolbar'
 import { Pagination } from '@/Components/ui/pagination'
@@ -31,7 +32,8 @@ const estadoClass = {
 const money = (n) => '$' + Number(n || 0).toLocaleString('es-CO')
 const fecha = (iso) => (iso ? new Date(iso).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' }) : '—')
 
-export default function OrdenesIndex({ ordenes = [], estados = [], soloPropias = false }) {
+export default function OrdenesIndex({ ordenes, estados = [], soloPropias = false }) {
+  const loading = ordenes == null
   const { can } = usePermissions()
   const { verificarCaja, abrirCaja, cajasDisponibles } = useCaja()
   const { toast } = useToast()
@@ -180,7 +182,9 @@ export default function OrdenesIndex({ ordenes = [], estados = [], soloPropias =
             }
           />
         </div>
-        {ordenes.length === 0 ? (
+        {loading ? (
+          <div className="p-4"><TableSkeleton rows={6} cols={6} /></div>
+        ) : ordenes.length === 0 ? (
           <EmptyState
             icon={Wrench}
             title="Sin órdenes de reparación"

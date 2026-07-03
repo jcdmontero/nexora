@@ -5,10 +5,12 @@ import { Button } from '@/Components/ui/button';
 import { PackageOpen, Eye } from 'lucide-react';
 import { DataTable } from '@/Components/ui/data-table';
 import EmptyState from '@/Components/ui/empty-state';
+import { TableSkeleton } from '@/Components/ui/skeleton';
 import { usePermissions } from '@/Hooks/usePermissions';
 
 export default function Index({ recepciones }) {
     const { can } = usePermissions();
+    const loading = recepciones == null;
 
     const columns = [
         {
@@ -52,7 +54,9 @@ export default function Index({ recepciones }) {
                         <h3 className="text-lg font-medium text-gray-900">Historial de Recepciones</h3>
                     </div>
 
-                    {!recepciones || recepciones.length === 0 ? (
+                    {loading ? (
+                        <TableSkeleton rows={5} cols={3} />
+                    ) : !recepciones || recepciones.length === 0 ? (
                         <EmptyState
                             icon={PackageOpen}
                             title="No hay recepciones registradas"

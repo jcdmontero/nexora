@@ -58,7 +58,7 @@ export function EmptyState({
   return (
     <div
       className={cn(
-        'flex flex-col items-center justify-center py-16 px-6 text-center',
+        'flex flex-col items-center justify-center py-16 px-6 text-center animate-[fade-in-up_0.4s_ease-out]',
         className
       )}
     >

@@ -6,11 +6,13 @@ import { Plus, ShoppingCart, Eye, Edit, Trash2, CheckCircle2 } from 'lucide-reac
 import { DataTable } from '@/Components/ui/data-table';
 import { Badge } from '@/Components/ui/badge';
 import EmptyState from '@/Components/ui/empty-state';
+import { TableSkeleton } from '@/Components/ui/skeleton';
 import { usePermissions } from '@/Hooks/usePermissions';
 
 export default function Index({ ordenes }) {
     const { can } = usePermissions();
     const [isDeleting, setIsDeleting] = useState(false);
+    const loading = ordenes == null;
 
     const handleDelete = (id) => {
         if (confirm('¿Está seguro de eliminar esta orden?')) {
@@ -112,7 +114,9 @@ export default function Index({ ordenes }) {
                         )}
                     </div>
 
-                    {!ordenes || ordenes.length === 0 ? (
+                    {loading ? (
+                        <TableSkeleton rows={6} cols={5} />
+                    ) : !ordenes || ordenes.length === 0 ? (
                         <EmptyState
                             icon={ShoppingCart}
                             title="No hay órdenes de compra"

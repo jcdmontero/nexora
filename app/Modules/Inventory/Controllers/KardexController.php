@@ -22,7 +22,7 @@ class KardexController extends Controller
             ->paginate(15)
             ->withQueryString();
 
-        return Inertia::render('Modules/Inventory/Kardex/Index', [
+        return Inertia::render('Inventory/Kardex/Index', [
             'productos' => $productos,
             'filters' => $request->only(['search']),
         ]);
@@ -38,7 +38,7 @@ class KardexController extends Controller
             ->orderBy('id', 'desc')
             ->paginate(20);
 
-        return Inertia::render('Modules/Inventory/Kardex/Show', [
+        return Inertia::render('Inventory/Kardex/Show', [
             'producto' => $producto,
             'movimientos' => $movimientos,
         ]);

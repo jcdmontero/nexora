@@ -42,32 +42,31 @@ class LiquidacionController extends Controller
             abort(403);
         }
 
-        $periodo->load([
-            'nominas.contrato.empleado',
-            'nominas.detalles.concepto',
-        ]);
-
-        $nominas = $periodo->nominas->map(fn ($n) => [
-            'id'                  => $n->id,
-            'empleado_nombre'     => trim(
-                ($n->contrato?->empleado?->nombres ?? '') . ' '
-                . ($n->contrato?->empleado?->apellidos ?? '')
-            ),
-            'empleado_documento'  => $n->contrato?->empleado?->documento,
-            'dias_laborados'      => $n->dias_laborados,
-            'total_devengado'     => (float) $n->total_devengado,
-            'total_deducciones'   => (float) $n->total_deducciones,
-            'neto_pagar'          => (float) $n->neto_pagar,
-            'ibc_seguridad_social'=> (float) $n->ibc_seguridad_social,
-            'costo_laboral_total' => (float) $n->costo_laboral_total,
-            'detalles'            => $n->detalles->map(fn ($d) => [
-                'concepto_codigo' => $d->concepto?->codigo,
-                'concepto_nombre' => $d->concepto?->nombre,
-                'concepto_tipo'   => $d->concepto?->tipo,
-                'cantidad'        => (float) $d->cantidad,
-                'valor'           => (float) $d->valor,
-            ]),
-        ]);
+        $nominasPaginadas = $periodo->nominas()
+            ->with(['contrato.empleado', 'detalles.concepto'])
+            ->orderBy('id')
+            ->paginate(20)
+            ->through(fn ($n) => [
+                'id'                  => $n->id,
+                'empleado_nombre'     => trim(
+                    ($n->contrato?->empleado?->nombres ?? '') . ' '
+                    . ($n->contrato?->empleado?->apellidos ?? '')
+                ),
+                'empleado_documento'  => $n->contrato?->empleado?->documento,
+                'dias_laborados'      => $n->dias_laborados,
+                'total_devengado'     => (float) $n->total_devengado,
+                'total_deducciones'   => (float) $n->total_deducciones,
+                'neto_pagar'          => (float) $n->neto_pagar,
+                'ibc_seguridad_social'=> (float) $n->ibc_seguridad_social,
+                'costo_laboral_total' => (float) $n->costo_laboral_total,
+                'detalles'            => $n->detalles->map(fn ($d) => [
+                    'concepto_codigo' => $d->concepto?->codigo,
+                    'concepto_nombre' => $d->concepto?->nombre,
+                    'concepto_tipo'   => $d->concepto?->tipo,
+                    'cantidad'        => (float) $d->cantidad,
+                    'valor'           => (float) $d->valor,
+                ]),
+            ]);
 
         return Inertia::render('Payroll/Liquidaciones/Show', [
             'periodo' => [
@@ -80,9 +79,9 @@ class LiquidacionController extends Controller
                 'observaciones'=> $periodo->observaciones,
                 'created_at'   => $periodo->created_at?->format('Y-m-d H:i'),
             ],
-            'nominas' => $nominas,
+            'nominas' => $nominasPaginadas,
             'resumen' => [
-                'total_empleados'   => $periodo->nominas->count(),
+                'total_empleados'   => $periodo->nominas()->count(),
                 'total_devengado'   => (float) $periodo->total_devengado,
                 'total_deducciones' => (float) $periodo->total_deducciones,
                 'total_provisiones' => (float) $periodo->total_provisiones,
@@ -113,6 +112,14 @@ class LiquidacionController extends Controller
 
         if ($exists) {
             return back()->with('error', 'Ya existe un período para el mes contable seleccionado.');
+        }
+
+        $codigoExists = PeriodoNomina::where('tenant_id', $tenantId)
+            ->where('codigo', $validated['codigo'])
+            ->exists();
+
+        if ($codigoExists) {
+            return back()->with('error', 'El código de período ya está en uso.');
         }
 
         $periodo = PeriodoNomina::create([

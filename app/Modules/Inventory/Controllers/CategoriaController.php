@@ -20,7 +20,7 @@ class CategoriaController extends Controller
             ->paginate(15)
             ->withQueryString();
 
-        return Inertia::render('Modules/Inventory/Categorias/Index', [
+        return Inertia::render('Inventory/Categorias/Index', [
             'categorias' => $categorias,
             'filters' => $request->only(['search']),
         ]);

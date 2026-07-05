@@ -1,11 +1,12 @@
 import React from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import { Button } from '@/Components/ui/button';
-import { ArrowLeft, Printer } from 'lucide-react';
+import { ArrowLeft, Printer, CheckCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card';
 import { DataTable, type DataTableColumn } from '@/Components/ui/data-table';
 import { Badge } from '@/Components/ui/badge';
+import { usePermissions } from '@/Hooks/usePermissions';
 
 const columns: DataTableColumn<typeof traslado.detalles[0]>[] = [
   {
@@ -33,6 +34,15 @@ const columns: DataTableColumn<typeof traslado.detalles[0]>[] = [
 ]
 
 export default function Show({ traslado }) {
+    const { can } = usePermissions();
+    const isBorrador = traslado.estado === 'borrador';
+
+    const handleCompletar = () => {
+        if (confirm('¿Confirmar traslado? Se moverá el stock entre bodegas.')) {
+            router.post(route('inventory.traslados.completar', traslado.id));
+        }
+    };
+
     return (
         <AuthenticatedLayout
             header={
@@ -46,12 +56,17 @@ export default function Show({ traslado }) {
                         <h2 className="font-semibold text-xl text-gray-800 leading-tight">
                             Traslado: {traslado.numero}
                         </h2>
-                        <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
-                            {traslado.estado.toUpperCase()}
+                        <Badge className={isBorrador ? 'bg-amber-500/10 text-amber-600 border-amber-200' : 'bg-emerald-500/10 text-emerald-600 border-emerald-200'}>
+                            {traslado.estado === 'borrador' ? 'Borrador' : 'Completado'}
                         </Badge>
                     </div>
 
                     <div className="flex gap-2">
+                        {isBorrador && can('inventory:create') && (
+                            <Button onClick={handleCompletar}>
+                                <CheckCircle className="w-4 h-4 mr-2" /> Completar Traslado
+                            </Button>
+                        )}
                         <Button variant="outline" onClick={() => window.print()}>
                             <Printer className="w-4 h-4 mr-2" /> Imprimir
                         </Button>

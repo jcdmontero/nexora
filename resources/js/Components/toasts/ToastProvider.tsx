@@ -17,7 +17,7 @@ let nextId = 0
 
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<ToastData[]>([])
-  const flash = usePage().props.flash as { success?: string; error?: string } | undefined
+  const flash = usePage().props.flash as { success?: string; error?: string; warning?: string } | undefined
 
   const toast = useCallback<ToastFn>((message, variant = 'info') => {
     const id = String(++nextId)
@@ -27,6 +27,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (flash?.success) toast(flash.success, 'success')
     if (flash?.error) toast(flash.error, 'error')
+    if (flash?.warning) toast(flash.warning, 'warning')
   }, [flash, toast])
 
   const dismiss = useCallback((id: string) => {

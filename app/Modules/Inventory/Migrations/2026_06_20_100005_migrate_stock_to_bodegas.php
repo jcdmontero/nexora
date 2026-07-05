@@ -42,7 +42,8 @@ return new class extends Migration
 
     public function down(): void
     {
-        DB::table('inventory_stocks')->truncate();
-        DB::table('inventory_bodegas')->truncate();
+        // Data migration — no-op to avoid destroying user data.
+        // up() only inserts initial records; truncate() in down()
+        // would wipe records added later by business logic.
     }
 };

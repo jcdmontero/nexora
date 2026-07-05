@@ -5,7 +5,7 @@
     "description": "Catálogo de productos, control de stock y alertas de existencias.",
     "icon": "Package",
     "core": false,
-    "dependencies": [],
+    "dependencies": ["purchasing", "cash", "accounting"],
     "permissions": [
         "inventory:view",
         "inventory:create",

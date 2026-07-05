@@ -18,8 +18,8 @@ use App\Modules\Payroll\Models\Novedad;
 class PayrollLiquidator
 {
     // Parámetros legales (Fijos para MVP 2026)
-    public const SMLMV = 1300000;
-    public const AUXILIO_TRANSPORTE = 162000;
+    public const SMLMV = 1400000;
+    public const AUXILIO_TRANSPORTE = 200000;
     public const PORCENTAJE_SALUD = 0.04;
     public const PORCENTAJE_PENSION = 0.04;
 

@@ -5,7 +5,10 @@ use App\Http\Controllers\Controller;
 use App\Modules\Inventory\Models\Producto;
 use App\Modules\Inventory\Models\Categoria;
 use App\Modules\Inventory\Models\Marca;
+use App\Modules\Inventory\Models\Bodega;
+use App\Modules\Inventory\Models\Stock;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Illuminate\Support\Str;
 
@@ -25,25 +28,23 @@ class ProductoController extends Controller
             ->paginate(15)
             ->withQueryString()
             ->through(function ($p) {
-                $p->is_critical = $p->stock_actual <= $p->stock_minimo;
+                $p->is_critical = $p->stock_minimo > 0 && $p->stock_actual <= $p->stock_minimo;
                 return $p;
             });
 
-        $criticalStockCount = Producto::whereColumn('stock_actual', '<=', 'stock_minimo')->count();
+        $criticalStockCount = Producto::where('stock_minimo', '>', 0)
+            ->whereColumn('stock_actual', '<=', 'stock_minimo')
+            ->count();
 
-        return Inertia::render('Modules/Inventory/Productos/Index', [
+        return Inertia::render('Inventory/Productos/Index', [
             'productos' => $productos,
             'filters' => $request->only(['search']),
-            'criticalStockCount' => $criticalStockCount
+            'criticalCount' => $criticalStockCount
         ]);
     }
 
     public function printLabels(Request $request)
     {
-        if (!$request->user()->can('inventory:view')) {
-            abort(403);
-        }
-
         $ids = $request->query('ids', '');
         $productIds = array_filter(explode(',', $ids));
 
@@ -83,14 +84,14 @@ class ProductoController extends Controller
             return $items;
         })->flatten(1);
 
-        return Inertia::render('Modules/Inventory/Productos/PrintLabels', [
+        return Inertia::render('Inventory/Productos/PrintLabels', [
             'productos' => $productos
         ]);
     }
 
     public function create()
     {
-        return Inertia::render('Modules/Inventory/Productos/Create', [
+        return Inertia::render('Inventory/Productos/Create', [
             'categorias' => Categoria::where('is_active', true)->orderBy('nombre')->get(['id', 'nombre']),
             'marcas' => Marca::where('is_active', true)->orderBy('nombre')->get(['id', 'nombre']),
         ]);
@@ -101,8 +102,8 @@ class ProductoController extends Controller
         $validated = $request->validate([
             'codigo' => 'required|string|max:50|unique:inventory_productos,codigo,NULL,id,tenant_id,' . auth()->user()->tenant_id,
             'nombre' => 'required|string|max:150',
-            'categoria_id' => 'nullable|exists:inventory_categorias,id',
-            'marca_id' => 'nullable|exists:inventory_marcas,id',
+            'categoria_id' => ['nullable', Rule::in(Categoria::pluck('id'))],
+            'marca_id' => ['nullable', Rule::in(Marca::pluck('id'))],
             'unidad_medida' => 'required|string|max:20',
             'precio_venta' => 'required|numeric|min:0',
             'costo_promedio' => 'required|numeric|min:0',
@@ -128,12 +129,23 @@ class ProductoController extends Controller
         \DB::transaction(function () use ($validated, $imagenesPaths) {
             $data = \Arr::except($validated, ['packs', 'imagenes']);
             $data['imagenes'] = $imagenesPaths;
-            $data['imagen_url'] = !empty($imagenesPaths) ? $imagenesPaths[0] : null;
 
             $producto = Producto::create($data);
-            
+
             if (!empty($validated['packs'])) {
                 $producto->packs()->createMany($validated['packs']);
+            }
+
+            // Sincronizar stock en bodega principal si stock_inicial > 0
+            if (($validated['stock_actual'] ?? 0) > 0) {
+                $bodegaPrincipal = Bodega::where('es_principal', true)->first();
+                if ($bodegaPrincipal) {
+                    Stock::create([
+                        'producto_id' => $producto->id,
+                        'bodega_id' => $bodegaPrincipal->id,
+                        'cantidad' => $validated['stock_actual'],
+                    ]);
+                }
             }
         });
 
@@ -144,7 +156,7 @@ class ProductoController extends Controller
     {
         $producto->load('packs');
 
-        return Inertia::render('Modules/Inventory/Productos/Edit', [
+        return Inertia::render('Inventory/Productos/Edit', [
             'producto' => $producto,
             'categorias' => Categoria::where('is_active', true)->orderBy('nombre')->get(['id', 'nombre']),
             'marcas' => Marca::where('is_active', true)->orderBy('nombre')->get(['id', 'nombre']),
@@ -156,8 +168,8 @@ class ProductoController extends Controller
         $validated = $request->validate([
             'codigo' => 'required|string|max:50|unique:inventory_productos,codigo,' . $producto->id . ',id,tenant_id,' . auth()->user()->tenant_id,
             'nombre' => 'required|string|max:150',
-            'categoria_id' => 'nullable|exists:inventory_categorias,id',
-            'marca_id' => 'nullable|exists:inventory_marcas,id',
+            'categoria_id' => ['nullable', Rule::in(Categoria::pluck('id'))],
+            'marca_id' => ['nullable', Rule::in(Marca::pluck('id'))],
             'unidad_medida' => 'required|string|max:20',
             'precio_venta' => 'required|numeric|min:0',
             'costo_promedio' => 'required|numeric|min:0',
@@ -168,7 +180,7 @@ class ProductoController extends Controller
             'imagenes_existentes' => 'nullable|array',
             'imagenes_existentes.*' => 'string',
             'packs' => 'nullable|array',
-            'packs.*.id' => 'nullable|exists:inventory_product_packs,id',
+            'packs.*.id' => ['nullable', Rule::in(\App\Modules\Inventory\Models\ProductPack::pluck('id'))],
             'packs.*.nombre' => 'required|string|max:100',
             'packs.*.unidad_medida' => 'required|string|max:20',
             'packs.*.factor_conversion' => 'required|numeric|min:0.0001',
@@ -186,19 +198,18 @@ class ProductoController extends Controller
         // Merge existing and new images
         $allImages = array_slice(array_merge($existingImages, $newImages), 0, 4);
 
-        // Delete images that are no longer in the list
+        // Collect images to delete (will be deleted inside the transaction)
         $oldImages = $producto->imagenes ?? [];
+        $imagesToDelete = [];
         foreach ($oldImages as $oldImage) {
             if (!in_array($oldImage, $allImages)) {
-                $pathInStorage = str_replace('/storage/', '', $oldImage);
-                \Storage::disk('public')->delete($pathInStorage);
+                $imagesToDelete[] = str_replace('/storage/', '', $oldImage);
             }
         }
 
-        \DB::transaction(function () use ($validated, $producto, $allImages) {
+        \DB::transaction(function () use ($validated, $producto, $allImages, $imagesToDelete) {
             $data = \Arr::except($validated, ['packs', 'stock_actual', 'imagenes', 'imagenes_existentes']);
             $data['imagenes'] = $allImages;
-            $data['imagen_url'] = !empty($allImages) ? $allImages[0] : null;
 
             $producto->update($data);
 
@@ -217,6 +228,11 @@ class ProductoController extends Controller
             
             // Eliminar los packs que no vinieron en el request
             $producto->packs()->whereNotIn('id', $packIds)->delete();
+
+            // Eliminar imágenes obsoletas (dentro de la transacción)
+            foreach ($imagesToDelete as $pathInStorage) {
+                \Storage::disk('public')->delete($pathInStorage);
+            }
         });
 
         return redirect()->route('inventory.productos.index')->with('success', 'Producto actualizado correctamente.');

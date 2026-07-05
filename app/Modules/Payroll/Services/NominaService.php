@@ -197,6 +197,7 @@ class NominaService
             $topeAuxilio = $salarioMinimo * $topeSalarios;
 
             if ((float) $contrato->salario_base <= $topeAuxilio && $diasEfectivos > 0) {
+                // Ley 17/2023: empleados con salario hasta 2 SMMLV (inclusivo) reciben auxilio completo.
                 $valorAuxilio = round(((float) $configLegal->auxilio_transporte / 30) * $diasEfectivos);
                 if ($valorAuxilio > 0) {
                     $conceptos[] = $this->entry('AUX01', $valorAuxilio, $valorAuxilio);
@@ -418,11 +419,11 @@ class NominaService
             // Actualizar totales del período.
             $periodo->refresh();
             $periodo->update([
-                'total_devengado'          => $periodo->nominas()->sum('total_devengado'),
-                'total_deducciones'        => $periodo->nominas()->sum('total_deducciones'),
-                'total_provisiones'        => $periodo->nominas()->sum('total_provisiones'),
-                'total_aportes_patronales' => $periodo->nominas()->sum('total_aportes_patronales'),
-                'neto_pagar'               => $periodo->nominas()->sum('neto_pagar'),
+                'total_devengado'          => round($periodo->nominas()->sum('total_devengado'), 2),
+                'total_deducciones'        => round($periodo->nominas()->sum('total_deducciones'), 2),
+                'total_provisiones'        => round($periodo->nominas()->sum('total_provisiones'), 2),
+                'total_aportes_patronales' => round($periodo->nominas()->sum('total_aportes_patronales'), 2),
+                'neto_pagar'               => round($periodo->nominas()->sum('neto_pagar'), 2),
                 'estado'                   => 'LIQUIDADA',
             ]);
 
@@ -855,6 +856,7 @@ class NominaService
             $conceptoModelo = $this->conceptoPorCodigo($entry['concepto_codigo']);
 
             NominaDetalle::create([
+                'tenant_id'    => $periodo->tenant_id,
                 'nomina_id'    => $nomina->id,
                 'concepto_id'  => $conceptoModelo?->id,
                 'empleado_id'  => $empleado->id,

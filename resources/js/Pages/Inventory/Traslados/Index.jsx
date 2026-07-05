@@ -2,11 +2,22 @@ import React from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link } from '@inertiajs/react';
 import { Button } from '@/Components/ui/button';
+import { Badge } from '@/Components/ui/badge';
 import { Plus, ArrowRightLeft, Eye } from 'lucide-react';
 import { DataTable } from '@/Components/ui/data-table';
 import EmptyState from '@/Components/ui/empty-state';
 import { TableSkeleton } from '@/Components/ui/skeleton';
 import { usePermissions } from '@/Hooks/usePermissions';
+
+const estadoBadge = (estado) => {
+    if (estado === 'completado') {
+        return <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-200">Completado</Badge>;
+    }
+    if (estado === 'borrador') {
+        return <Badge className="bg-amber-500/10 text-amber-600 border-amber-200">Borrador</Badge>;
+    }
+    return <Badge>{estado}</Badge>;
+};
 
 export default function Index({ traslados }) {
     const { can } = usePermissions();
@@ -29,6 +40,11 @@ export default function Index({ traslados }) {
         {
             header: 'Destino',
             accessorKey: 'destino',
+        },
+        {
+            header: 'Estado',
+            accessorKey: 'estado',
+            cell: (row) => estadoBadge(row.estado),
         },
         {
             id: 'actions',

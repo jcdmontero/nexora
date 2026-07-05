@@ -10,6 +10,7 @@ use App\Modules\Payroll\Models\Novedad;
 use App\Modules\Payroll\Models\PeriodoNomina;
 use App\Modules\Payroll\Models\ConceptoNomina;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\DB;
 
@@ -90,12 +91,14 @@ class NovedadController extends Controller
      */
     public function store(Request $request)
     {
+        $tenantId = auth()->user()->tenant_id;
+
         $validated = $request->validate([
-            'empleado_id'  => 'required|exists:hr_empleados,id',
+            'empleado_id'  => ['required', Rule::in(Empleado::where('tenant_id', $tenantId)->pluck('id'))],
             'tipo'         => 'required|in:ingreso,descuento',
             'descripcion'  => 'nullable|string|max:250',
-            'concepto_id'  => 'nullable|exists:pay_conceptos_nomina,id',
-            'periodo_id'   => 'nullable|exists:pay_periodos_nomina,id',
+            'concepto_id'  => ['nullable', Rule::in(ConceptoNomina::where('tenant_id', $tenantId)->pluck('id'))],
+            'periodo_id'   => ['nullable', Rule::in(PeriodoNomina::where('tenant_id', $tenantId)->pluck('id'))],
             'codigo'       => 'nullable|string|max:30',
             'valor'        => 'required|numeric|min:1',
             'fecha_registro'=> 'required|date',
@@ -103,12 +106,7 @@ class NovedadController extends Controller
             'fecha_fin'    => 'nullable|date|after_or_equal:fecha_inicio',
         ]);
 
-        $empleado = Empleado::findOrFail($validated['empleado_id']);
-        if ($empleado->tenant_id !== auth()->user()->tenant_id) {
-            abort(403);
-        }
-
-        $validated['tenant_id'] = auth()->user()->tenant_id;
+        $validated['tenant_id'] = $tenantId;
         $validated['estado'] = 'pendiente';
 
         Novedad::create($validated);
@@ -121,13 +119,15 @@ class NovedadController extends Controller
      */
     public function storeBulk(Request $request)
     {
+        $tenantId = auth()->user()->tenant_id;
+
         $validated = $request->validate([
             'empleados_ids' => 'required|array|min:1',
-            'empleados_ids.*' => 'exists:hr_empleados,id',
+            'empleados_ids.*' => ['exists:hr_empleados,id'],
             'tipo'          => 'required|in:ingreso,descuento',
             'descripcion'   => 'nullable|string|max:250',
-            'concepto_id'   => 'nullable|exists:pay_conceptos_nomina,id',
-            'periodo_id'    => 'nullable|exists:pay_periodos_nomina,id',
+            'concepto_id'   => ['nullable', Rule::in(ConceptoNomina::where('tenant_id', $tenantId)->pluck('id'))],
+            'periodo_id'    => ['nullable', Rule::in(PeriodoNomina::where('tenant_id', $tenantId)->pluck('id'))],
             'codigo'        => 'nullable|string|max:30',
             'valor'         => 'required|numeric|min:1',
             'fecha_registro'=> 'required|date',
@@ -145,10 +145,9 @@ class NovedadController extends Controller
         }
 
         $creadas = 0;
-        $data = [];
 
         foreach ($empleadosValidos as $empleadoId) {
-            $data[] = [
+            Novedad::create([
                 'tenant_id'     => $tenantId,
                 'empleado_id'   => $empleadoId,
                 'tipo'          => $validated['tipo'],
@@ -159,13 +158,9 @@ class NovedadController extends Controller
                 'valor'         => $validated['valor'],
                 'fecha_registro'=> $validated['fecha_registro'],
                 'estado'        => 'pendiente',
-                'created_at'    => now(),
-                'updated_at'    => now(),
-            ];
+            ]);
             $creadas++;
         }
-
-        Novedad::insert($data);
 
         return back()->with('success', "{$creadas} novedad(es) creada(s) en lote.");
     }

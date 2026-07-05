@@ -2,9 +2,11 @@
 namespace App\Modules\Inventory\Controllers;
 
 use App\Modules\Inventory\Models\Bodega;
+use App\Modules\Inventory\Models\Stock;
 use App\Core\Models\Sede;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
 class BodegaController extends Controller
@@ -25,8 +27,10 @@ class BodegaController extends Controller
 
     public function store(Request $request)
     {
+        $tenantId = auth()->user()->tenant_id;
+
         $data = $request->validate([
-            'sede_id' => ['required', 'exists:core_sedes,id'],
+            'sede_id' => ['required', Rule::in(Sede::pluck('id'))],
             'nombre' => ['required', 'string', 'max:255'],
             'direccion' => ['nullable', 'string', 'max:255'],
             'es_principal' => ['boolean'],
@@ -54,7 +58,7 @@ class BodegaController extends Controller
     public function update(Request $request, Bodega $bodega)
     {
         $data = $request->validate([
-            'sede_id' => ['required', 'exists:core_sedes,id'],
+            'sede_id' => ['required', Rule::in(Sede::pluck('id'))],
             'nombre' => ['required', 'string', 'max:255'],
             'direccion' => ['nullable', 'string', 'max:255'],
             'es_principal' => ['boolean'],
@@ -75,6 +79,15 @@ class BodegaController extends Controller
     {
         if ($bodega->es_principal) {
             return back()->with('error', 'No puedes eliminar la bodega principal.');
+        }
+
+        // Fix #13: Verificar stock antes de eliminar
+        $tieneStock = Stock::where('bodega_id', $bodega->id)
+            ->where('cantidad', '>', 0)
+            ->exists();
+
+        if ($tieneStock) {
+            return back()->with('error', 'No puedes eliminar una bodega que tiene stock positivo.');
         }
 
         $bodega->delete();

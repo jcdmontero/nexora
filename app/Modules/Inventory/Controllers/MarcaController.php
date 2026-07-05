@@ -20,7 +20,7 @@ class MarcaController extends Controller
             ->paginate(15)
             ->withQueryString();
 
-        return Inertia::render('Modules/Inventory/Marcas/Index', [
+        return Inertia::render('Inventory/Marcas/Index', [
             'marcas' => $marcas,
             'filters' => $request->only(['search']),
         ]);

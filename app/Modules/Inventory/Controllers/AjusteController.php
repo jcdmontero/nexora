@@ -6,7 +6,9 @@ use App\Modules\Inventory\Models\Producto;
 use App\Modules\Inventory\Models\Bodega;
 use App\Modules\Inventory\Models\Stock;
 use App\Modules\Inventory\Models\InventoryAdjustment;
+use App\Modules\Inventory\Models\ProductPack;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\DB;
 
@@ -20,7 +22,7 @@ class AjusteController extends Controller
             ->orderBy('nombre')
             ->get(['id', 'nombre', 'codigo', 'unidad_medida', 'stock_actual']);
 
-        return Inertia::render('Modules/Inventory/Ajustes/Create', [
+        return Inertia::render('Inventory/Ajustes/Create', [
             'productos' => $productos,
             'bodegas' => Bodega::where('activo', true)->get(['id', 'nombre'])
         ]);
@@ -30,9 +32,9 @@ class AjusteController extends Controller
     {
         $validated = $request->validate([
             'tipo' => 'required|in:entrada,salida,ajuste',
-            'bodega_id' => 'required|exists:inventory_bodegas,id',
-            'producto_id' => 'required|exists:inventory_productos,id',
-            'pack_id' => 'nullable|exists:inventory_product_packs,id',
+            'bodega_id' => ['required', Rule::in(Bodega::pluck('id'))],
+            'producto_id' => ['required', Rule::in(Producto::pluck('id'))],
+            'pack_id' => ['nullable', Rule::in(ProductPack::pluck('id'))],
             'cantidad' => 'required|numeric|min:0.0001',
             'factor_conversion' => 'required|numeric|min:0.0001',
             'observaciones' => 'required|string|min:5|max:500',
@@ -60,7 +62,7 @@ class AjusteController extends Controller
             InventoryAdjustment::create([
                 'producto_id' => $validated['producto_id'],
                 'bodega_id' => $validated['bodega_id'],
-                'pack_id' => $validated['pack_id'],
+                'pack_id' => $validated['pack_id'] ?? null,
                 'tipo' => $validated['tipo'],
                 'cantidad' => $validated['cantidad'],
                 'factor_conversion' => $validated['factor_conversion'],

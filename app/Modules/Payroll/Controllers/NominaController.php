@@ -27,6 +27,13 @@ class NominaController extends Controller
 
         $nominas = Nomina::where('tenant_id', $tenantId)
             ->with(['contrato.empleado', 'periodo'])
+            ->when($request->search, function ($q, $search) {
+                $q->whereHas('contrato.empleado', function ($sub) use ($search) {
+                    $sub->where('nombres', 'ilike', "%{$search}%")
+                        ->orWhere('apellidos', 'ilike', "%{$search}%")
+                        ->orWhere('documento', 'like', "%{$search}%");
+                });
+            })
             ->orderBy('id', 'desc')
             ->paginate(15)
             ->through(fn ($n) => [
@@ -122,8 +129,8 @@ class NominaController extends Controller
             abort(403);
         }
 
-        if (!in_array($nomina->periodo?->estado, ['BORRADOR', 'LIQUIDADA'], true)) {
-            return back()->with('error', 'No se pueden modificar conceptos en una nómina ' . $nomina->periodo?->estado . '.');
+        if ($nomina->periodo?->estado !== 'BORRADOR') {
+            return back()->with('error', 'Solo se pueden modificar conceptos en períodos en estado BORRADOR.');
         }
 
         $validated = $request->validate([

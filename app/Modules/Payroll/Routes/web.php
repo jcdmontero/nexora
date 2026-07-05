@@ -100,8 +100,7 @@ Route::middleware(['web', 'auth', 'tenant', 'module:payroll'])->group(function (
 
         Route::get('liquidaciones/{periodo}', [LiquidacionController::class, 'show'])
             ->name('liquidaciones.show')
-            ->middleware('permission:payroll:view')
-            ->defaults('binding', 'periodo');
+            ->middleware('permission:payroll:view');
 
     });
 });

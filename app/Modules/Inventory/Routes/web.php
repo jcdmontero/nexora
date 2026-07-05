@@ -10,7 +10,6 @@ use App\Modules\Inventory\Controllers\BodegaController;
 use App\Modules\Inventory\Controllers\MarcaController;
 use App\Modules\Inventory\Controllers\AjusteController;
 use App\Modules\Inventory\Controllers\KardexController;
-
 Route::middleware(['web', 'auth', 'tenant', 'module:inventory'])->group(function () {
     Route::prefix('inventory')->name('inventory.')->group(function () {
 
@@ -50,6 +49,7 @@ Route::middleware('permission:inventory:create')->group(function () {
 
     Route::get('traslados/crear', [TrasladoController::class, 'create'])->name('traslados.create');
     Route::post('traslados', [TrasladoController::class, 'store'])->name('traslados.store');
+    Route::post('traslados/{traslado}/completar', [TrasladoController::class, 'completar'])->name('traslados.completar')->where('traslado', '[0-9]+');
 });
 
 Route::middleware('permission:inventory:edit')->group(function () {
@@ -68,12 +68,6 @@ Route::middleware('permission:inventory:delete')->group(function () {
     Route::delete('bodegas/{bodega}', [BodegaController::class, 'destroy'])->name('bodegas.destroy');
     Route::delete('marcas/{marca}', [MarcaController::class, 'destroy'])->name('marcas.destroy');
         Route::delete('productos/{producto}', [ProductoController::class, 'destroy'])->name('productos.destroy');
-    });
-
-    // ─── Imágenes de productos ───
-    Route::middleware('permission:inventory:edit')->group(function () {
-        Route::post('productos/{producto}/imagen', [\App\Modules\ServiceDesk\Controllers\MultimediaController::class, 'uploadProducto'])->name('productos.imagen.upload');
-        Route::delete('productos/{producto}/imagen', [\App\Modules\ServiceDesk\Controllers\MultimediaController::class, 'destroyProducto'])->name('productos.imagen.destroy');
     });
 
     });

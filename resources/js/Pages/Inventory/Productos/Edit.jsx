@@ -12,8 +12,7 @@ import MarcaFormModal from '../Marcas/MarcaFormModal'
 import { CurrencyInput } from '@/Components/ui/currency-input'
 
 export default function ProductoEdit({ producto, categorias, marcas }) {
-  const { data, setData, post, processing, errors, transform } = useForm({
-    _method: 'PUT',
+  const { data, setData, put, processing, errors, transform } = useForm({
     codigo: producto.codigo || '',
     nombre: producto.nombre || '',
     descripcion: producto.descripcion || '',
@@ -109,7 +108,7 @@ export default function ProductoEdit({ producto, categorias, marcas }) {
 
   const handleSubmit = (e) => {
     e.preventDefault()
-    post(route('inventory.productos.update', producto.id))
+    put(route('inventory.productos.update', producto.id))
   }
 
   const addPack = () => {

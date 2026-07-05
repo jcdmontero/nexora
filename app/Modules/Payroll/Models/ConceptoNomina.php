@@ -6,6 +6,7 @@ use App\Core\Models\Tenant;
 use App\Modules\Accounting\Models\CuentaContable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
  * Modelo de Concepto de Nómina.
@@ -27,6 +28,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class ConceptoNomina extends Model
 {
+    use SoftDeletes;
+
     protected $table = 'pay_conceptos_nomina';
 
     protected $fillable = [

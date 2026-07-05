@@ -17,7 +17,6 @@ class Producto extends Model
         'tenant_id',
         'codigo',
         'nombre',
-        'imagen_url',
         'imagenes',
         'descripcion',
         'categoria_id',

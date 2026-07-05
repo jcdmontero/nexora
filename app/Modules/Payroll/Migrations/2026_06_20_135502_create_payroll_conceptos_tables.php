@@ -146,7 +146,7 @@ return new class extends Migration
             $table->dropForeign(['periodo_id']);
             $table->dropForeign(['contrato_id']);
             $table->dropForeign(['created_by']);
-            $table->dropColumn(['periodo_id', 'contrato_id', 'dias_laborados', 'ibc_seguridad_social', 'ibc_parafiscales', 'auxilio_transporte', 'total_provisiones', 'total_aportes_patronales', 'costo_laboral_total', 'created_by']);
+            $table->dropColumn(['periodo_id', 'contrato_id', 'dias_laborados', 'ibc_seguridad_social', 'ibc_parafiscales', 'auxilio_transporte', 'total_devengado', 'total_deducciones', 'neto_pagar', 'total_provisiones', 'total_aportes_patronales', 'costo_laboral_total', 'created_by']);
         });
 
         Schema::dropIfExists('pay_parametros_contables');

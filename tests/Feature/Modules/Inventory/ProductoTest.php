@@ -109,36 +109,24 @@ class ProductoTest extends TestCase
         $this->assertSoftDeleted('inventory_productos', ['id' => $producto->id]);
     }
 
-    public function test_upload_imagen_producto(): void
+    public function test_producto_store_con_imagenes(): void
     {
         Storage::fake('public');
-        $producto = Producto::create([
-            'tenant_id' => $this->tenant->id, 'codigo' => 'IMG-001', 'nombre' => 'Con imagen',
-            'unidad_medida' => 'unidad', 'precio_venta' => 10000, 'costo_promedio' => 5000,
-            'stock_actual' => 1, 'stock_minimo' => 0,
-        ]);
-
         $archivo = UploadedFile::fake()->image('foto.jpg', 200, 200);
-        $this->postJson(route('inventory.productos.imagen.upload', $producto->id), ['archivo' => $archivo])
-            ->assertOk()->assertJson(['success' => true]);
 
-        $producto->refresh();
-        $this->assertNotNull($producto->imagen_url);
-    }
+        $this->post(route('inventory.productos.store'), [
+            'codigo' => 'IMG-001',
+            'nombre' => 'Con imagen',
+            'unidad_medida' => 'unidad',
+            'precio_venta' => 15000,
+            'costo_promedio' => 8000,
+            'stock_actual' => 10,
+            'stock_minimo' => 1,
+            'imagenes' => [$archivo],
+        ])->assertRedirect();
 
-    public function test_destroy_imagen_producto(): void
-    {
-        Storage::fake('public');
-        $producto = Producto::create([
-            'tenant_id' => $this->tenant->id, 'codigo' => 'RMV-001', 'nombre' => 'Quitar imagen',
-            'unidad_medida' => 'unidad', 'precio_venta' => 10000, 'costo_promedio' => 5000,
-            'stock_actual' => 1, 'stock_minimo' => 0, 'imagen_url' => '/storage/productos/test.jpg',
-        ]);
-
-        $this->deleteJson(route('inventory.productos.imagen.destroy', $producto->id))
-            ->assertOk()->assertJson(['success' => true]);
-
-        $producto->refresh();
-        $this->assertNull($producto->imagen_url);
+        $producto = Producto::where('codigo', 'IMG-001')->first();
+        $this->assertNotNull($producto);
+        $this->assertNotEmpty($producto->imagenes);
     }
 }

@@ -28,8 +28,10 @@ class PeriodoController extends Controller
         $periodos = PeriodoNomina::where('tenant_id', $tenantId)
             ->withCount('nominas')
             ->when($request->search, function ($q, $search) {
-                $q->where('codigo', 'ilike', "%{$search}%")
-                  ->orWhere('mes_contable', 'ilike', "%{$search}%");
+                $q->where(function ($sub) use ($search) {
+                    $sub->where('codigo', 'ilike', "%{$search}%")
+                        ->orWhere('mes_contable', 'ilike', "%{$search}%");
+                });
             })
             ->orderBy('created_at', 'desc')
             ->paginate(15)
@@ -64,7 +66,7 @@ class PeriodoController extends Controller
             'codigo'       => 'required|string|max:30',
             'fecha_inicio' => 'required|date',
             'fecha_fin'    => 'required|date|after_or_equal:fecha_inicio',
-            'mes_contable' => 'required|string|size:7',
+            'mes_contable' => 'required|string|regex:/^\d{4}-\d{2}$/|size:7',
             'observaciones'=> 'nullable|string|max:500',
         ]);
 
@@ -196,7 +198,7 @@ class PeriodoController extends Controller
         $this->authorizeTenant($periodo);
 
         if ($periodo->estado !== 'LIQUIDADA') {
-            throw new \Exception('Solo se puede aprobar un período en estado LIQUIDADA.');
+            return back()->with('error', 'Solo se puede aprobar un período en estado LIQUIDADA.');
         }
 
         DB::transaction(function () use ($periodo, $contabilidadService) {
@@ -220,7 +222,7 @@ class PeriodoController extends Controller
 
         DB::transaction(function () use ($periodo) {
             // Liberar novedades asociadas
-            $periodo->nominas()->each(function ($nomina) {
+            $periodo->nominas()->with('novedades', 'detalles')->each(function ($nomina) {
                 $nomina->novedades()->update([
                     'estado'    => 'pendiente',
                     'nomina_id' => null,

@@ -2,6 +2,7 @@
 
 namespace App\Modules\Payroll\Models;
 
+use App\Core\Concerns\BelongsToTenant;
 use App\Modules\Hr\Models\Contrato;
 use App\Modules\Hr\Models\Empleado;
 use Illuminate\Database\Eloquent\Model;
@@ -13,6 +14,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * de cada liquidación individual.
  *
  * @property int $id
+ * @property int $tenant_id
  * @property int $nomina_id
  * @property int $concepto_id
  * @property int $empleado_id
@@ -25,9 +27,12 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class NominaDetalle extends Model
 {
+    use BelongsToTenant;
+
     protected $table = 'pay_nomina_detalles';
 
     protected $fillable = [
+        'tenant_id',
         'nomina_id',
         'concepto_id',
         'empleado_id',

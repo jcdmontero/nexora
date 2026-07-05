@@ -37,10 +37,32 @@ class ContabilidadNominaService
 
         $lineas = [];
 
+        // #8: Precargar cuentas contables fuera del loop para evitar N+1
+        $cuentaGasto = CuentaContable::withoutGlobalScopes()
+            ->where('tenant_id', $tenantId)
+            ->where('codigo', '5105')
+            ->value('id');
+
+        $cuentaPasivoAporte = CuentaContable::withoutGlobalScopes()
+            ->where('tenant_id', $tenantId)
+            ->where('codigo', '2370')
+            ->value('id');
+
+        // #7: Verificar que las cuentas necesarias existen
+        if (!$cuentaGasto || !$cuentaPasivoAporte) {
+            $faltantes = [];
+            if (!$cuentaGasto) $faltantes[] = '5105 (Gastos de nómina)';
+            if (!$cuentaPasivoAporte) $faltantes[] = '2370 (Aportes parafiscales por pagar)';
+            throw new \Exception('Faltan cuentas contables en el PUC: ' . implode(', ', $faltantes) . '. Configúrelas antes de contabilizar.');
+        }
+
         foreach ($periodo->nominas as $nomina) {
             $empleado = $nomina->empleado;
-            $documento = $empleado->documento;
-            $nombre = $empleado->nombres . ' ' . $empleado->apellidos;
+            if (!$empleado) {
+                continue;
+            }
+            $documento = $empleado->documento ?? '';
+            $nombre = trim(($empleado->nombres ?? '') . ' ' . ($empleado->apellidos ?? ''));
 
             foreach ($nomina->detalles as $detalle) {
                 $concepto = $detalle->concepto;
@@ -50,11 +72,6 @@ class ContabilidadNominaService
                 }
 
                 if ($concepto->tipo === 'PROVISION') {
-                    $cuentaGasto = CuentaContable::withoutGlobalScopes()
-                        ->where('tenant_id', $tenantId)
-                        ->where('codigo', '5105')
-                        ->value('id');
-
                     // Débito al Gasto
                     $lineas[] = [
                         'cuenta_contable_id' => $cuentaGasto,
@@ -90,11 +107,6 @@ class ContabilidadNominaService
                     ];
 
                     // Crédito Pasivo
-                    $cuentaPasivoAporte = CuentaContable::withoutGlobalScopes()
-                        ->where('tenant_id', $tenantId)
-                        ->where('codigo', '2370')
-                        ->value('id');
-                        
                     $lineas[] = [
                         'cuenta_contable_id' => $cuentaPasivoAporte,
                         'centro_costo_id' => $centroCostoDefault->id,

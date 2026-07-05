@@ -109,17 +109,18 @@ class PayrollProvisioner
         $previous = $registrar->getPermissionsTeamId();
         $registrar->setPermissionsTeamId($tenantId);
 
-        foreach (['payroll:edit', 'payroll:delete', 'payroll:manage'] as $perm) {
-            Permission::firstOrCreate(['name' => $perm, 'guard_name' => 'web']);
-            // Otorgar al ADMIN_EMPRESA
-            $role = \Spatie\Permission\Models\Role::where('team_id', $tenantId)
-                ->where('name', config('roles.default_tenant_admin', 'ADMIN_EMPRESA'))
-                ->first();
-            if ($role) {
-                $role->givePermissionTo($perm);
+        try {
+            foreach (['payroll:edit', 'payroll:delete', 'payroll:manage'] as $perm) {
+                Permission::firstOrCreate(['name' => $perm, 'guard_name' => 'web']);
+                $role = \Spatie\Permission\Models\Role::where('team_id', $tenantId)
+                    ->where('name', config('roles.default_tenant_admin', 'ADMIN_EMPRESA'))
+                    ->first();
+                if ($role) {
+                    $role->givePermissionTo($perm);
+                }
             }
+        } finally {
+            $registrar->setPermissionsTeamId($previous);
         }
-
-        $registrar->setPermissionsTeamId($previous);
     }
 }

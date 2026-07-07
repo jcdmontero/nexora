@@ -33,8 +33,7 @@ export function getWidget(id: string): RegisteredWidget | undefined {
 /** Obtiene TODOS los widgets del catálogo */
 export function getAllWidgets(): RegisteredWidget[] {
   return Array.from(widgetRegistry.values()).sort((a, b) => {
-    // Ordenar por posición por defecto (no usada todavía, pero prepara para layout)
-    return 0
+    return a.definition.id.localeCompare(b.definition.id)
   })
 }
 

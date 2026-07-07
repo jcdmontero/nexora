@@ -66,15 +66,15 @@ class RecepcionController extends Controller
         $tenantId = auth()->user()->tenant_id;
 
         $data = $request->validate([
-            'orden_compra_id' => ['required'],
-            'bodega_id' => ['required', Rule::in(Bodega::pluck('id'))],
+            'orden_compra_id' => ['required', 'integer'],
+            'bodega_id' => ['required', Rule::exists('inventory_bodegas', 'id')->where('tenant_id', $tenantId)],
             'numero' => ['required', 'string', 'max:50'],
             'fecha' => ['required', 'date'],
             'metodo_pago' => ['required', 'string', 'in:efectivo,transferencia,credito'],
             'fecha_vencimiento' => ['nullable', 'date'],
             'notas' => ['nullable', 'string'],
             'detalles' => ['required', 'array', 'min:1'],
-            'detalles.*.producto_id' => ['required', Rule::in(Producto::pluck('id'))],
+            'detalles.*.producto_id' => ['required', Rule::exists('inventory_productos', 'id')->where('tenant_id', $tenantId)],
             'detalles.*.cantidad' => ['required', 'numeric', 'min:0.01'],
         ]);
 

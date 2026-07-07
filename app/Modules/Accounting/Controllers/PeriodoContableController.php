@@ -51,12 +51,14 @@ class PeriodoContableController extends Controller
             }
 
             // Verificar integridad débito = crédito en todos los asientos del periodo.
-            $asientosDesbalanceados = AsientoContable::query()
-                ->where('periodo_contable_id', $lockedPeriodo->id)
-                ->where('estado', '!=', 'reversado')
-                ->whereRaw('(SELECT COALESCE(SUM(debito), 0) FROM asiento_lineas WHERE asiento_lineas.asiento_contable_id = asientos_contables.id) != '
-                    . '(SELECT COALESCE(SUM(credito), 0) FROM asiento_lineas WHERE asiento_lineas.asiento_contable_id = asientos_contables.id)')
-                ->pluck('numero');
+            // ACC-011: Usar JOIN + GROUP BY en vez de subqueries correlacionadas
+            $asientosDesbalanceados = DB::table('asientos_contables')
+                ->join('asiento_lineas', 'asientos_contables.id', '=', 'asiento_lineas.asiento_contable_id')
+                ->where('asientos_contables.periodo_contable_id', $lockedPeriodo->id)
+                ->where('asientos_contables.estado', '!=', 'reversado')
+                ->groupBy('asientos_contables.id', 'asientos_contables.numero')
+                ->havingRaw('ABS(SUM(asiento_lineas.debito) - SUM(asiento_lineas.credito)) > 0.01')
+                ->pluck('asientos_contables.numero');
 
             if ($asientosDesbalanceados->isNotEmpty()) {
                 $numeros = $asientosDesbalanceados->implode(', ');

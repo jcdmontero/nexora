@@ -2,6 +2,7 @@
 
 namespace App\Modules\Payroll\Models;
 
+use App\Core\Concerns\BelongsToTenant;
 use App\Modules\Hr\Models\Empleado;
 use App\Modules\Hr\Models\Contrato;
 use Illuminate\Database\Eloquent\Model;
@@ -35,6 +36,8 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
  */
 class Novedad extends Model
 {
+    use BelongsToTenant;
+
     protected $table = 'pay_novedades';
 
     protected $fillable = [
@@ -47,6 +50,7 @@ class Novedad extends Model
         'tipo',
         'codigo',
         'concepto',
+        'cantidad',
         'descripcion',
         'valor',
         'fecha_registro',
@@ -58,6 +62,7 @@ class Novedad extends Model
     ];
 
     protected $casts = [
+        'cantidad' => 'decimal:2',
         'valor' => 'decimal:2',
         'fecha_registro' => 'date',
         'fecha_inicio' => 'date',

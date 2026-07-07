@@ -43,6 +43,9 @@ class LiquidarNominaJob implements ShouldQueue
             return;
         }
 
+        app()->instance('current_tenant', $tenant);
+        setPermissionsTeamId($this->tenantId);
+
         $periodo = PeriodoNomina::find($this->periodoId);
         if (!$periodo) {
             Log::error("Period not found for payroll liquidation", ['periodo_id' => $this->periodoId]);

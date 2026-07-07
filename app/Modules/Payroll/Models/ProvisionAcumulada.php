@@ -2,6 +2,7 @@
 
 namespace App\Modules\Payroll\Models;
 
+use App\Core\Concerns\BelongsToTenant;
 use App\Core\Models\Tenant;
 use App\Modules\Hr\Models\Empleado;
 use Illuminate\Database\Eloquent\Model;
@@ -26,6 +27,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class ProvisionAcumulada extends Model
 {
+    use BelongsToTenant;
+
     protected $table = 'pay_provisiones_acumuladas';
 
     protected $fillable = [

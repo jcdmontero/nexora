@@ -95,21 +95,18 @@ class CrossTenantTest extends TestCase
         ])->assertSessionHasErrors('marca_id');
     }
 
-    public function test_bodega_store_no_rechaza_sede_de_otro_tenant(): void
+    public function test_bodega_store_rechaza_sede_de_otro_tenant(): void
     {
-        // NOTA: Sede NO tiene BelongsToTenant, por lo que Rule::in(Sede::pluck('id'))
-        // retorna TODAS las sedes de todos los tenants. Esto es un hueco de seguridad
-        // conocido que debería corregirse scoping la query de sedes por tenant.
+        // C-04 CORREGIDO: Rule::exists con tenant_id ahora rechaza sedes ajenas
         $this->post(route('inventory.bodegas.store'), [
             'sede_id' => $this->sedeB->id,
             'nombre' => 'Bodega Cross Tenant',
-        ])->assertRedirect();
+        ])->assertSessionHasErrors('sede_id');
 
-        // Verificar que se creó (el bug de seguridad permite esto)
-        $this->assertDatabaseHas('inventory_bodegas', [
+        // Verificar que NO se creó
+        $this->assertDatabaseMissing('inventory_bodegas', [
             'tenant_id' => $this->tenantA->id,
             'nombre' => 'Bodega Cross Tenant',
-            'sede_id' => $this->sedeB->id,
         ]);
     }
 

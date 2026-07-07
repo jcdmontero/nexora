@@ -4,6 +4,7 @@ namespace App\Modules\Inventory\Services;
 use App\Modules\Inventory\Models\Producto;
 use App\Modules\Inventory\Models\Stock;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class StockReconciliationService
 {
@@ -22,7 +23,7 @@ class StockReconciliationService
         $productos = $query->select('id', 'tenant_id', 'codigo', 'nombre', 'stock_actual')->get();
         $corregidos = [];
 
-        DB::transaction(function () use ($productos, &$corregidos) {
+        DB::transaction(function () use ($productos, &$corregidos, $tenantId) {
             foreach ($productos as $producto) {
                 $sumaBodegas = Stock::where('producto_id', $producto->id)->sum('cantidad');
                 $sumaBodegas = (float) $sumaBodegas;
@@ -32,6 +33,16 @@ class StockReconciliationService
                     $diferencia = $sumaBodegas - $actual;
                     $producto->stock_actual = $sumaBodegas;
                     $producto->save();
+
+                    // INV-002: Registrar traza de auditoría
+                    Log::info('Stock reconciliation correction', [
+                        'tenant_id' => $tenantId ?? $producto->tenant_id,
+                        'producto_id' => $producto->id,
+                        'codigo' => $producto->codigo,
+                        'stock_anterior' => $actual,
+                        'stock_corregido' => $sumaBodegas,
+                        'diferencia' => $diferencia,
+                    ]);
 
                     $corregidos[] = [
                         'id' => $producto->id,

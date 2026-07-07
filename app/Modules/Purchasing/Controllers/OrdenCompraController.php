@@ -188,20 +188,21 @@ class OrdenCompraController extends Controller
         $tenantId = auth()->user()->tenant_id;
 
         return $request->validate([
-            'proveedor_id' => ['required', Rule::in(Proveedor::pluck('id'))],
+            'proveedor_id' => ['required', Rule::exists('purchasing_proveedores', 'id')->where('tenant_id', $tenantId)->whereNull('deleted_at')],
             'numero' => [
                 'required', 'string', 'max:50',
                 Rule::unique('purchasing_ordenes', 'numero')
                     ->where('tenant_id', $tenantId)
+                    ->whereNull('deleted_at')
                     ->ignore($ignoreId),
             ],
             'fecha_emision' => ['required', 'date'],
-            'fecha_esperada' => ['nullable', 'date'],
-            'notas' => ['nullable', 'string'],
-            'detalles' => ['required', 'array', 'min:1'],
-            'detalles.*.producto_id' => ['required', Rule::in(Producto::pluck('id'))],
-            'detalles.*.cantidad' => ['required', 'numeric', 'min:0.01'],
-            'detalles.*.precio_unitario' => ['required', 'numeric', 'min:0'],
+            'fecha_esperada' => ['nullable', 'date', 'after_or_equal:fecha_emision'],
+            'notas' => ['nullable', 'string', 'max:1000'],
+            'detalles' => ['required', 'array', 'min:1', 'max:50'],
+            'detalles.*.producto_id' => ['required', Rule::exists('inventory_productos', 'id')->where('tenant_id', $tenantId)->whereNull('deleted_at')],
+            'detalles.*.cantidad' => ['required', 'numeric', 'min:0.01', 'max:999999'],
+            'detalles.*.precio_unitario' => ['required', 'numeric', 'min:0', 'max:99999999'],
         ]);
     }
 }

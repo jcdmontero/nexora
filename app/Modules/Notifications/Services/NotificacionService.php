@@ -82,20 +82,27 @@ class NotificacionService
             $canales = ['email'];
         }
 
-        $noti = Notificacion::create([
-            'evento' => $evento,
-            'referencia_type' => $referencia ? get_class($referencia) : null,
-            'referencia_id' => $referencia?->getKey(),
-            'cliente_id' => $destinatario['cliente_id'] ?? null,
-            'destinatario_nombre' => $destinatario['nombre'] ?? null,
-            'destinatario_email' => $destinatario['email'] ?? null,
-            'destinatario_telefono' => $destinatario['telefono'] ?? null,
-            'titulo' => $asunto,
-            'mensaje' => $mensaje,
-            'canales' => $canales,
-            'canal_estados' => array_fill_keys($canales, 'pendiente'),
-            'estado' => 'pendiente',
-        ]);
+        $noti = \Illuminate\Support\Facades\DB::transaction(function () use (
+            $evento, $referencia, $destinatario, $asunto, $mensaje, $canales
+        ) {
+            $noti = Notificacion::create([
+                'tenant_id' => tenantId(),
+                'evento' => $evento,
+                'referencia_type' => $referencia ? get_class($referencia) : null,
+                'referencia_id' => $referencia?->getKey(),
+                'cliente_id' => $destinatario['cliente_id'] ?? null,
+                'destinatario_nombre' => $destinatario['nombre'] ?? null,
+                'destinatario_email' => $destinatario['email'] ?? null,
+                'destinatario_telefono' => $destinatario['telefono'] ?? null,
+                'titulo' => $asunto,
+                'mensaje' => $mensaje,
+                'canales' => $canales,
+                'canal_estados' => array_fill_keys($canales, 'pendiente'),
+                'estado' => 'pendiente',
+            ]);
+
+            return $noti;
+        });
 
         $this->enviar($noti, $enviadoPor);
 

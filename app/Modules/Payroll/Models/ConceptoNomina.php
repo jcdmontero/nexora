@@ -2,6 +2,7 @@
 
 namespace App\Modules\Payroll\Models;
 
+use App\Core\Concerns\BelongsToTenant;
 use App\Core\Models\Tenant;
 use App\Modules\Accounting\Models\CuentaContable;
 use Illuminate\Database\Eloquent\Model;
@@ -28,7 +29,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  */
 class ConceptoNomina extends Model
 {
-    use SoftDeletes;
+    use BelongsToTenant, SoftDeletes;
 
     protected $table = 'pay_conceptos_nomina';
 

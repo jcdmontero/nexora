@@ -177,7 +177,12 @@ class PeriodoController extends Controller
     {
         $this->authorizeTenant($periodo);
 
-        if ($periodo->estado !== 'BORRADOR') {
+        // C-02: Cambiar estado atómicamente ANTES de despachar el job
+        $updated = PeriodoNomina::where('id', $periodo->id)
+            ->where('estado', 'BORRADOR')
+            ->update(['estado' => 'PROCESANDO']);
+
+        if (!$updated) {
             return back()->with('error', 'El período no está en estado BORRADOR. No se puede liquidar.');
         }
 
@@ -216,11 +221,17 @@ class PeriodoController extends Controller
     {
         $this->authorizeTenant($periodo);
 
-        if (!in_array($periodo->estado, ['BORRADOR', 'LIQUIDADA'], true)) {
+        if (!in_array($periodo->estado, ['BORRADOR', 'LIQUIDADA', 'PROCESANDO'], true)) {
             return back()->with('error', 'No se puede anular un período en estado ' . $periodo->estado . '.');
         }
 
         DB::transaction(function () use ($periodo) {
+            // C-03: Revertir cuotas de préstamo del período
+            $this->nominaService->revertirCuotasDelPeriodoPublico($periodo);
+
+            // C-03: Revertir provisiones acumuladas del período
+            $this->nominaService->revertirProvisionesDelPeriodo($periodo);
+
             // Liberar novedades asociadas
             $periodo->nominas()->with('novedades', 'detalles')->each(function ($nomina) {
                 $nomina->novedades()->update([
@@ -243,7 +254,7 @@ class PeriodoController extends Controller
         });
 
         return redirect()->route('payroll.periodos.index')
-            ->with('success', 'Período anulado y nóminas eliminadas.');
+            ->with('success', 'Período anulado, nóminas eliminadas y efectos colaterales revertidos.');
     }
 
     /**

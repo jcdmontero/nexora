@@ -123,11 +123,11 @@ class NovedadController extends Controller
 
         $validated = $request->validate([
             'empleados_ids' => 'required|array|min:1',
-            'empleados_ids.*' => ['exists:hr_empleados,id'],
+            'empleados_ids.*' => [Rule::exists('hr_empleados', 'id')->where('tenant_id', $tenantId)],
             'tipo'          => 'required|in:ingreso,descuento',
             'descripcion'   => 'nullable|string|max:250',
-            'concepto_id'   => ['nullable', Rule::in(ConceptoNomina::where('tenant_id', $tenantId)->pluck('id'))],
-            'periodo_id'    => ['nullable', Rule::in(PeriodoNomina::where('tenant_id', $tenantId)->pluck('id'))],
+            'concepto_id'   => ['nullable', Rule::exists('pay_conceptos_nomina', 'id')->where('tenant_id', $tenantId)->whereNull('deleted_at')],
+            'periodo_id'    => ['nullable', Rule::exists('pay_periodos_nomina', 'id')->where('tenant_id', $tenantId)],
             'codigo'        => 'nullable|string|max:30',
             'valor'         => 'required|numeric|min:1',
             'fecha_registro'=> 'required|date',

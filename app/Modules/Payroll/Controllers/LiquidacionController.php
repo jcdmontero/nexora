@@ -128,7 +128,7 @@ class LiquidacionController extends Controller
             'fecha_inicio' => $validated['fecha_inicio'],
             'fecha_fin'    => $validated['fecha_fin'],
             'mes_contable' => $validated['mes_contable'],
-            'estado'       => 'BORRADOR',
+            'estado'       => 'PROCESANDO',
             'observaciones'=> $validated['observaciones'] ?? null,
             'created_by'   => auth()->id(),
         ]);

@@ -67,7 +67,7 @@ class LoginController
             }
 
             // Si es login de SuperAdmin pero el usuario NO es superadmin, denegar
-            if (request()->is('superadmin/*') && !$user->is_superadmin) {
+            if ($request->is('superadmin/*') && !$user->is_superadmin) {
                 Auth::logout();
                 return back()->withErrors([
                     'email' => 'No tienes acceso al portal de administración.',

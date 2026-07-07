@@ -30,7 +30,7 @@ Route::middleware(['web', 'auth', 'tenant', 'module:inventory'])->group(function
     Route::get('traslados/{traslado}', [TrasladoController::class, 'show'])->name('traslados.show')->where('traslado', '[0-9]+');
 });
 
-Route::middleware('permission:inventory:create')->group(function () {
+Route::middleware(['permission:inventory:create', 'throttle:60,1'])->group(function () {
     Route::post('categorias', [CategoriaController::class, 'store'])->name('categorias.store');
     
     Route::get('bodegas/crear', [BodegaController::class, 'create'])->name('bodegas.create');
@@ -52,7 +52,7 @@ Route::middleware('permission:inventory:create')->group(function () {
     Route::post('traslados/{traslado}/completar', [TrasladoController::class, 'completar'])->name('traslados.completar')->where('traslado', '[0-9]+');
 });
 
-Route::middleware('permission:inventory:edit')->group(function () {
+Route::middleware(['permission:inventory:edit', 'throttle:60,1'])->group(function () {
     Route::put('categorias/{categoria}', [CategoriaController::class, 'update'])->name('categorias.update');
     
     Route::get('bodegas/{bodega}/editar', [BodegaController::class, 'edit'])->name('bodegas.edit');
@@ -63,7 +63,7 @@ Route::middleware('permission:inventory:edit')->group(function () {
     Route::put('productos/{producto}', [ProductoController::class, 'update'])->name('productos.update');
 });
 
-Route::middleware('permission:inventory:delete')->group(function () {
+Route::middleware(['permission:inventory:delete', 'throttle:60,1'])->group(function () {
     Route::delete('categorias/{categoria}', [CategoriaController::class, 'destroy'])->name('categorias.destroy');
     Route::delete('bodegas/{bodega}', [BodegaController::class, 'destroy'])->name('bodegas.destroy');
     Route::delete('marcas/{marca}', [MarcaController::class, 'destroy'])->name('marcas.destroy');

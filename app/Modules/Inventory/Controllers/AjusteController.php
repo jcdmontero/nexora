@@ -30,11 +30,13 @@ class AjusteController extends Controller
 
     public function store(Request $request)
     {
+        $tenantId = auth()->user()->tenant_id;
+
         $validated = $request->validate([
             'tipo' => 'required|in:entrada,salida,ajuste',
-            'bodega_id' => ['required', Rule::in(Bodega::pluck('id'))],
-            'producto_id' => ['required', Rule::in(Producto::pluck('id'))],
-            'pack_id' => ['nullable', Rule::in(ProductPack::pluck('id'))],
+            'bodega_id' => ['required', Rule::exists('inventory_bodegas', 'id')->where('tenant_id', $tenantId)],
+            'producto_id' => ['required', Rule::exists('inventory_productos', 'id')->where('tenant_id', $tenantId)],
+            'pack_id' => ['nullable', Rule::exists('inventory_product_packs', 'id')],
             'cantidad' => 'required|numeric|min:0.0001',
             'factor_conversion' => 'required|numeric|min:0.0001',
             'observaciones' => 'required|string|min:5|max:500',
@@ -44,20 +46,46 @@ class AjusteController extends Controller
         ]);
 
         $producto = Producto::findOrFail($validated['producto_id']);
-        $cantidadFisica = $validated['cantidad'] * $validated['factor_conversion'];
 
-        $stockBodega = Stock::firstOrCreate([
-            'producto_id' => $producto->id,
-            'bodega_id' => $validated['bodega_id']
-        ]);
-
-        if ($validated['tipo'] === 'salida' && $stockBodega->cantidad < $cantidadFisica) {
-            throw \Illuminate\Validation\ValidationException::withMessages([
-                'cantidad' => "La cantidad total a retirar ({$cantidadFisica} {$producto->unidad_medida}) supera el stock disponible en esta bodega ({$stockBodega->cantidad} {$producto->unidad_medida}).",
-            ]);
+        // C-03: Validar factor_conversion server-side si se proporciona pack_id
+        if (!empty($validated['pack_id'])) {
+            $pack = ProductPack::where('id', $validated['pack_id'])
+                ->where('producto_id', $producto->id)
+                ->first();
+            if (!$pack) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'pack_id' => 'El empaque seleccionado no pertenece a este producto.',
+                ]);
+            }
+            $factorConversion = (float) $pack->factor_conversion;
+        } else {
+            // Sin pack: usar el factor ingresado por el usuario (unidad base)
+            $factorConversion = (float) $validated['factor_conversion'];
         }
 
-        DB::transaction(function () use ($validated, $cantidadFisica, $producto, $stockBodega) {
+        $cantidadFisica = $validated['cantidad'] * $factorConversion;
+
+        DB::transaction(function () use ($validated, $cantidadFisica, $factorConversion, $producto) {
+            // C-01: Bloqueo pesimista sobre la fila de stock para evitar race conditions
+            $stockBodega = Stock::where('producto_id', $producto->id)
+                ->where('bodega_id', $validated['bodega_id'])
+                ->lockForUpdate()
+                ->first();
+
+            if (!$stockBodega) {
+                $stockBodega = Stock::create([
+                    'producto_id' => $producto->id,
+                    'bodega_id' => $validated['bodega_id'],
+                    'cantidad' => 0,
+                ]);
+            }
+
+            if ($validated['tipo'] === 'salida' && $stockBodega->cantidad < $cantidadFisica) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'cantidad' => "La cantidad total a retirar ({$cantidadFisica} {$producto->unidad_medida}) supera el stock disponible en esta bodega ({$stockBodega->cantidad} {$producto->unidad_medida}).",
+                ]);
+            }
+
             // 1. Registrar el movimiento
             InventoryAdjustment::create([
                 'producto_id' => $validated['producto_id'],
@@ -65,7 +93,7 @@ class AjusteController extends Controller
                 'pack_id' => $validated['pack_id'] ?? null,
                 'tipo' => $validated['tipo'],
                 'cantidad' => $validated['cantidad'],
-                'factor_conversion' => $validated['factor_conversion'],
+                'factor_conversion' => $factorConversion,
                 'cantidad_base' => $cantidadFisica,
                 'observaciones' => $validated['observaciones'],
             ]);
@@ -79,7 +107,6 @@ class AjusteController extends Controller
                 $stockBodega->decrement('cantidad', $cantidadFisica);
             } else {
                 // Ajuste directo (set)
-                // Calculamos la diferencia para ajustar el stock_actual global correctamente
                 $diferencia = $cantidadFisica - $stockBodega->cantidad;
                 $producto->increment('stock_actual', $diferencia);
                 $stockBodega->update(['cantidad' => $cantidadFisica]);

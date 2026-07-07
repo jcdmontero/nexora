@@ -2,6 +2,7 @@
 
 namespace App\Modules\ServiceDesk\Models;
 
+use App\Core\Concerns\BelongsToTenant;
 use App\Core\Models\Tenant;
 use App\Models\User;
 use App\Modules\Crm\Models\Cliente;
@@ -11,6 +12,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Ticket extends Model
 {
+    use BelongsToTenant;
+
     protected $table = 'sd_tickets';
     protected $fillable = [
         'tenant_id',

@@ -16,11 +16,21 @@ return new class extends Migration
             $table->foreignId('bodega_id')->nullable()->constrained('inventory_bodegas');
         });
 
-        // Set default bodega to existing records
-        $defaultBodega = \Illuminate\Support\Facades\DB::table('inventory_bodegas')->where('es_principal', true)->first();
-        if ($defaultBodega) {
-            \Illuminate\Support\Facades\DB::table('inventory_adjustments')->update(['bodega_id' => $defaultBodega->id]);
-            \Illuminate\Support\Facades\DB::table('inventory_recepciones')->update(['bodega_id' => $defaultBodega->id]);
+        // INV-004: Asignar bodega principal POR TENANTE en vez de global
+        $bodegasPrincipales = \Illuminate\Support\Facades\DB::table('inventory_bodegas')
+            ->where('es_principal', true)
+            ->get()
+            ->keyBy('tenant_id');
+
+        foreach ($bodegasPrincipales as $tenantId => $bodega) {
+            \Illuminate\Support\Facades\DB::table('inventory_adjustments')
+                ->where('tenant_id', $tenantId)
+                ->whereNull('bodega_id')
+                ->update(['bodega_id' => $bodega->id]);
+            \Illuminate\Support\Facades\DB::table('inventory_recepciones')
+                ->where('tenant_id', $tenantId)
+                ->whereNull('bodega_id')
+                ->update(['bodega_id' => $bodega->id]);
         }
 
         // Make columns required

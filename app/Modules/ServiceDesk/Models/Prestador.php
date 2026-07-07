@@ -2,6 +2,7 @@
 
 namespace App\Modules\ServiceDesk\Models;
 
+use App\Core\Concerns\BelongsToTenant;
 use App\Core\Models\Tenant;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
@@ -23,6 +24,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class Prestador extends Model
 {
+    use BelongsToTenant;
+
     protected $table = 'sd_prestadores';
     protected $guarded = ['id'];
 

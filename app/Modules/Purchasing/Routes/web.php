@@ -13,7 +13,7 @@ Route::middleware(['web', 'auth', 'tenant', 'module:purchasing'])->group(functio
         Route::get('ordenes/{ordene}', [OrdenCompraController::class, 'show'])->name('ordenes.show')->where('ordene', '[0-9]+');
     });
 
-    Route::middleware('permission:purchasing:create')->group(function () {
+    Route::middleware(['permission:purchasing:create', 'throttle:60,1'])->group(function () {
         Route::get('proveedores/crear', [ProveedorController::class, 'create'])->name('proveedores.create');
         Route::post('proveedores', [ProveedorController::class, 'store'])->name('proveedores.store');
 
@@ -21,7 +21,7 @@ Route::middleware(['web', 'auth', 'tenant', 'module:purchasing'])->group(functio
         Route::post('ordenes', [OrdenCompraController::class, 'store'])->name('ordenes.store');
     });
 
-    Route::middleware('permission:purchasing:edit')->group(function () {
+    Route::middleware(['permission:purchasing:edit', 'throttle:60,1'])->group(function () {
         Route::get('proveedores/{proveedore}/editar', [ProveedorController::class, 'edit'])->name('proveedores.edit')->where('proveedore', '[0-9]+');
         Route::put('proveedores/{proveedore}', [ProveedorController::class, 'update'])->name('proveedores.update')->where('proveedore', '[0-9]+');
 
@@ -30,9 +30,9 @@ Route::middleware(['web', 'auth', 'tenant', 'module:purchasing'])->group(functio
         Route::patch('ordenes/{ordene}/estado', [OrdenCompraController::class, 'updateEstado'])->name('ordenes.estado')->where('ordene', '[0-9]+');
     });
 
-    Route::middleware('permission:purchasing:delete')->group(function () {
+    Route::middleware(['permission:purchasing:delete', 'throttle:60,1'])->group(function () {
         Route::delete('proveedores/{proveedore}', [ProveedorController::class, 'destroy'])->name('proveedores.destroy')->where('proveedore', '[0-9]+');
-        
+
         Route::delete('ordenes/{ordene}', [OrdenCompraController::class, 'destroy'])->name('ordenes.destroy')->where('ordene', '[0-9]+');
         });
     });

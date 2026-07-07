@@ -2,12 +2,15 @@
 
 namespace App\Modules\ServiceDesk\Models;
 
+use App\Core\Concerns\BelongsToTenant;
 use App\Core\Models\Tenant;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ComisionPago extends Model
 {
+    use BelongsToTenant;
+
     protected $table = 'sd_comisiones_pagos';
     protected $guarded = ['id'];
 

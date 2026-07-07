@@ -1,28 +1,48 @@
 import { useMemo, useState } from 'react'
 
+interface DataTableOptions<T> {
+  searchAccessor?: (row: T) => string
+  filters?: Record<string, string | null>
+  initialFilters?: Record<string, string | null>
+  pageSize?: number
+}
+
+interface SortState {
+  key: string | null
+  dir: 'asc' | 'desc'
+}
+
+interface DataTableResult<T> {
+  search: string
+  setSearch: (v: string) => void
+  filters: Record<string, string | null>
+  setFilter: (key: string, value: string | null) => void
+  sort: SortState
+  toggleSort: (key: string) => void
+  page: number
+  setPage: (p: number) => void
+  totalPages: number
+  totalResults: number
+  rows: T[]
+}
+
 /**
  * Hook reutilizable para listados: búsqueda, filtros, ordenamiento y paginación
  * del lado del cliente. Pensado para datasets por tenant (tamaño moderado).
- *
- * @param {Array} rows               Datos completos.
- * @param {Object} options
- * @param {(row:any)=>string} options.searchAccessor  Texto donde busca el search.
- * @param {Object} options.filters   { campo: valor } filtros de igualdad activos.
- * @param {number} options.pageSize  Filas por página (default 10).
  */
-export function useDataTable(rows = [], options = {}) {
+export function useDataTable<T>(rows: T[] = [], options: DataTableOptions<T> = {}): DataTableResult<T> {
   const { searchAccessor, pageSize = 10 } = options
   const [search, setSearch] = useState('')
-  const [filters, setFilters] = useState(options.initialFilters || {})
-  const [sort, setSort] = useState({ key: null, dir: 'asc' })
+  const [filters, setFilters] = useState<Record<string, string | null>>(options.initialFilters || {})
+  const [sort, setSort] = useState<SortState>({ key: null, dir: 'asc' })
   const [page, setPage] = useState(1)
 
-  const setFilter = (key, value) => {
+  const setFilter = (key: string, value: string | null) => {
     setFilters((prev) => ({ ...prev, [key]: value }))
     setPage(1)
   }
 
-  const toggleSort = (key) => {
+  const toggleSort = (key: string) => {
     setSort((prev) =>
       prev.key === key
         ? { key, dir: prev.dir === 'asc' ? 'desc' : 'asc' }
@@ -33,23 +53,20 @@ export function useDataTable(rows = [], options = {}) {
   const filtered = useMemo(() => {
     let data = Array.isArray(rows) ? [...rows] : []
 
-    // Búsqueda
     const q = search.trim().toLowerCase()
     if (q && searchAccessor) {
       data = data.filter((r) => searchAccessor(r).toLowerCase().includes(q))
     }
 
-    // Filtros de igualdad
     Object.entries(filters).forEach(([key, value]) => {
       if (value === '' || value == null || value === 'all') return
-      data = data.filter((r) => String(r[key]) === String(value))
+      data = data.filter((r) => String((r as Record<string, unknown>)[key]) === String(value))
     })
 
-    // Ordenamiento
     if (sort.key) {
       data.sort((a, b) => {
-        const av = a[sort.key]
-        const bv = b[sort.key]
+        const av = (a as Record<string, unknown>)[sort.key!]
+        const bv = (b as Record<string, unknown>)[sort.key!]
         if (av == null) return 1
         if (bv == null) return -1
         const cmp =

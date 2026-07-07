@@ -15,13 +15,19 @@ class PurchasingService
     public function canDeleteProveedor(Proveedor $proveedor): array
     {
         $pendingCount = $proveedor->ordenes()
-            ->whereNotIn('estado', ['cancelada', 'recibida'])
+            ->whereNotIn('estado', ['cancelada'])
             ->count();
 
         if ($pendingCount > 0) {
+            $estados = $proveedor->ordenes()
+                ->whereNotIn('estado', ['cancelada'])
+                ->pluck('estado')
+                ->unique()
+                ->implode(', ');
+
             return [
                 'can_delete' => false,
-                'reason' => "Tiene {$pendingCount} órden(es) de compra activa(s).",
+                'reason' => "Tiene {$pendingCount} órden(es) de compra en estado(s): {$estados}.",
                 'pending_count' => $pendingCount,
             ];
         }

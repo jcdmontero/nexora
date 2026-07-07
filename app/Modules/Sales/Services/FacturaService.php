@@ -421,7 +421,7 @@ class FacturaService
         $prefijoFallback = strtoupper($tipoDocumento);
         for ($attempt = 0; $attempt < 10; $attempt++) {
             $numero = sprintf('%s-%s-%s', $prefijoFallback, now()->format('YmdHisv'), random_int(1000, 9999));
-            if (!Factura::withoutGlobalScopes()->where('numero', $numero)->exists()) {
+            if (!Factura::withoutGlobalScope('tenant')->where('numero', $numero)->exists()) {
                 return [
                     'numero' => $numero,
                     'resolucion_id' => null

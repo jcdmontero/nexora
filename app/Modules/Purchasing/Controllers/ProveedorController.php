@@ -5,6 +5,7 @@ use App\Modules\Purchasing\Models\Proveedor;
 use App\Modules\Purchasing\Services\PurchasingService;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
 class ProveedorController extends Controller
@@ -71,21 +72,31 @@ class ProveedorController extends Controller
 
     private function validateData(Request $request, $ignoreId = null): array
     {
-        return $request->validate([
+        $tenantId = auth()->user()->tenant_id;
+
+        $rules = [
             'regimen_tributario' => ['nullable', 'in:simplificado,comun'],
             'porcentaje_retencion_fuente' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'porcentaje_retencion_iva' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'porcentaje_retencion_ica' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'tipo_documento' => ['nullable', 'string', 'max:20'],
-            'numero_documento' => ['nullable', 'string', 'max:40'],
+            'numero_documento' => [
+                'nullable', 'string', 'max:40',
+                Rule::unique('purchasing_proveedores', 'numero_documento')
+                    ->where('tenant_id', $tenantId)
+                    ->whereNull('deleted_at')
+                    ->ignore($ignoreId),
+            ],
             'razon_social' => ['required', 'string', 'max:200'],
             'nombre_contacto' => ['nullable', 'string', 'max:120'],
             'email' => ['nullable', 'email', 'max:255'],
             'telefono' => ['nullable', 'string', 'max:30'],
             'direccion' => ['nullable', 'string', 'max:255'],
             'ciudad' => ['nullable', 'string', 'max:120'],
-            'notas' => ['nullable', 'string'],
+            'notas' => ['nullable', 'string', 'max:1000'],
             'activo' => ['boolean'],
-        ]);
+        ];
+
+        return $request->validate($rules);
     }
 }

@@ -28,8 +28,10 @@ class MarcaController extends Controller
 
     public function store(Request $request)
     {
+        $tenantId = auth()->user()->tenant_id;
+
         $validated = $request->validate([
-            'nombre' => 'required|string|max:100|unique:inventory_marcas,nombre,NULL,id,tenant_id,' . auth()->user()->tenant_id,
+            'nombre' => ['required', 'string', 'max:100', \Illuminate\Validation\Rule::unique('inventory_marcas', 'nombre')->where('tenant_id', $tenantId)->whereNull('deleted_at')],
             'is_active' => 'boolean',
         ]);
 
@@ -40,8 +42,10 @@ class MarcaController extends Controller
 
     public function update(Request $request, Marca $marca)
     {
+        $tenantId = auth()->user()->tenant_id;
+
         $validated = $request->validate([
-            'nombre' => 'required|string|max:100|unique:inventory_marcas,nombre,' . $marca->id . ',id,tenant_id,' . auth()->user()->tenant_id,
+            'nombre' => ['required', 'string', 'max:100', \Illuminate\Validation\Rule::unique('inventory_marcas', 'nombre')->where('tenant_id', $tenantId)->whereNull('deleted_at')->ignore($marca->id)],
             'is_active' => 'boolean',
         ]);
 

@@ -43,7 +43,7 @@ class EmitirFacturaDianJob implements ShouldQueue
             return;
         }
 
-        if ($factura->dian_status === 'aceptado') {
+        if ($factura->dian_estado === 'aceptado') {
             Log::info("Factura already accepted by DIAN", ['factura_id' => $this->facturaId]);
             return;
         }
@@ -55,33 +55,33 @@ class EmitirFacturaDianJob implements ShouldQueue
                 'numero' => $factura->numero,
             ]);
 
-            $result = $dianService->emitir($factura, $tenant);
+            app()->instance('current_tenant', $tenant);
 
-            if ($result['success']) {
-                Log::info("DIAN emission successful", [
-                    'factura_id' => $this->facturaId,
-                    'cude' => $result['cude'] ?? null,
-                ]);
-            } else {
-                Log::error("DIAN emission failed", [
-                    'factura_id' => $this->facturaId,
-                    'error' => $result['error'] ?? 'Unknown error',
-                ]);
+            $empresa = [
+                'nit' => \App\Core\Models\Configuracion::get('nit', '', $this->tenantId),
+                'razon_social' => \App\Core\Models\Configuracion::get('nombre_empresa', $tenant->name, $this->tenantId),
+                'direccion' => \App\Core\Models\Configuracion::get('direccion', '', $this->tenantId),
+                'ciudad_codigo' => \App\Core\Models\Configuracion::get('dian_ciudad_codigo', '11001', $this->tenantId),
+                'pais' => 'CO',
+            ];
 
-                // Mark as failed for manual retry
-                $factura->update([
-                    'dian_status' => 'error',
-                    'dian_error' => $result['error'] ?? 'Error desconocido en emisión DIAN',
-                ]);
-            }
+            $dianService->emitirFactura($factura, $empresa);
+
+            Log::info("DIAN emission successful", [
+                'factura_id' => $this->facturaId,
+                'cude' => $factura->cufe ?? null,
+            ]);
         } catch (\Exception $e) {
-            Log::error("DIAN emission exception", [
+            Log::error("DIAN emission failed", [
                 'factura_id' => $this->facturaId,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
             ]);
 
-            // Re-throw to trigger retry
+            $factura->update([
+                'dian_estado' => 'error',
+                'dian_mensaje' => $e->getMessage(),
+            ]);
+
             throw $e;
         }
     }
@@ -98,8 +98,8 @@ class EmitirFacturaDianJob implements ShouldQueue
         $factura = Factura::find($this->facturaId);
         if ($factura) {
             $factura->update([
-                'dian_status' => 'error',
-                'dian_error' => 'Error permanente en emisión DIAN: ' . $exception->getMessage(),
+                'dian_estado' => 'error',
+                'dian_mensaje' => 'Error permanente en emisión DIAN: ' . $exception->getMessage(),
             ]);
         }
     }

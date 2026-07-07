@@ -2,11 +2,12 @@
 namespace App\Modules\Inventory\Models;
 
 use App\Core\Concerns\BelongsToTenant;
+use App\Core\Services\Auditable;
 use Illuminate\Database\Eloquent\Model;
 
 class ProductPack extends Model
 {
-    use BelongsToTenant;
+    use BelongsToTenant, Auditable;
 
     protected $table = 'inventory_product_packs';
 

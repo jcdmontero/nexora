@@ -18,7 +18,7 @@ class OportunidadController extends Controller
         $oportunidades = Oportunidad::query()
             ->with('cliente')
             ->when($search, function ($query, $search) {
-                $cleanSearch = addcslashes($search, '%_');
+                $cleanSearch = addcslashes($search, '%_\\');
                 $operator = \Illuminate\Support\Facades\DB::connection()->getDriverName() === 'pgsql' ? 'ILIKE' : 'LIKE';
                 
                 $query->where(function ($q) use ($cleanSearch, $operator) {

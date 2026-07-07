@@ -22,9 +22,12 @@ class UniqueSerialPerEquipment implements ValidationRule
             return;
         }
 
+        $tenantId = tenantId();
+
         // 1. El serial/IMEI debe pertenecer siempre al mismo modelo de equipo.
         if ($this->modeloId !== null) {
             $existsOtherModel = OrdenReparacion::where('numero_serie', $value)
+                ->where('tenant_id', $tenantId)
                 ->where('modelo_id', '!=', $this->modeloId)
                 ->when($this->ignoreOrderId, fn ($q) => $q->where('id', '!=', $this->ignoreOrderId))
                 ->exists();
@@ -38,6 +41,7 @@ class UniqueSerialPerEquipment implements ValidationRule
         // 2. El mismo equipo puede tener múltiples atenciones, pero no debe existir otra orden activa
         //    para el mismo equipo si ya hay una en curso (no entregada ni cancelada).
         $activeOrderExists = OrdenReparacion::where('numero_serie', $value)
+            ->where('tenant_id', $tenantId)
             ->when($this->ignoreOrderId, fn ($q) => $q->where('id', '!=', $this->ignoreOrderId))
             ->whereNotIn('estado', ['entregado', 'cancelado'])
             ->exists();

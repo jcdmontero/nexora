@@ -24,7 +24,7 @@ class RegisteredUserController
 
     public function store(Request $request): RedirectResponse
     {
-        $slug = str($request->tenant_name)->slug();
+        $slug = str($request->tenant_name)->slug('es');
 
         $request->validate([
             'name' => ['required', 'string', 'max:255'],

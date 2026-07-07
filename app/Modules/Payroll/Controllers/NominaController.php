@@ -10,6 +10,7 @@ use App\Modules\Payroll\Models\Nomina;
 use App\Modules\Payroll\Models\ConceptoNomina;
 use App\Modules\Payroll\Services\NominaService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
 class NominaController extends Controller
@@ -139,33 +140,35 @@ class NominaController extends Controller
         ]);
 
         try {
-            $this->nominaService->actualizarConcepto(
-                $nomina,
-                (int) $validated['concepto_id'],
-                (float) $validated['valor']
-            );
+            DB::transaction(function () use ($nomina, $validated) {
+                $this->nominaService->actualizarConcepto(
+                    $nomina,
+                    (int) $validated['concepto_id'],
+                    (float) $validated['valor']
+                );
 
-            // Actualizar totales del período padre
-            $periodo = $nomina->periodo;
-            if ($periodo) {
-                $totales = $periodo->nominas()
-                    ->selectRaw('
-                        COALESCE(SUM(total_devengado), 0) as td,
-                        COALESCE(SUM(total_deducciones), 0) as tdd,
-                        COALESCE(SUM(neto_pagar), 0) as np,
-                        COALESCE(SUM(total_provisiones), 0) as tp,
-                        COALESCE(SUM(total_aportes_patronales), 0) as tap
-                    ')
-                    ->first();
+                // Actualizar totales del período padre
+                $periodo = $nomina->periodo;
+                if ($periodo) {
+                    $totales = $periodo->nominas()
+                        ->selectRaw('
+                            COALESCE(SUM(total_devengado), 0) as td,
+                            COALESCE(SUM(total_deducciones), 0) as tdd,
+                            COALESCE(SUM(neto_pagar), 0) as np,
+                            COALESCE(SUM(total_provisiones), 0) as tp,
+                            COALESCE(SUM(total_aportes_patronales), 0) as tap
+                        ')
+                        ->first();
 
-                $periodo->update([
-                    'total_devengado'       => $totales->td,
-                    'total_deducciones'     => $totales->tdd,
-                    'neto_pagar'            => $totales->np,
-                    'total_provisiones'     => $totales->tp,
-                    'total_aportes_patronales' => $totales->tap,
-                ]);
-            }
+                    $periodo->update([
+                        'total_devengado'       => $totales->td,
+                        'total_deducciones'     => $totales->tdd,
+                        'neto_pagar'            => $totales->np,
+                        'total_provisiones'     => $totales->tp,
+                        'total_aportes_patronales' => $totales->tap,
+                    ]);
+                }
+            });
 
             return back()->with('success', 'Concepto actualizado exitosamente.');
         } catch (\Exception $e) {

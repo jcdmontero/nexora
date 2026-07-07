@@ -158,7 +158,7 @@ readonly class XmlSigner implements SignatureProviderInterface
         string $xmlDigest
     ): string {
         $uuid = 'sig-' . strtoupper(bin2hex(random_bytes(16)));
-        $timestamp = now()->format('Y-m-d\TH:i:s-05:00');
+        $timestamp = now()->setTimezone(config('app.timezone', 'America/Bogota'))->format('Y-m-d\TH:i:sP');
 
         // Extract the issuer name and serial number from the certificate
         $certData = openssl_x509_parse($certificate);
@@ -293,12 +293,6 @@ XML;
         openssl_x509_export($pem, $der, false);
         // The export gives us PEM, strip headers
         return base64_decode(str_replace(["-----BEGIN CERTIFICATE-----", "-----END CERTIFICATE-----", "\n", "\r"], '', $der));
-    }
-
-    private function getSerialNumber(string $certificate): string
-    {
-        $certData = openssl_x509_parse($certificate);
-        return $certData['serialNumberHex'] ?? strtoupper(bin2hex(random_bytes(8)));
     }
 
     private function normalizeX509Name(array $nameParts): string

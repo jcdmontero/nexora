@@ -62,7 +62,14 @@ class ReporteController extends Controller
         });
 
         $ingresos = round((float) data_get($porTipo, 'ingreso.saldo', 0), 2);
-        $gastos = round(abs((float) data_get($porTipo, 'gasto.saldo', 0)) + abs((float) data_get($porTipo, 'costo.saldo', 0)), 2);
+        // M-14: Usar saldo con signo en vez de abs() para no sobreestimar gastos
+        // con devoluciones/notas crédito que generan saldo negativo
+        $gastosNeto = round(
+            (float) data_get($porTipo, 'gasto.saldo', 0)
+            + (float) data_get($porTipo, 'costo.saldo', 0),
+            2
+        );
+        $gastos = abs($gastosNeto);
         $utilidad = $ingresos - $gastos;
 
         $saldos = Cache::remember($this->getCacheKey('index', $desde, $hasta, "page_{$page}"), now()->addMinutes(10), function () use ($desde, $hasta) {

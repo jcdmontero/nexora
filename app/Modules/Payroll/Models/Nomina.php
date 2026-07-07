@@ -2,6 +2,7 @@
 
 namespace App\Modules\Payroll\Models;
 
+use App\Core\Concerns\BelongsToTenant;
 use App\Core\Models\Tenant;
 use App\Modules\Hr\Models\Contrato;
 use App\Models\User;
@@ -35,6 +36,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class Nomina extends Model
 {
+    use BelongsToTenant;
+
     protected $table = 'pay_nominas';
 
     protected $fillable = [

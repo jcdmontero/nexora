@@ -7,6 +7,7 @@ namespace App\Modules\Payroll\Controllers;
 use App\Http\Controllers\Controller;
 use App\Modules\Payroll\Models\Nomina;
 use App\Modules\Payroll\Models\PeriodoNomina;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 
 class ReporteController extends Controller
@@ -51,7 +52,15 @@ class ReporteController extends Controller
                 $nombre = $detalle->concepto?->nombre ?? 'Sin concepto';
                 $valor = (float) $detalle->valor;
 
-                if (!isset($consolidado[$tipo])) continue;
+                if (!isset($consolidado[$tipo])) {
+                    Log::warning('Payroll resumen: concepto con tipo desconocido o null', [
+                        'nomina_id' => $nomina->id,
+                        'detalle_id' => $detalle->id,
+                        'tipo' => $tipo,
+                        'concepto_id' => $detalle->concepto_id,
+                    ]);
+                    continue;
+                }
 
                 $consolidado[$tipo]['total'] += $valor;
 

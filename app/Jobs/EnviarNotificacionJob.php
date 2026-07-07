@@ -30,13 +30,20 @@ class EnviarNotificacionJob implements ShouldQueue
 
     public function handle(NotificacionService $notificacionService): void
     {
-        $tenant = app('current_tenant');
-        if (!$tenant) {
-            Log::error("No current_tenant for notification job", ['notificacion_id' => $this->notificacionId]);
+        $noti = Notificacion::withoutGlobalScope('tenant')->find($this->notificacionId);
+        if (!$noti) {
+            Log::error("Notificacion not found", ['notificacion_id' => $this->notificacionId]);
             return;
         }
 
-        $noti = Notificacion::find($this->notificacionId);
+        $tenant = Tenant::find($noti->tenant_id);
+        if (!$tenant) {
+            Log::error("Tenant not found for notification", ['tenant_id' => $noti->tenant_id]);
+            return;
+        }
+
+        app()->instance('current_tenant', $tenant);
+        setPermissionsTeamId($tenant->id);
         if (!$noti) {
             Log::error("Notificacion not found", ['notificacion_id' => $this->notificacionId]);
             return;

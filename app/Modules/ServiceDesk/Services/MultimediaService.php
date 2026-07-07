@@ -79,18 +79,4 @@ class MultimediaService
 
         return false;
     }
-
-    /**
-     * Obtiene la duración de un video usando ffprobe (si está disponible).
-     */
-    private function getVideoDuration(UploadedFile $file): ?float
-    {
-        try {
-            $path = $file->getRealPath();
-            $output = shell_exec("ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 \"{$path}\" 2>/dev/null");
-            return $output ? (float) trim($output) : null;
-        } catch (\Exception $e) {
-            return null;
-        }
-    }
 }

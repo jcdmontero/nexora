@@ -5,7 +5,7 @@
     "description": "Liquidación de nómina, novedades, prestaciones y seguridad social.",
     "icon": "Banknote",
     "core": false,
-    "dependencies": ["hr"],
+    "dependencies": ["hr", "accounting"],
     "permissions": [
         "payroll:view",
         "payroll:create",

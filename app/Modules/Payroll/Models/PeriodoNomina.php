@@ -2,6 +2,7 @@
 
 namespace App\Modules\Payroll\Models;
 
+use App\Core\Concerns\BelongsToTenant;
 use App\Core\Models\Tenant;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
@@ -32,7 +33,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class PeriodoNomina extends Model
 {
-    public const ESTADOS = ['BORRADOR', 'LIQUIDADA', 'CONTABILIZADA', 'PAGADA', 'ANULADA'];
+    use BelongsToTenant;
+
+    public const ESTADOS = ['BORRADOR', 'PROCESANDO', 'LIQUIDADA', 'CONTABILIZADA', 'PAGADA', 'ANULADA'];
 
     protected $table = 'pay_periodos_nomina';
 

@@ -2,6 +2,7 @@
 
 namespace App\Modules\ServiceDesk\Models;
 
+use App\Core\Concerns\BelongsToTenant;
 use App\Core\Services\Auditable;
 use App\Core\Models\Tenant;
 use App\Models\User;
@@ -11,7 +12,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class ComisionLiquidacion extends Model
 {
-    use Auditable;
+    use BelongsToTenant, Auditable;
 
     protected $table = 'sd_comisiones_liquidaciones';
     protected $guarded = ['id'];

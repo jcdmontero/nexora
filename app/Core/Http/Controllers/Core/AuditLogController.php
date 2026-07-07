@@ -41,8 +41,8 @@ class AuditLogController extends Controller
                 'created_at' => $log->created_at->toISOString(),
             ]);
 
-        $eventOptions = AuditLog::distinct('event')->pluck('event');
-        $typeOptions = AuditLog::distinct('auditable_type')->pluck('auditable_type')
+        $eventOptions = AuditLog::where('tenant_id', tenantId())->distinct('event')->pluck('event');
+        $typeOptions = AuditLog::where('tenant_id', tenantId())->distinct('auditable_type')->pluck('auditable_type')
             ->map(fn ($t) => class_basename($t));
 
         return Inertia::render('Audit/Index', [

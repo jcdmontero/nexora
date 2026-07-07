@@ -109,10 +109,16 @@ function showErrorBanner(message, type = 'error') {
     banner.style.borderBottom = '2px solid #fbbf24'
   }
 
-  banner.innerHTML = `
-    <span>${message}</span>
-    <button onclick="this.parentElement.remove()" style="background:none;border:none;cursor:pointer;font-size:18px;color:inherit;padding:0 4px">&times;</button>
-  `
+  const span = document.createElement('span')
+  span.textContent = message
+  banner.appendChild(span)
+
+  const closeBtn = document.createElement('button')
+  closeBtn.textContent = '\u00d7'
+  closeBtn.style.cssText = 'background:none;border:none;cursor:pointer;font-size:18px;color:inherit;padding:0 4px'
+  closeBtn.onclick = () => banner.remove()
+  banner.appendChild(closeBtn)
+
   document.body.prepend(banner)
   setTimeout(() => banner.remove(), 8000)
 }

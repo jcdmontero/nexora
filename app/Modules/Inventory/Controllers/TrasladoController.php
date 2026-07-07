@@ -35,14 +35,16 @@ class TrasladoController extends Controller
 
     public function store(Request $request)
     {
+        $tenantId = auth()->user()->tenant_id;
+
         $data = $request->validate([
             'numero' => ['required', 'string', 'max:50'],
             'fecha' => ['required', 'date'],
-            'bodega_origen_id' => ['required', Rule::in(Bodega::pluck('id'))],
-            'bodega_destino_id' => ['required', Rule::in(Bodega::pluck('id')), 'different:bodega_origen_id'],
+            'bodega_origen_id' => ['required', Rule::exists('inventory_bodegas', 'id')->where('tenant_id', $tenantId)],
+            'bodega_destino_id' => ['required', Rule::exists('inventory_bodegas', 'id')->where('tenant_id', $tenantId), 'different:bodega_origen_id'],
             'notas' => ['nullable', 'string'],
             'detalles' => ['required', 'array', 'min:1'],
-            'detalles.*.producto_id' => ['required', Rule::in(Producto::pluck('id'))],
+            'detalles.*.producto_id' => ['required', Rule::exists('inventory_productos', 'id')->where('tenant_id', $tenantId)],
             'detalles.*.cantidad' => ['required', 'numeric', 'min:0.01'],
         ]);
 
@@ -86,11 +88,29 @@ class TrasladoController extends Controller
         $detalles = $traslado->detalles()->with('producto:id,nombre')->get();
 
         DB::transaction(function () use ($traslado, $detalles) {
+            // C-02: Bloquear todas las filas de stock involucradas en orden consistente
+            $productoIds = $detalles->pluck('producto_id')->unique()->sort()->values()->all();
+            $bodegaOrigenId = $traslado->bodega_origen_id;
+            $bodegaDestinoId = $traslado->bodega_destino_id;
+
+            // Lock pesimista sobre todas las filas de stock del origen
+            $stocksOrigenLock = Stock::where('bodega_id', $bodegaOrigenId)
+                ->whereIn('producto_id', $productoIds)
+                ->lockForUpdate()
+                ->get()
+                ->keyBy('producto_id');
+
             foreach ($detalles as $item) {
-                $stockOrigen = Stock::firstOrCreate([
-                    'producto_id' => $item->producto_id,
-                    'bodega_id' => $traslado->bodega_origen_id,
-                ]);
+                // Obtener stock origen con lock ya adquirido
+                $stockOrigen = $stocksOrigenLock->get($item->producto_id);
+
+                if (!$stockOrigen) {
+                    $stockOrigen = Stock::create([
+                        'producto_id' => $item->producto_id,
+                        'bodega_id' => $bodegaOrigenId,
+                        'cantidad' => 0,
+                    ]);
+                }
 
                 if ($stockOrigen->cantidad < $item->cantidad) {
                     throw ValidationException::withMessages([
@@ -102,7 +122,7 @@ class TrasladoController extends Controller
 
                 $stockDestino = Stock::firstOrCreate([
                     'producto_id' => $item->producto_id,
-                    'bodega_id' => $traslado->bodega_destino_id,
+                    'bodega_id' => $bodegaDestinoId,
                 ]);
                 $stockDestino->increment('cantidad', $item['cantidad']);
 

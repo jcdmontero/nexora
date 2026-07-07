@@ -6,6 +6,7 @@ use App\Modules\Inventory\Models\Stock;
 use App\Core\Models\Sede;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
@@ -20,8 +21,9 @@ class BodegaController extends Controller
 
     public function create()
     {
+        $tenantId = auth()->user()->tenant_id;
         return Inertia::render('Inventory/Bodegas/Create', [
-            'sedes' => Sede::where('activo', true)->get(['id', 'nombre'])
+            'sedes' => Sede::where('tenant_id', $tenantId)->where('activo', true)->get(['id', 'nombre'])
         ]);
     }
 
@@ -30,18 +32,24 @@ class BodegaController extends Controller
         $tenantId = auth()->user()->tenant_id;
 
         $data = $request->validate([
-            'sede_id' => ['required', Rule::in(Sede::pluck('id'))],
+            'sede_id' => ['required', Rule::exists('core_sedes', 'id')->where('tenant_id', $tenantId)],
             'nombre' => ['required', 'string', 'max:255'],
             'direccion' => ['nullable', 'string', 'max:255'],
             'es_principal' => ['boolean'],
             'activo' => ['boolean'],
         ]);
 
-        if (!empty($data['es_principal'])) {
-            Bodega::where('es_principal', true)->update(['es_principal' => false]);
-        }
+        // A-04: Transacción + lock para evitar race condition en bodega principal
+        DB::transaction(function () use ($data, $tenantId) {
+            if (!empty($data['es_principal'])) {
+                Bodega::where('tenant_id', $tenantId)
+                    ->where('es_principal', true)
+                    ->lockForUpdate()
+                    ->update(['es_principal' => false]);
+            }
 
-        Bodega::create($data);
+            Bodega::create($data + ['tenant_id' => $tenantId]);
+        });
 
         return redirect()->route('inventory.bodegas.index')
             ->with('success', 'Bodega creada correctamente.');
@@ -49,27 +57,36 @@ class BodegaController extends Controller
 
     public function edit(Bodega $bodega)
     {
+        $tenantId = auth()->user()->tenant_id;
         return Inertia::render('Inventory/Bodegas/Edit', [
             'bodega' => $bodega,
-            'sedes' => Sede::where('activo', true)->get(['id', 'nombre'])
+            'sedes' => Sede::where('tenant_id', $tenantId)->where('activo', true)->get(['id', 'nombre'])
         ]);
     }
 
     public function update(Request $request, Bodega $bodega)
     {
+        $tenantId = auth()->user()->tenant_id;
+
         $data = $request->validate([
-            'sede_id' => ['required', Rule::in(Sede::pluck('id'))],
+            'sede_id' => ['required', Rule::exists('core_sedes', 'id')->where('tenant_id', $tenantId)],
             'nombre' => ['required', 'string', 'max:255'],
             'direccion' => ['nullable', 'string', 'max:255'],
             'es_principal' => ['boolean'],
             'activo' => ['boolean'],
         ]);
 
-        if (!empty($data['es_principal'])) {
-            Bodega::where('id', '!=', $bodega->id)->where('es_principal', true)->update(['es_principal' => false]);
-        }
+        DB::transaction(function () use ($data, $bodega, $tenantId) {
+            if (!empty($data['es_principal'])) {
+                Bodega::where('tenant_id', $tenantId)
+                    ->where('id', '!=', $bodega->id)
+                    ->where('es_principal', true)
+                    ->lockForUpdate()
+                    ->update(['es_principal' => false]);
+            }
 
-        $bodega->update($data);
+            $bodega->update($data);
+        });
 
         return redirect()->route('inventory.bodegas.index')
             ->with('success', 'Bodega actualizada correctamente.');

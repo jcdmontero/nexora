@@ -48,8 +48,13 @@ class OrdenService
                 'updated_by' => $userId,
             ]);
 
-            $orden->servicios()->detach();
-            $orden->repuestos()->detach();
+            // SD-003: Solo detach si el frontend envía arrays de servicios/repuestos
+            if (array_key_exists('servicios', $data)) {
+                $orden->servicios()->detach();
+            }
+            if (array_key_exists('repuestos', $data)) {
+                $orden->repuestos()->detach();
+            }
             $this->syncLineas($orden, $data);
 
             $orden->load('servicios', 'repuestos');

@@ -52,6 +52,14 @@ class CuentaController extends Controller
             'descripcion' => 'nullable|string',
         ]);
 
+        // ACC-009: Validar que parent_id no cree ciclo jerárquico
+        if (!empty($validated['parent_id'])) {
+            $ancestorIds = $this->getAncestorIds($validated['parent_id']);
+            if (in_array(0, $ancestorIds)) {
+                return back()->with('error', 'No se puede asignar esta cuenta como padre porque crearía un ciclo jerárquico.');
+            }
+        }
+
         CuentaContable::create($validated);
 
         return redirect()->route('accounting.cuentas.index')->with('success', 'Cuenta contable creada correctamente.');
@@ -77,6 +85,14 @@ class CuentaController extends Controller
             'descripcion' => 'nullable|string',
         ]);
 
+        // ACC-009: Validar que parent_id no cree ciclo jerárquico
+        if (!empty($validated['parent_id'])) {
+            $ancestorIds = $this->getAncestorIds($validated['parent_id'], $cuenta->id);
+            if (in_array($cuenta->id, $ancestorIds)) {
+                return back()->with('error', 'No se puede asignar esta cuenta como padre porque crearía un ciclo jerárquico.');
+            }
+        }
+
         $cuenta->update($validated);
 
         return back()->with('success', 'Cuenta contable actualizada correctamente.');
@@ -97,5 +113,36 @@ class CuentaController extends Controller
         $cuenta->delete();
 
         return back()->with('success', 'Cuenta contable eliminada correctamente.');
+    }
+
+    /**
+     * ACC-009: Obtiene todos los IDs de ancestros de una cuenta (recursivo).
+     * Retorna [0] si detecta un ciclo.
+     */
+    private function getAncestorIds(int $parentId, ?int $excludeId = null): array
+    {
+        $ancestors = [];
+        $currentId = $parentId;
+        $maxDepth = 10;
+
+        for ($i = 0; $i < $maxDepth; $i++) {
+            $cuenta = CuentaContable::where('id', $currentId)
+                ->where('tenant_id', tenantId())
+                ->select('id', 'parent_id')
+                ->first();
+
+            if (!$cuenta || !$cuenta->parent_id) {
+                break;
+            }
+
+            if ($cuenta->parent_id === $excludeId) {
+                return [0];
+            }
+
+            $ancestors[] = $cuenta->parent_id;
+            $currentId = $cuenta->parent_id;
+        }
+
+        return $ancestors;
     }
 }

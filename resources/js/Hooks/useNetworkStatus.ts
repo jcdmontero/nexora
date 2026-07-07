@@ -39,13 +39,13 @@ export function useNetworkStatus(): NetworkStatus & { syncNow: () => Promise<voi
   }, [isSyncing, updatePendingCount])
 
   useEffect(() => {
+    let offlineTimer: ReturnType<typeof setTimeout> | null = null
+
     const handleOnline = () => {
       setIsOnline(true)
       setWasOffline(true)
-      // Auto-sync cuando vuelve la conexión
       syncNow()
-      // Reset wasOffline después de 3 segundos
-      setTimeout(() => setWasOffline(false), 3000)
+      offlineTimer = setTimeout(() => setWasOffline(false), 3000)
     }
 
     const handleOffline = () => {
@@ -55,7 +55,6 @@ export function useNetworkStatus(): NetworkStatus & { syncNow: () => Promise<voi
     window.addEventListener('online', handleOnline)
     window.addEventListener('offline', handleOffline)
 
-    // Poll pending count cada 10 segundos
     updatePendingCount()
     const interval = setInterval(updatePendingCount, 10000)
 
@@ -63,6 +62,7 @@ export function useNetworkStatus(): NetworkStatus & { syncNow: () => Promise<voi
       window.removeEventListener('online', handleOnline)
       window.removeEventListener('offline', handleOffline)
       clearInterval(interval)
+      if (offlineTimer) clearTimeout(offlineTimer)
     }
   }, [syncNow, updatePendingCount])
 

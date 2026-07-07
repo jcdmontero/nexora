@@ -66,6 +66,10 @@ class RoleController extends Controller
 
     public function update(Request $request, Role $role)
     {
+        if ((int) $role->team_id !== (int) tenantId()) {
+            abort(403, 'Este rol no pertenece a su empresa.');
+        }
+
         $request->validate([
             'permissions' => ['array'],
             'permissions.*' => ['string', 'exists:permissions,name'],
@@ -80,6 +84,10 @@ class RoleController extends Controller
 
     public function destroy(Role $role)
     {
+        if ((int) $role->team_id !== (int) tenantId()) {
+            abort(403, 'Este rol no pertenece a su empresa.');
+        }
+
         if (in_array($role->name, [config('roles.system', 'superadmin'), config('roles.default_tenant_admin', 'ADMIN_EMPRESA')])) {
             return redirect()->route('core.roles.index')
                 ->with('error', "El rol \"{$role->name}\" no se puede eliminar.");

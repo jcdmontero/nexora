@@ -99,16 +99,19 @@ class ProductoController extends Controller
 
     public function store(Request $request)
     {
+        $tenantId = auth()->user()->tenant_id;
+
         $validated = $request->validate([
-            'codigo' => 'required|string|max:50|unique:inventory_productos,codigo,NULL,id,tenant_id,' . auth()->user()->tenant_id,
+            'codigo' => ['required', 'string', 'max:50', Rule::unique('inventory_productos', 'codigo')->where('tenant_id', $tenantId)->whereNull('deleted_at')],
             'nombre' => 'required|string|max:150',
-            'categoria_id' => ['nullable', Rule::in(Categoria::pluck('id'))],
-            'marca_id' => ['nullable', Rule::in(Marca::pluck('id'))],
+            'categoria_id' => ['nullable', Rule::exists('inventory_categorias', 'id')->where('tenant_id', $tenantId)],
+            'marca_id' => ['nullable', Rule::exists('inventory_marcas', 'id')->where('tenant_id', $tenantId)],
             'unidad_medida' => 'required|string|max:20',
             'precio_venta' => 'required|numeric|min:0',
             'costo_promedio' => 'required|numeric|min:0',
             'stock_actual' => 'required|numeric|min:0',
             'stock_minimo' => 'required|numeric|min:0',
+            'is_active' => 'boolean',
             'descripcion' => 'nullable|string',
             'imagenes' => 'nullable|array|max:4',
             'imagenes.*' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
@@ -119,14 +122,12 @@ class ProductoController extends Controller
             'packs.*.codigo_barras' => 'nullable|string|max:100',
             'packs.*.precio_venta' => 'nullable|numeric|min:0',
         ]);
-
-        $tenantId = auth()->user()->tenant_id;
         $imagenesPaths = [];
         if ($request->hasFile('imagenes')) {
             $imagenesPaths = $this->uploadImages($request->file('imagenes'), $tenantId);
         }
 
-        \DB::transaction(function () use ($validated, $imagenesPaths) {
+        \DB::transaction(function () use ($validated, $imagenesPaths, $tenantId) {
             $data = \Arr::except($validated, ['packs', 'imagenes']);
             $data['imagenes'] = $imagenesPaths;
 
@@ -136,15 +137,19 @@ class ProductoController extends Controller
                 $producto->packs()->createMany($validated['packs']);
             }
 
-            // Sincronizar stock en bodega principal si stock_inicial > 0
+            // A-05: Sincronizar stock en bodega principal si stock_inicial > 0
             if (($validated['stock_actual'] ?? 0) > 0) {
-                $bodegaPrincipal = Bodega::where('es_principal', true)->first();
+                $bodegaPrincipal = Bodega::where('tenant_id', $tenantId)->where('es_principal', true)->first();
                 if ($bodegaPrincipal) {
                     Stock::create([
+                        'tenant_id' => $tenantId,
                         'producto_id' => $producto->id,
                         'bodega_id' => $bodegaPrincipal->id,
                         'cantidad' => $validated['stock_actual'],
                     ]);
+                } else {
+                    // Revertir stock_actual del producto si no hay bodega principal
+                    $producto->update(['stock_actual' => 0]);
                 }
             }
         });
@@ -165,22 +170,25 @@ class ProductoController extends Controller
 
     public function update(Request $request, Producto $producto)
     {
+        $tenantId = auth()->user()->tenant_id;
+
         $validated = $request->validate([
-            'codigo' => 'required|string|max:50|unique:inventory_productos,codigo,' . $producto->id . ',id,tenant_id,' . auth()->user()->tenant_id,
+            'codigo' => ['required', 'string', 'max:50', Rule::unique('inventory_productos', 'codigo')->where('tenant_id', $tenantId)->whereNull('deleted_at')->ignore($producto->id)],
             'nombre' => 'required|string|max:150',
-            'categoria_id' => ['nullable', Rule::in(Categoria::pluck('id'))],
-            'marca_id' => ['nullable', Rule::in(Marca::pluck('id'))],
+            'categoria_id' => ['nullable', Rule::exists('inventory_categorias', 'id')->where('tenant_id', $tenantId)],
+            'marca_id' => ['nullable', Rule::exists('inventory_marcas', 'id')->where('tenant_id', $tenantId)],
             'unidad_medida' => 'required|string|max:20',
             'precio_venta' => 'required|numeric|min:0',
             'costo_promedio' => 'required|numeric|min:0',
             'stock_minimo' => 'required|numeric|min:0',
+            'is_active' => 'boolean',
             'descripcion' => 'nullable|string',
             'imagenes' => 'nullable|array|max:4',
             'imagenes.*' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
             'imagenes_existentes' => 'nullable|array',
             'imagenes_existentes.*' => 'string',
             'packs' => 'nullable|array',
-            'packs.*.id' => ['nullable', Rule::in(\App\Modules\Inventory\Models\ProductPack::pluck('id'))],
+            'packs.*.id' => ['nullable', Rule::exists('inventory_product_packs', 'id')],
             'packs.*.nombre' => 'required|string|max:100',
             'packs.*.unidad_medida' => 'required|string|max:20',
             'packs.*.factor_conversion' => 'required|numeric|min:0.0001',
@@ -188,15 +196,22 @@ class ProductoController extends Controller
             'packs.*.precio_venta' => 'nullable|numeric|min:0',
         ]);
 
-        $tenantId = auth()->user()->tenant_id;
         $existingImages = $request->input('imagenes_existentes', []);
+
+        // A-03: Validar cupo ANTES de subir imágenes para evitar huérfanos
+        $newImageFiles = $request->file('imagenes', []);
+        $availableSlots = 4 - count($existingImages);
+        if (count($newImageFiles) > $availableSlots) {
+            $newImageFiles = array_slice($newImageFiles, 0, $availableSlots);
+        }
+
         $newImages = [];
-        if ($request->hasFile('imagenes')) {
-            $newImages = $this->uploadImages($request->file('imagenes'), $tenantId);
+        if (!empty($newImageFiles)) {
+            $newImages = $this->uploadImages($newImageFiles, $tenantId);
         }
 
         // Merge existing and new images
-        $allImages = array_slice(array_merge($existingImages, $newImages), 0, 4);
+        $allImages = array_merge($existingImages, $newImages);
 
         // Collect images to delete (will be deleted inside the transaction)
         $oldImages = $producto->imagenes ?? [];

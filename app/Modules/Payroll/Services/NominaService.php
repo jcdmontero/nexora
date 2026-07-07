@@ -89,6 +89,9 @@ class NominaService
         $datosPeriodo = $this->calcularDiasProporcionales($contrato, $periodo);
         $diasTrabajados = $datosPeriodo['dias_trabajados'];
 
+        // M-04: Extraer salarioMinimo al inicio para evitar dependencia de orden de bloques
+        $salarioMinimo = (float) $configLegal->salario_minimo;
+
         $horasSemanales = $this->getHorasSemanales($periodo, $configLegal);
         $valorHoraOrdinaria = $this->calcularValorHoraOrdinaria(
             (float) $contrato->salario_base,
@@ -192,7 +195,6 @@ class NominaService
         //  4. AUXILIO DE TRANSPORTE (AUX01) — medio de prueba, prorrateado
         // ==================================================================
         {
-            $salarioMinimo = (float) $configLegal->salario_minimo;
             $topeSalarios = (float) ($configLegal->tope_auxilio_transporte_salarios ?? 2);
             $topeAuxilio = $salarioMinimo * $topeSalarios;
 
@@ -364,7 +366,7 @@ class NominaService
     public function liquidarPeriodo(PeriodoNomina $periodo): int
     {
         $estado = strtoupper($periodo->estado ?? '');
-        if (!\in_array($estado, ['BORRADOR', 'DRAFT'], true)) {
+        if (!\in_array($estado, ['BORRADOR', 'DRAFT', 'PROCESANDO'], true)) {
             throw new \RuntimeException(
                 "El período {$periodo->codigo} no está en estado BORRADOR ({$periodo->estado}).",
             );
@@ -396,6 +398,7 @@ class NominaService
 
             // Contratos activos dentro del período.
             $contratos = Contrato::with('empleado')
+                ->where('tenant_id', $periodo->tenant_id)
                 ->where('estado', true)
                 ->where('fecha_inicio', '<=', $fechaFin)
                 ->where(function ($q) use ($fechaInicio): void {
@@ -658,11 +661,14 @@ class NominaService
      */
     private function conceptoPorCodigo(string $codigo): ?ConceptoNomina
     {
-        if (!\array_key_exists($codigo, $this->conceptoCache)) {
-            $this->conceptoCache[$codigo] = ConceptoNomina::where('codigo', $codigo)->first();
+        $key = $codigo;
+        if (!\array_key_exists($key, $this->conceptoCache)) {
+            $this->conceptoCache[$key] = ConceptoNomina::where('codigo', $codigo)
+                ->where('tenant_id', tenantId())
+                ->first();
         }
 
-        return $this->conceptoCache[$codigo];
+        return $this->conceptoCache[$key];
     }
 
     /**
@@ -921,6 +927,14 @@ class NominaService
      */
     private function revertirCuotasDelPeriodo(PeriodoNomina $periodo): void
     {
+        $this->revertirCuotasDelPeriodoPublico($periodo);
+    }
+
+    /**
+     * Revierte cuotas de préstamo — versión pública reutilizable por anular().
+     */
+    public function revertirCuotasDelPeriodoPublico(PeriodoNomina $periodo): void
+    {
         $nominaIds = $periodo->nominas()->pluck('id');
 
         if ($nominaIds->isEmpty()) {
@@ -941,6 +955,48 @@ class NominaService
                 }
             }
             $cuota->update(['estado' => 'PENDIENTE', 'nomina_id' => null]);
+        }
+    }
+
+    /**
+     * Revierte provisiones acumuladas de un período — reutilizable por anular().
+     */
+    public function revertirProvisionesDelPeriodo(PeriodoNomina $periodo): void
+    {
+        $nominaIds = $periodo->nominas()->pluck('id');
+
+        if ($nominaIds->isEmpty()) {
+            return;
+        }
+
+        $detalles = NominaDetalle::with('concepto')
+            ->whereIn('nomina_id', $nominaIds)
+            ->get();
+
+        $tipoPorCodigo = [
+            'PRO01' => 'PRIMA',
+            'PRO02' => 'CESANTIAS',
+            'PRO03' => 'INT_CESANTIAS',
+            'PRO04' => 'VACACIONES',
+        ];
+
+        $ano = (int) date('Y', strtotime($this->dateToString($periodo->fecha_inicio)));
+
+        foreach ($detalles as $detalle) {
+            $tipo = $tipoPorCodigo[$detalle->concepto?->codigo] ?? null;
+            if ($tipo === null) {
+                continue;
+            }
+
+            $provision = ProvisionAcumulada::where('empleado_id', $detalle->empleado_id)
+                ->where('tipo_provision', $tipo)
+                ->where('ano', $ano)
+                ->first();
+
+            if ($provision) {
+                $provision->decrement('movimiento_mes', (float) $detalle->valor);
+                $provision->decrement('saldo_final', (float) $detalle->valor);
+            }
         }
     }
 

@@ -23,10 +23,10 @@ class IdentifyTenant
 
             if ($subdomain && $subdomain !== 'www' && $subdomain !== 'superadmin') {
                 try {
-                    // Cache tenant lookup for 5 minutes (changes rarely)
+                    // CORE-011: Cache 60s, verificar is_active siempre contra BD
                     $tenant = Cache::remember(
                         "tenant_slug_{$subdomain}",
-                        300,
+                        60,
                         fn () => Tenant::where('slug', $subdomain)->first()
                     );
 
@@ -34,7 +34,10 @@ class IdentifyTenant
                         abort(404, 'Empresa no encontrada');
                     }
 
-                    if (isset($tenant->is_active) && !$tenant->is_active) {
+                    // Verificar estado actual en BD (no confiar en cache para is_active)
+                    $isActivo = Tenant::where('id', $tenant->id)->where('is_active', true)->exists();
+                    if (!$isActivo) {
+                        Cache::forget("tenant_slug_{$subdomain}");
                         abort(403, 'Esta empresa está suspendida.');
                     }
                 } catch (\Exception $e) {

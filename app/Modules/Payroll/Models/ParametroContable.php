@@ -2,6 +2,7 @@
 
 namespace App\Modules\Payroll\Models;
 
+use App\Core\Concerns\BelongsToTenant;
 use App\Core\Models\Tenant;
 use App\Modules\Accounting\Models\CentroCosto;
 use App\Modules\Accounting\Models\CuentaContable;
@@ -28,6 +29,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class ParametroContable extends Model
 {
+    use BelongsToTenant;
+
     protected $table = 'pay_parametros_contables';
 
     protected $fillable = [

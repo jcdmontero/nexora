@@ -12,7 +12,9 @@ use App\Modules\ServiceDesk\Controllers\OrdenController;
 use App\Modules\ServiceDesk\Controllers\PrestadorController;
 use App\Modules\ServiceDesk\Controllers\ComisionController;
 
-Route::get('service-desk/comisiones/verificar/{token}', [ComisionController::class, 'verify'])->name('service-desk.comisiones.verify');
+Route::get('service-desk/comisiones/verificar/{token}', [ComisionController::class, 'verify'])
+    ->name('service-desk.comisiones.verify')
+    ->middleware('throttle:10,1');
 
 Route::middleware(['web', 'auth', 'tenant', 'module:service-desk'])->group(function () {
     Route::prefix('service-desk')->name('service-desk.')->group(function () {

@@ -5,7 +5,8 @@ import { Input } from '@/Components/ui/input'
 import { Button } from '@/Components/ui/button'
 import { DataTable, type DataTableColumn } from '@/Components/ui/data-table'
 import { Filter, FileText } from 'lucide-react'
-import { Link } from '@inertiajs/react'
+import { Link, router } from '@inertiajs/react'
+import { Pagination } from '@/Components/ui/pagination'
 
 export default function AuxiliarIndex({ filters, cuentas, lineas }) {
   const { data, setData, get, processing } = useForm({
@@ -13,6 +14,7 @@ export default function AuxiliarIndex({ filters, cuentas, lineas }) {
     hasta: filters.hasta || '',
     cuenta_id: filters.cuenta_id || '',
     tercero_numero: filters.tercero_numero || '',
+    page: filters.page || 1,
   })
 
   const submit = (e) => {
@@ -22,9 +24,10 @@ export default function AuxiliarIndex({ filters, cuentas, lineas }) {
 
   const formatCurrency = (val) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP' }).format(val)
 
-  // Pre-compute running balance
+  // Pre-compute running balance (Solo para la página actual, nota: idealmente el saldo inicial se trae del backend)
   let saldoAcumulado = 0
-  const lineasConSaldo = lineas.map((linea) => {
+  const lineasData = Array.isArray(lineas) ? lineas : (lineas?.data || [])
+  const lineasConSaldo = lineasData.map((linea) => {
     const debito = parseFloat(linea.debito)
     const credito = parseFloat(linea.credito)
     if (linea.naturaleza === 'credito') {
@@ -151,6 +154,23 @@ export default function AuxiliarIndex({ filters, cuentas, lineas }) {
             data={lineasConSaldo}
             rowKey={(_, idx) => idx}
           />
+          {lineas && lineas.last_page > 1 && (
+            <div className="mt-4">
+              <Pagination 
+                page={lineas.current_page} 
+                totalPages={lineas.last_page} 
+                onPage={(p) => {
+                  setData('page', p)
+                  // Usamos router.get para mantener estado limpio si se desea, 
+                  // o un setTimeout para enviar el form después de que useForm actualice.
+                  router.get(route('accounting.reportes.auxiliar'), {
+                    ...data,
+                    page: p
+                  })
+                }} 
+              />
+            </div>
+          )}
         </CardContent>
       </Card>
     </AuthenticatedLayout>

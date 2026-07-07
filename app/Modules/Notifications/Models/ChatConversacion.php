@@ -2,13 +2,14 @@
 
 namespace App\Modules\Notifications\Models;
 
-use App\Core\Models\BelongsToTenant;
+use App\Core\Concerns\BelongsToTenant;
+use App\Core\Services\Auditable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class ChatConversacion extends Model
 {
-    use BelongsToTenant;
+    use BelongsToTenant, Auditable;
 
     protected $table = 'chat_conversaciones';
 

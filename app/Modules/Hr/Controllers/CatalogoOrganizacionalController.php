@@ -88,12 +88,21 @@ class CatalogoOrganizacionalController extends Controller
         $tenantId = auth()->user()->tenant_id;
 
         $data = $request->validate([
-            'departamento_id' => 'required|exists:hr_departamentos,id',
+            'departamento_id' => ['required', 'exists:hr_departamentos,id'],
             'nombre' => ['required', 'string', 'max:100', Rule::unique('hr_cargos', 'nombre')->where('tenant_id', $tenantId)],
             'categoria_laboral' => 'required|string|in:Administrativo,Operativo,Comercial',
             'salario_base_sugerido' => 'nullable|numeric|min:0',
             'es_productivo' => 'boolean',
         ]);
+
+        // Validar que el departamento pertenece al tenant
+        $depto = Departamento::where('id', $data['departamento_id'])
+            ->where('tenant_id', $tenantId)
+            ->first();
+
+        if (!$depto) {
+            return back()->with('error', 'El departamento seleccionado no pertenece a tu empresa.');
+        }
 
         Cargo::create([
             'tenant_id' => $tenantId,
@@ -115,7 +124,7 @@ class CatalogoOrganizacionalController extends Controller
         }
 
         $data = $request->validate([
-            'departamento_id' => 'required|exists:hr_departamentos,id',
+            'departamento_id' => ['required', 'exists:hr_departamentos,id'],
             'nombre' => ['required', 'string', 'max:100', Rule::unique('hr_cargos', 'nombre')
                 ->where('tenant_id', $cargo->tenant_id)->ignore($cargo->id)],
             'categoria_laboral' => 'required|string|in:Administrativo,Operativo,Comercial',
@@ -123,6 +132,15 @@ class CatalogoOrganizacionalController extends Controller
             'es_productivo' => 'boolean',
             'activo' => 'boolean',
         ]);
+
+        // Validar que el departamento pertenece al tenant
+        $depto = Departamento::where('id', $data['departamento_id'])
+            ->where('tenant_id', $cargo->tenant_id)
+            ->first();
+
+        if (!$depto) {
+            return back()->with('error', 'El departamento seleccionado no pertenece a tu empresa.');
+        }
 
         $cargo->update($data);
 

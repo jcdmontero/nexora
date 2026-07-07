@@ -1,14 +1,18 @@
 <?php
 namespace App\Modules\Purchasing\Models;
 
+use App\Core\Concerns\BelongsToTenant;
 use App\Modules\Inventory\Models\Producto;
 use Illuminate\Database\Eloquent\Model;
 
 class OrdenCompraDetalle extends Model
 {
+    use BelongsToTenant;
+
     protected $table = 'purchasing_orden_detalles';
 
     protected $fillable = [
+        'tenant_id',
         'orden_compra_id',
         'producto_id',
         'cantidad',

@@ -13,8 +13,7 @@ class CentroCosto extends Model
     protected $table = 'centros_costo';
 
     protected $fillable = [
-        'tenant_id',
-        'codigo',
+        'tenant_id','codigo',
         'nombre',
         'activo',
     ];

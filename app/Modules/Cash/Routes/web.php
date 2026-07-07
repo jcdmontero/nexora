@@ -68,7 +68,7 @@ Route::middleware(['web', 'auth', 'tenant', 'module:cash'])->group(function () {
         });
 
         // ── Recaudos (Cartera / Cuentas por Cobrar) ──
-        Route::middleware('permission:accounting:view')->group(function () {
+        Route::middleware('permission:cash:receipts')->group(function () {
             Route::get('recaudos', [RecaudoController::class, 'index'])->name('recaudos.index');
             Route::get('recaudos/cliente/{cliente}', [RecaudoController::class, 'pendientes'])->name('recaudos.pendientes');
         });
@@ -77,7 +77,7 @@ Route::middleware(['web', 'auth', 'tenant', 'module:cash'])->group(function () {
         });
 
         // ── Pagos a Proveedores (Cuentas por Pagar) ──
-        Route::middleware('permission:accounting:view')->group(function () {
+        Route::middleware('permission:cash:receipts')->group(function () {
             Route::get('pagos-proveedores', [PagoProveedorController::class, 'index'])->name('pagos-proveedores.index');
             Route::get('pagos-proveedores/proveedor/{proveedor}', [PagoProveedorController::class, 'pendientes'])->name('pagos-proveedores.pendientes');
         });

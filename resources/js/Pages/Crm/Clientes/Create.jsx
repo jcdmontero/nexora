@@ -23,6 +23,10 @@ export default function ClienteCreate() {
     direccion: '',
     ciudad: '',
     notas: '',
+    regimen_tributario: 'simplificado',
+    porcentaje_retencion_fuente: '0',
+    porcentaje_retencion_iva: '0',
+    porcentaje_retencion_ica: '0',
     activo: true,
     portal_active: false,
     password: '',
@@ -32,8 +36,19 @@ export default function ClienteCreate() {
 
   const clienteSchema = z.object({
     numero_documento: z.string().min(1, 'El número de documento es obligatorio'),
-    razon_social: z.string().min(2, 'La razón social es obligatoria'),
     email: z.string().email('Ingresa un correo válido').optional().or(z.literal('')),
+  }).superRefine((data, ctx) => {
+    if (data.tipo === 'juridico' && (!data.razon_social || data.razon_social.length < 2)) {
+      ctx.addIssue({ path: ['razon_social'], message: 'La razón social es obligatoria' })
+    }
+    if (data.tipo === 'natural') {
+      if (!data.nombres || data.nombres.trim().length === 0) {
+        ctx.addIssue({ path: ['nombres'], message: 'Los nombres son obligatorios' })
+      }
+      if (!data.apellidos || data.apellidos.trim().length === 0) {
+        ctx.addIssue({ path: ['apellidos'], message: 'Los apellidos son obligatorios' })
+      }
+    }
   })
 
   const submit = (e) => {
@@ -91,7 +106,7 @@ export default function ClienteCreate() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           
           {/* Columna Izquierda: Formulario */}
-          <div className="lg:col-span-2 space-y-6">
+          <div className="space-y-6 lg:col-span-2">
             <ClienteForm data={data} setData={setData} errors={{ ...errors, ...clientErrors }} />
           </div>
 

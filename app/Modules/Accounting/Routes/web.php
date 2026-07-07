@@ -20,6 +20,12 @@ Route::middleware(['web', 'auth', 'tenant', 'module:accounting'])
         Route::middleware('permission:accounting:create')->group(function () {
             Route::post('cuentas', [CuentaController::class, 'store'])->name('cuentas.store');
         });
+        Route::middleware('permission:accounting:edit')->group(function () {
+            Route::put('cuentas/{cuenta}', [CuentaController::class, 'update'])->name('cuentas.update');
+        });
+        Route::middleware('permission:accounting:admin')->group(function () {
+            Route::delete('cuentas/{cuenta}', [CuentaController::class, 'destroy'])->name('cuentas.destroy');
+        });
 
         // Libros Contables (Diario, Mayor, Caja, Ventas)
         Route::middleware('permission:accounting:view')->group(function () {
@@ -36,7 +42,7 @@ Route::middleware(['web', 'auth', 'tenant', 'module:accounting'])
             Route::post('asientos', [AsientoController::class, 'store'])->name('asientos.store');
         });
 
-        Route::middleware('permission:accounting:report')->group(function () {
+        Route::middleware(['permission:accounting:report', 'throttle:30,1'])->group(function () {
             Route::get('reportes', [ReporteController::class, 'index'])->name('reportes.index');
             Route::get('reportes/pyg', [ReporteController::class, 'pyg'])->name('reportes.pyg');
             Route::get('reportes/balance', [ReporteController::class, 'balance'])->name('reportes.balance');

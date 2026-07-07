@@ -40,25 +40,6 @@ class MovimientoCaja extends Model
     }
 
     /**
-     * Si el movimiento está relacionado con un abono (ReciboCaja),
-     * devuelve su ID. Útil para mostrar acciones de anulación en la UI.
-     */
-    public function getReciboIdAttribute(): ?int
-    {
-        if (!$this->referencia_type || !$this->referencia_id) return null;
-
-        // Buscar recibo activo que apunte a la misma referencia
-        $recibo = ReciboCaja::where('referencia_type', $this->referencia_type)
-            ->where('referencia_id', $this->referencia_id)
-            ->where('estado', 'activo')
-            ->where('concepto', 'like', 'Abono OT%')
-            ->where('monto', $this->monto)
-            ->first();
-
-        return $recibo?->id;
-    }
-
-    /**
      * Si el movimiento es de reversión de anulación, lo identifica.
      */
     public function getEsAnulacionAttribute(): bool

@@ -35,8 +35,14 @@ class IncapacidadController extends Controller
             ->paginate(15)
             ->withQueryString();
 
+        $empleados = Empleado::where('tenant_id', $tenantId)
+            ->where('estado', true)
+            ->orderBy('nombres')
+            ->get(['id', 'nombres', 'apellidos', 'documento']);
+
         return Inertia::render('Hr/Incapacidades/Index', [
             'incapacidades' => $incapacidades,
+            'empleados' => $empleados,
             'filters' => $request->only(['search', 'tipo']),
         ]);
     }
@@ -50,9 +56,8 @@ class IncapacidadController extends Controller
             'tipo' => ['required', 'string', 'max:100', Rule::in(['Enfermedad General', 'Accidente Laboral', 'Enfermedad Laboral', 'Licencia Maternidad', 'Licencia Paternidad', 'Otro'])],
             'fecha_inicio' => 'required|date',
             'fecha_fin' => 'required|date|after_or_equal:fecha_inicio',
-            'diagnostico' => 'nullable|string|max:500',
+            'observaciones' => 'nullable|string|max:500',
             'porcentaje_pago' => 'nullable|numeric|min:0|max:100',
-            'documento_soporte' => 'nullable|string|max:255',
         ]);
 
         // Verificar que el empleado pertenece al tenant
@@ -66,15 +71,30 @@ class IncapacidadController extends Controller
         $fechaFin = \Carbon\Carbon::parse($data['fecha_fin']);
         $dias = $fechaInicio->diffInDays($fechaFin) + 1;
 
+        // Validar superposición de fechas
+        $overlapping = Incapacidad::where('empleado_id', $data['empleado_id'])
+            ->where(function ($q) use ($data) {
+                $q->whereBetween('fecha_inicio', [$data['fecha_inicio'], $data['fecha_fin']])
+                  ->orWhereBetween('fecha_fin', [$data['fecha_inicio'], $data['fecha_fin']])
+                  ->orWhere(function ($q2) use ($data) {
+                      $q2->where('fecha_inicio', '<=', $data['fecha_inicio'])
+                         ->where('fecha_fin', '>=', $data['fecha_fin']);
+                  });
+            })->exists();
+
+        if ($overlapping) {
+            return back()->withErrors(['fecha_inicio' => 'El empleado ya tiene una incapacidad registrada que se cruza con estas fechas.'])->withInput();
+        }
+
         Incapacidad::create([
+            'tenant_id' => $tenantId,
             'empleado_id' => $data['empleado_id'],
             'tipo' => $data['tipo'],
             'fecha_inicio' => $data['fecha_inicio'],
             'fecha_fin' => $data['fecha_fin'],
             'dias' => $dias,
-            'diagnostico' => $data['diagnostico'] ?? null,
+            'observaciones' => $data['observaciones'] ?? null,
             'porcentaje_pago' => $data['porcentaje_pago'] ?? null,
-            'documento_soporte' => $data['documento_soporte'] ?? null,
         ]);
 
         return back()->with('success', 'Incapacidad registrada exitosamente.');
@@ -82,7 +102,7 @@ class IncapacidadController extends Controller
 
     public function update(Request $request, Incapacidad $incapacidad)
     {
-        if ($incapacidad->empleado->tenant_id !== auth()->user()->tenant_id) {
+        if ($incapacidad->tenant_id !== auth()->user()->tenant_id) {
             abort(403);
         }
 
@@ -90,15 +110,30 @@ class IncapacidadController extends Controller
             'tipo' => ['required', 'string', 'max:100', Rule::in(['Enfermedad General', 'Accidente Laboral', 'Enfermedad Laboral', 'Licencia Maternidad', 'Licencia Paternidad', 'Otro'])],
             'fecha_inicio' => 'required|date',
             'fecha_fin' => 'required|date|after_or_equal:fecha_inicio',
-            'diagnostico' => 'nullable|string|max:500',
+            'observaciones' => 'nullable|string|max:500',
             'porcentaje_pago' => 'nullable|numeric|min:0|max:100',
-            'documento_soporte' => 'nullable|string|max:255',
         ]);
 
         // Recalcular días
         $fechaInicio = \Carbon\Carbon::parse($data['fecha_inicio']);
         $fechaFin = \Carbon\Carbon::parse($data['fecha_fin']);
         $data['dias'] = $fechaInicio->diffInDays($fechaFin) + 1;
+
+        // Validar superposición
+        $overlapping = Incapacidad::where('empleado_id', $incapacidad->empleado_id)
+            ->where('id', '!=', $incapacidad->id)
+            ->where(function ($q) use ($data) {
+                $q->whereBetween('fecha_inicio', [$data['fecha_inicio'], $data['fecha_fin']])
+                  ->orWhereBetween('fecha_fin', [$data['fecha_inicio'], $data['fecha_fin']])
+                  ->orWhere(function ($q2) use ($data) {
+                      $q2->where('fecha_inicio', '<=', $data['fecha_inicio'])
+                         ->where('fecha_fin', '>=', $data['fecha_fin']);
+                  });
+            })->exists();
+
+        if ($overlapping) {
+            return back()->withErrors(['fecha_inicio' => 'El empleado ya tiene otra incapacidad registrada que se cruza con estas fechas.'])->withInput();
+        }
 
         $incapacidad->update($data);
 
@@ -107,7 +142,7 @@ class IncapacidadController extends Controller
 
     public function destroy(Incapacidad $incapacidad)
     {
-        if ($incapacidad->empleado->tenant_id !== auth()->user()->tenant_id) {
+        if ($incapacidad->tenant_id !== auth()->user()->tenant_id) {
             abort(403);
         }
 

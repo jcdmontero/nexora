@@ -59,6 +59,6 @@ class ReciboCaja extends Model
 
     public function getNumeroFormateadoAttribute(): string
     {
-        return 'RC-' . str_pad($this->numero, 6, '0', STR_PAD_LEFT);
+        return 'RC-' . $this->numero;
     }
 }

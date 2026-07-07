@@ -3,6 +3,7 @@
 namespace App\Modules\Accounting\Services;
 
 use App\Core\Models\Configuracion;
+use App\Modules\Accounting\Models\TenantRegimenHistorial;
 use App\Modules\Accounting\Services\ContabilidadConfig;
 use Carbon\Carbon;
 
@@ -11,9 +12,9 @@ class TributaryRuleService
     /**
      * Umbral mínimo para retención en la fuente (Art. 376 E.T.).
      * Si el valor de la retención es inferior a este monto, no se cobra.
-     * Equivalente a 1 UVT para 2026: $107.000 COP.
+     * A-11: Se resuelve desde Configuracion; este es el fallback por defecto (1 UVT 2026).
      */
-    private const UMBRAL_MINIMO_RETENCION = 107000;
+    private const UMBRAL_MINIMO_RETENCION_DEFAULT = 107000;
 
     /**
      * Calcula el desglose tributario de una transacción.
@@ -66,11 +67,12 @@ class TributaryRuleService
         if ($tercero) {
             // Retención en la Fuente — base pre-IVA según Art. 376 E.T.
             if (isset($tercero->porcentaje_retencion_fuente) && $tercero->porcentaje_retencion_fuente > 0) {
-                $baseRetencion = $base / (1 + ($porcentajeIva / 100));
+                $baseRetencion = $base;
                 $reteFuente = round($baseRetencion * ($tercero->porcentaje_retencion_fuente / 100), 2);
 
                 // Art. 376 E.T.: no se cobra retención si el valor es inferior al umbral mínimo (1 UVT)
-                if ($reteFuente >= self::UMBRAL_MINIMO_RETENCION) {
+                $umbral = ContabilidadConfig::umbralRetencionFuente($tenantId);
+                if ($reteFuente >= $umbral) {
                     $retenciones['rete_fuente'] = [
                         'tipo' => 'rete_fuente',
                         'base' => round($baseRetencion, 2),
@@ -122,21 +124,28 @@ class TributaryRuleService
 
     /**
      * Determina el régimen que tenía el tenant en una fecha específica.
+     * A-04: Consulta el historial versionado de cambios de régimen.
      */
     public function getRegimeAtDate(int $tenantId, ?string $fecha = null): string
     {
         $fechaConsulta = $fecha ? Carbon::parse($fecha) : now();
-        $fechaCambio = Configuracion::get('fecha_cambio_regimen', null, $tenantId);
 
-        if (!$fechaCambio) {
-            return Configuracion::get('regimen_fiscal', 'simplificado', $tenantId);
+        // Buscar en el historial versionado el régimen vigente para la fecha consultada
+        $historial = TenantRegimenHistorial::where('tenant_id', $tenantId)
+            ->where('fecha_vigente_desde', '<=', $fechaConsulta->toDateString())
+            ->where(function ($q) use ($fechaConsulta) {
+                $q->whereNull('fecha_vigente_hasta')
+                  ->orWhere('fecha_vigente_hasta', '>=', $fechaConsulta->toDateString());
+            })
+            ->orderByDesc('fecha_vigente_desde')
+            ->first();
+
+        if ($historial) {
+            return $historial->regimen;
         }
 
-        $fechaCambioCarbon = Carbon::parse($fechaCambio);
-
-        return $fechaConsulta->greaterThanOrEqualTo($fechaCambioCarbon) 
-            ? Configuracion::get('regimen_fiscal', 'simplificado', $tenantId)
-            : 'simplificado';
+        // Fallback: usar configuración legacy si no hay historial
+        return Configuracion::get('regimen_fiscal', 'simplificado', $tenantId);
     }
 
     /**
@@ -163,7 +172,7 @@ class TributaryRuleService
         $cuentas = [];
 
         if ($operacion === 'venta') {
-            $cuentas['ingreso'] = ContabilidadConfig::get('cta_ingresos', '4135', $tenantId);
+            $cuentas['ingreso'] = ContabilidadConfig::ingresoVentas($tenantId);
             $cuentas['cobro'] = ContabilidadConfig::clientes($tenantId);
 
             if ($regimen === 'comun') {
@@ -173,7 +182,7 @@ class TributaryRuleService
         }
 
         if ($operacion === 'compra') {
-            $cuentas['gasto'] = ContabilidadConfig::get('cta_gasto', '5105', $tenantId);
+            $cuentas['gasto'] = ContabilidadConfig::get('cta_gasto_compras', '5105', $tenantId);
             $cuentas['pago'] = ContabilidadConfig::proveedores($tenantId);
 
             if ($regimen === 'comun') {

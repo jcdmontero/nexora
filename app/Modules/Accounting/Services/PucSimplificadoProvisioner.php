@@ -31,6 +31,7 @@ class PucSimplificadoProvisioner
             ['3000', 'Patrimonio', 'patrimonio', 'credito', 1, false, false, false],
             ['3115', 'Aportes sociales', 'patrimonio', 'credito', 2, true, false, false],
             ['3605', 'Utilidad del ejercicio', 'patrimonio', 'credito', 2, true, false, false],
+            ['3610', 'Utilidades Retenidas', 'patrimonio', 'credito', 2, true, false, false],
             // Ingresos
             ['4000', 'INGRESOS', 'ingreso', 'credito', 1, false, false, false],
             ['4135', 'Comercio al por mayor y menor', 'ingreso', 'credito', 2, true, true, false],

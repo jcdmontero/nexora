@@ -103,6 +103,56 @@ class ClienteTest extends TestCase
         ]);
     }
 
+    public function test_cliente_unique_numero_documento_within_tenant(): void
+    {
+        Cliente::create([
+            'tenant_id' => $this->tenant->id,
+            'tipo' => 'natural',
+            'nombres' => 'First',
+            'numero_documento' => '111111',
+        ]);
+
+        // Mismo documento en mismo tenant → debe fallar
+        $response = $this->post(route('crm.clientes.store'), [
+            'tipo' => 'natural',
+            'nombres' => 'Second',
+            'numero_documento' => '111111',
+        ]);
+        $response->assertSessionHasErrors('numero_documento');
+    }
+
+    public function test_cliente_allows_same_document_in_different_tenants(): void
+    {
+        Cliente::create([
+            'tenant_id' => $this->tenant->id,
+            'tipo' => 'natural',
+            'nombres' => 'TenantA',
+            'numero_documento' => '999999',
+        ]);
+
+        // Otro tenant con mismo documento → debe permitir
+        $tenantB = Tenant::factory()->create();
+        TenantModule::create([
+            'tenant_id' => $tenantB->id,
+            'module_code' => 'crm',
+            'is_active' => true,
+        ]);
+        $userB = User::factory()->create([
+            'tenant_id' => $tenantB->id,
+            'is_superadmin' => true,
+        ]);
+
+        $this->actingAs($userB);
+        app()->instance('current_tenant', $tenantB);
+
+        $response = $this->post(route('crm.clientes.store'), [
+            'tipo' => 'natural',
+            'nombres' => 'TenantB',
+            'numero_documento' => '999999',
+        ]);
+        $response->assertRedirect();
+    }
+
     public function test_cliente_tenant_isolation(): void
     {
         // Create a client for tenant A (the current tenant)

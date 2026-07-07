@@ -13,8 +13,7 @@ class CuentaContable extends Model
     protected $table = 'cuentas_contables';
 
     protected $fillable = [
-        'tenant_id',
-        'codigo',
+        'tenant_id','codigo',
         'nombre',
         'tipo',
         'naturaleza',
@@ -43,5 +42,10 @@ class CuentaContable extends Model
     public function children()
     {
         return $this->hasMany(CuentaContable::class, 'parent_id');
+    }
+
+    public function lineas()
+    {
+        return $this->hasMany(AsientoLinea::class);
     }
 }

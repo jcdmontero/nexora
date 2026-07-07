@@ -220,6 +220,24 @@ class ContactoOportunidadTest extends TestCase
         $this->assertSoftDeleted('crm_oportunidades', ['id' => $op->id]);
     }
 
+    public function test_oportunidad_store_rejects_cross_tenant_cliente(): void
+    {
+        $tenantB = Tenant::factory()->create();
+        $clienteB = Cliente::create([
+            'tenant_id' => $tenantB->id,
+            'tipo' => 'natural', 'nombres' => 'Cliente Ajeno',
+        ]);
+
+        $response = $this->post(route('crm.oportunidades.store'), [
+            'cliente_id' => $clienteB->id,
+            'titulo' => 'Oportunidad con cliente de otro tenant',
+            'valor_estimado' => 1000,
+            'etapa' => 'prospecto',
+        ]);
+
+        $response->assertSessionHasErrors('cliente_id');
+    }
+
     public function test_oportunidad_aislamiento_entre_tenants(): void
     {
         $tenantB  = Tenant::factory()->create();

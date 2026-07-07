@@ -274,6 +274,6 @@ class RecepcionIntegrationTest extends TestCase
             ],
         ]);
 
-        $response->assertSessionHas('error', 'Debes abrir un turno de caja para registrar egresos en efectivo.');
+        $response->assertSessionHasErrors('metodo_pago');
     }
 }

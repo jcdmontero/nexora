@@ -13,8 +13,7 @@ class CuentaPorCobrar extends Model
     protected $table = 'cuentas_por_cobrar';
 
     protected $fillable = [
-        'tenant_id',
-        'deudor_id',
+        'tenant_id','deudor_id',
         'deudor_type',
         'documento_origen_id',
         'documento_origen_type',

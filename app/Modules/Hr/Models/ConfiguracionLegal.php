@@ -2,15 +2,31 @@
 
 namespace App\Modules\Hr\Models;
 
-use App\Core\Models\Tenant;
+use App\Core\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ConfiguracionLegal extends Model
 {
+    use BelongsToTenant;
     protected $table = 'hr_configuracion_legal';
 
-    protected $guarded = ['id'];
+    protected $fillable = [
+        'tenant_id',
+        'ano_vigencia',
+        'salario_minimo',
+        'auxilio_transporte',
+        'tope_auxilio_transporte_salarios',
+        'valor_uvt',
+        'horas_semanales',
+        'aporte_salud_empleado',
+        'aporte_pension_empleado',
+        'aporte_salud_patronal',
+        'aporte_pension_patronal',
+        'caja_compensacion',
+        'sena',
+        'icbf',
+    ];
 
     protected $casts = [
         'salario_minimo' => 'decimal:2',

@@ -51,6 +51,8 @@ class OrdenReparacion extends Model
         'descuento' => 'decimal:2',
         'costo_tecnico_manual' => 'boolean',
         'codigo_bloqueo' => SafeEncrypted::class,
+        'valor_comision_fijo' => 'decimal:2',
+        'porcentaje_comision' => 'decimal:2',
     ];
 
     protected static function booted(): void
@@ -162,9 +164,22 @@ class OrdenReparacion extends Model
         return $this->actividades->sum('costo_total');
     }
 
+    /**
+     * Calcula la comisión usando la misma lógica que ComisionController.
+     * La fuente de verdad es el tipo_comision/valor_comision_fijo/porcentaje_comision
+     * de la orden, NO la suma de actividades (que es un costo interno del técnico).
+     */
     public function getTotalComisionesAttribute(): float
     {
-        return $this->actividades->sum('comision_valor');
+        $totalCliente = $this->total_cliente;
+        $tipo = $this->tipo_comision ?? 'FIJO';
+
+        return match ($tipo) {
+            'FIJO' => (float) ($this->valor_comision_fijo ?? 0),
+            'PORCENTAJE' => $totalCliente * ((float) ($this->porcentaje_comision ?? 0) / 100),
+            'LIBRE' => (float) ($this->valor_comision_fijo ?? 0),
+            default => 0,
+        };
     }
 
     public function getTotalHorasAttribute(): float

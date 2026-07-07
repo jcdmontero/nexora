@@ -90,6 +90,70 @@ export default function ProveedorForm({ data, setData, errors, isEdit = false })
 
       <Card className="border-slate-200 shadow-sm rounded-2xl overflow-hidden mt-6">
         <CardHeader className="bg-slate-50/50 border-b border-slate-100 pb-4">
+          <CardTitle className="text-lg">Régimen Tributario y Retenciones</CardTitle>
+          <CardDescription>Configuración fiscal del proveedor para cálculo automático de retenciones.</CardDescription>
+        </CardHeader>
+        <CardContent className="p-6 space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <Label>Régimen Tributario</Label>
+              <Select value={data.regimen_tributario || ''} onValueChange={(v) => setData('regimen_tributario', v)}>
+                <SelectTrigger><SelectValue placeholder="Seleccione..." /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="simplificado">Simplificado</SelectItem>
+                  <SelectItem value="comun">Común</SelectItem>
+                </SelectContent>
+              </Select>
+              {errors.regimen_tributario && <p className="text-sm text-red-500 mt-1">{errors.regimen_tributario}</p>}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="space-y-2">
+              <Label htmlFor="porcentaje_retencion_fuente">Ret. Fuente (%)</Label>
+              <Input
+                id="porcentaje_retencion_fuente"
+                type="number"
+                min="0"
+                max="100"
+                step="0.01"
+                value={data.porcentaje_retencion_fuente || ''}
+                onChange={e => setData('porcentaje_retencion_fuente', e.target.value)}
+                placeholder="0"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="porcentaje_retencion_iva">Ret. IVA (%)</Label>
+              <Input
+                id="porcentaje_retencion_iva"
+                type="number"
+                min="0"
+                max="100"
+                step="0.01"
+                value={data.porcentaje_retencion_iva || ''}
+                onChange={e => setData('porcentaje_retencion_iva', e.target.value)}
+                placeholder="0"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="porcentaje_retencion_ica">Ret. ICA (%)</Label>
+              <Input
+                id="porcentaje_retencion_ica"
+                type="number"
+                min="0"
+                max="100"
+                step="0.01"
+                value={data.porcentaje_retencion_ica || ''}
+                onChange={e => setData('porcentaje_retencion_ica', e.target.value)}
+                placeholder="0"
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="border-slate-200 shadow-sm rounded-2xl overflow-hidden mt-6">
+        <CardHeader className="bg-slate-50/50 border-b border-slate-100 pb-4">
           <CardTitle className="text-lg">Información de ubicación y estado</CardTitle>
           <CardDescription>Detalles adicionales para contacto y envío.</CardDescription>
         </CardHeader>

@@ -4,52 +4,47 @@ import { Head, Link, router } from '@inertiajs/react';
 import { Button } from '@/Components/ui/button';
 import { ArrowLeft, CheckCircle2, XCircle, Send, Printer } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/Components/ui/card';
-import { DataTable, type DataTableColumn } from '@/Components/ui/data-table';
+import { DataTable } from '@/Components/ui/data-table';
 import { Badge } from '@/Components/ui/badge';
+import { ConfirmDialog } from '@/Components/ui/confirm-dialog';
 import { usePermissions } from '@/Hooks/usePermissions';
-
-const columns: DataTableColumn<typeof orden.detalles[0]>[] = [
-  {
-    key: 'producto',
-    header: 'Producto',
-    cell: (row) => (
-      <>
-        <div className="font-medium">{row.producto?.nombre}</div>
-        <div className="text-xs text-muted-foreground">Ref: {row.producto?.codigo}</div>
-      </>
-    ),
-  },
-  {
-    key: 'cantidad',
-    header: 'Cantidad',
-    className: 'text-right',
-    cell: (row) => parseFloat(row.cantidad).toString(),
-    alignEnd: true,
-  },
-  {
-    key: 'precio_unitario',
-    header: 'Precio Unitario',
-    className: 'text-right',
-    cell: (row) => `$${row.precio_unitario}`,
-    alignEnd: true,
-  },
-  {
-    key: 'subtotal',
-    header: 'Subtotal',
-    className: 'text-right',
-    cell: (row) => <span className="font-medium">${row.subtotal}</span>,
-    alignEnd: true,
-  },
-]
 
 export default function Show({ orden }) {
     const { can } = usePermissions();
 
-    const changeState = (newState) => {
-        if (confirm(`¿Cambiar el estado a ${newState}?`)) {
-            router.patch(route('purchasing.ordenes.estado', orden.id), { estado: newState });
-        }
-    };
+    const columns = [
+      {
+        key: 'producto',
+        header: 'Producto',
+        cell: (row) => (
+          <>
+            <div className="font-medium">{row.producto?.nombre}</div>
+            <div className="text-xs text-muted-foreground">Ref: {row.producto?.codigo}</div>
+          </>
+        ),
+      },
+      {
+        key: 'cantidad',
+        header: 'Cantidad',
+        className: 'text-right',
+        cell: (row) => parseFloat(row.cantidad).toString(),
+        alignEnd: true,
+      },
+      {
+        key: 'precio_unitario',
+        header: 'Precio Unitario',
+        className: 'text-right',
+        cell: (row) => `$${row.precio_unitario}`,
+        alignEnd: true,
+      },
+      {
+        key: 'subtotal',
+        header: 'Subtotal',
+        className: 'text-right',
+        cell: (row) => <span className="font-medium">${row.subtotal}</span>,
+        alignEnd: true,
+      },
+    ];
 
     const statusColors = {
         'borrador': 'bg-gray-100 text-gray-800',
@@ -82,9 +77,17 @@ export default function Show({ orden }) {
                         </Button>
 
                         {can('purchasing:edit') && orden.estado === 'borrador' && (
-                            <Button variant="default" className="bg-blue-600 hover:bg-blue-700" onClick={() => changeState('enviada')}>
-                                <Send className="w-4 h-4 mr-2" /> Enviar a Proveedor
-                            </Button>
+                            <ConfirmDialog
+                                trigger={
+                                    <Button variant="default" className="bg-blue-600 hover:bg-blue-700">
+                                        <Send className="w-4 h-4 mr-2" /> Enviar a Proveedor
+                                    </Button>
+                                }
+                                title="¿Enviar orden a proveedor?"
+                                description="La orden cambiará a estado 'enviada' y ya no podrá editarse."
+                                confirmLabel="Enviar"
+                                onConfirm={() => router.patch(route('purchasing.ordenes.estado', orden.id), { estado: 'enviada' })}
+                            />
                         )}
 
                         {can('purchasing:edit') && orden.estado === 'enviada' && (
@@ -96,9 +99,17 @@ export default function Show({ orden }) {
                         )}
 
                         {can('purchasing:edit') && (orden.estado === 'borrador' || orden.estado === 'enviada') && (
-                            <Button variant="destructive" onClick={() => changeState('cancelada')}>
-                                <XCircle className="w-4 h-4 mr-2" /> Cancelar Orden
-                            </Button>
+                            <ConfirmDialog
+                                trigger={
+                                    <Button variant="destructive">
+                                        <XCircle className="w-4 h-4 mr-2" /> Cancelar Orden
+                                    </Button>
+                                }
+                                title="¿Cancelar esta orden?"
+                                description="La orden quedará en estado 'cancelada' y no podrá reactivarse."
+                                confirmLabel="Cancelar orden"
+                                onConfirm={() => router.patch(route('purchasing.ordenes.estado', orden.id), { estado: 'cancelada' })}
+                            />
                         )}
                     </div>
                 </div>

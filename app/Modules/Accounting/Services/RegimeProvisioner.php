@@ -5,6 +5,8 @@ namespace App\Modules\Accounting\Services;
 use App\Core\Models\Configuracion;
 use App\Core\Models\Tenant;
 use App\Modules\Accounting\Models\CuentaContable;
+use App\Modules\Accounting\Models\TenantRegimenHistorial;
+use App\Modules\Accounting\Services\PucColombiaProvisioner;
 
 /**
  * Crea las cuentas contables tributarias necesarias cuando un tenant
@@ -16,16 +18,11 @@ class RegimeProvisioner
 {
     /**
      * Cuentas que un régimen COMÚN necesita y el simplificado no tiene.
-     * [codigo, nombre, tipo, naturaleza, nivel, acepta_movimientos, requiere_tercero]
+     * A-01: Reutiliza la fuente única de verdad de PucColombiaProvisioner.
+     * Se filtra solo las cuentas tributarias (código empieza con 13, 23, 24 o 4135).
      */
-    private const CUENTAS_COMUN = [
-        ['240805', 'IVA generado', 'pasivo', 'credito', 3, true, false],
-        ['240810', 'IVA descontable', 'activo', 'debito', 3, true, false],
-        ['135515', 'Retención en la fuente', 'activo', 'debito', 3, true, true],
-        ['2365', 'Retención en la fuente por pagar', 'pasivo', 'credito', 2, true, true],
-        ['135518', 'Impuesto de industria y comercio retenido', 'activo', 'debito', 3, true, true],
-        ['2367', 'Impuesto a las ventas retenido', 'pasivo', 'credito', 2, true, true],
-        ['413505', 'Ingresos por ventas gravadas', 'ingreso', 'credito', 3, true, false],
+    private const CODIGOS_TRIBUTARIOS = [
+        '240805', '240810', '135515', '2365', '135518', '2367',
     ];
 
     /**
@@ -37,8 +34,16 @@ class RegimeProvisioner
     public function provisionarCuentasComun(Tenant $tenant): array
     {
         $creadas = [];
+        $todasLasCuentas = PucColombiaProvisioner::getCuentasComun();
 
-        foreach (self::CUENTAS_COMUN as [$codigo, $nombre, $tipo, $naturaleza, $nivel, $acepta, $tercero]) {
+        foreach ($todasLasCuentas as $cuenta) {
+            [$codigo, $nombre, $tipo, $naturaleza, $nivel, $acepta, $tercero, $centroCosto] = $cuenta;
+
+            // Solo provisionar cuentas tributarias (las que simplificado no tiene)
+            if (!in_array($codigo, self::CODIGOS_TRIBUTARIOS)) {
+                continue;
+            }
+
             $existe = CuentaContable::withoutGlobalScopes()
                 ->where('tenant_id', $tenant->id)
                 ->where('codigo', $codigo)
@@ -55,7 +60,7 @@ class RegimeProvisioner
                     'clase' => substr($codigo, 0, 1),
                     'acepta_movimientos' => $acepta,
                     'requiere_tercero' => $tercero,
-                    'requiere_centro_costo' => false,
+                    'requiere_centro_costo' => $centroCosto,
                     'tipo_regimen' => 'COMUN',
                 ]);
                 $creadas[] = $cuenta;
@@ -73,7 +78,7 @@ class RegimeProvisioner
      * @param string|null $fechaCambio Fecha del cambio (null = ahora)
      * @return array Resultado con las cuentas creadas
      */
-    public function cambiarRegimen(Tenant $tenant, string $nuevoRegimen, ?string $fechaCambio = null): array
+    public function cambiarRegimen(Tenant $tenant, string $nuevoRegimen, ?string $fechaCambio = null, ?int $userId = null): array
     {
         $resultado = [
             'regimen_anterior' => Configuracion::get('regimen_fiscal', 'simplificado', $tenant->id),
@@ -81,10 +86,26 @@ class RegimeProvisioner
             'cuentas_creadas' => [],
         ];
 
-        // Guardar el nuevo régimen
+        $fecha = $fechaCambio ?? now()->toDateString();
+
+        // Cerrar el periodo vigente anterior en el historial
+        TenantRegimenHistorial::where('tenant_id', $tenant->id)
+            ->whereNull('fecha_vigente_hasta')
+            ->update(['fecha_vigente_hasta' => now()->subDay()->toDateString()]);
+
+        // Registrar el nuevo régimen en el historial
+        TenantRegimenHistorial::create([
+            'tenant_id' => $tenant->id,
+            'regimen' => $nuevoRegimen,
+            'fecha_vigente_desde' => $fecha,
+            'cambiado_por' => $userId,
+            'motivo' => "Cambio de {$resultado['regimen_anterior']} a {$nuevoRegimen}",
+        ]);
+
+        // Guardar el nuevo régimen en configuración (compatibilidad)
         Configuracion::setMany([
             'regimen_fiscal' => $nuevoRegimen,
-            'fecha_cambio_regimen' => $fechaCambio ?? now()->toDateString(),
+            'fecha_cambio_regimen' => $fecha,
         ], $tenant->id);
 
         // Si cambia a común, provisionar cuentas tributarias

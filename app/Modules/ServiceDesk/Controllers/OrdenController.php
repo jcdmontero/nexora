@@ -18,6 +18,7 @@ use App\Modules\ServiceDesk\Models\TipoEquipo;
 use App\Modules\ServiceDesk\Rules\UniqueSerialPerEquipment;
 use App\Modules\ServiceDesk\Services\OrdenService;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
 class OrdenController extends Controller
@@ -45,11 +46,8 @@ class OrdenController extends Controller
                 'prestador:id,nombre_completo',
                 'factura' => fn ($q) => $q->select('sales_facturas.id', 'sales_facturas.orden_id', 'sales_facturas.numero'),
             ])
-                ->when($soloPropias, function ($q) use ($prestadorIds, $user) {
-                    $q->where(function ($sub) use ($prestadorIds, $user) {
-                        $sub->whereIn('prestador_id', $prestadorIds)
-                            ->orWhere('tecnico_id', $user->id);
-                    });
+                ->when($soloPropias, function ($q) use ($prestadorIds) {
+                    $q->whereIn('prestador_id', $prestadorIds);
                 })
                 ->orderByDesc('created_at')
                 ->get()
@@ -169,8 +167,7 @@ class OrdenController extends Controller
                     'nombre_original' => $m->nombre_original,
                 ]),
             ],
-            'recibos' => \App\Modules\Cash\Models\ReciboCaja::where('referencia_type', get_class($orden))
-                ->where('referencia_id', $orden->id)
+            'recibos' => $orden->recibos()
                 ->orderByDesc('fecha')
                 ->get()
                 ->map(fn ($r) => [
@@ -343,8 +340,7 @@ class OrdenController extends Controller
             'serviciosDisponibles' => Servicio::where('activo', true)
                 ->orderBy('nombre')
                 ->get(['id', 'nombre', 'costo_tecnico_base']),
-            'recibos' => \App\Modules\Cash\Models\ReciboCaja::where('referencia_type', get_class($orden))
-                ->where('referencia_id', $orden->id)
+            'recibos' => $orden->recibos()
                 ->orderByDesc('fecha')
                 ->get()
                 ->map(fn ($r) => [
@@ -400,9 +396,9 @@ class OrdenController extends Controller
         }
 
         $eventoMap = [
-            'recibido' => 'orden_recibida', 'diagnostico' => 'orden_diagnostico',
-            'reparacion' => 'orden_reparacion', 'pruebas' => 'orden_pruebas',
-            'listo' => 'orden_listo', 'entregado' => 'orden_entregado',
+            'recibido' => 'orden_recibida', 'diagnosticado' => 'orden_diagnostico',
+            'en_proceso' => 'orden_reparacion', 'pruebas' => 'orden_pruebas',
+            'completado' => 'orden_listo', 'entregado' => 'orden_entregado',
         ];
         if (isset($eventoMap[$validated['estado']])) {
             $this->notificarOrden($orden, $eventoMap[$validated['estado']]);
@@ -429,7 +425,7 @@ class OrdenController extends Controller
 
         $estado = $orden->estado->value;
 
-        if (in_array($estado, ['reparacion', 'pruebas'])) {
+        if (in_array($estado, ['en_proceso', 'pruebas'])) {
             $tecnicoUserId = $orden->prestador?->user_id;
             if ($tecnicoUserId && $user->id !== $tecnicoUserId) {
                 return true;
@@ -437,7 +433,7 @@ class OrdenController extends Controller
         }
 
         if ($user->hasRole('TECNICO')) {
-            if (!in_array($estado, ['reparacion', 'pruebas'])) {
+            if (!in_array($estado, ['en_proceso', 'pruebas'])) {
                 return true;
             }
         }
@@ -654,10 +650,11 @@ class OrdenController extends Controller
 
     private function validateData(Request $request, ?OrdenReparacion $orden = null): array
     {
+        $tenantId = tenantId();
         $validated = $request->validate([
-            'cliente_id' => ['required', 'exists:crm_clientes,id'],
-            'tipo_equipo_id' => ['nullable', 'exists:sd_tipos_equipo,id'],
-            'modelo_id' => ['nullable', 'exists:sd_modelos,id'],
+            'cliente_id' => ['required', Rule::exists('crm_clientes', 'id')->where('tenant_id', $tenantId)],
+            'tipo_equipo_id' => ['nullable', Rule::exists('sd_tipos_equipo', 'id')->where('tenant_id', $tenantId)],
+            'modelo_id' => ['nullable', Rule::exists('sd_modelos', 'id')->where('tenant_id', $tenantId)],
             'tipo_equipo_manual' => ['nullable', 'string', 'max:150'],
             'numero_serie' => ['nullable', 'string', 'max:100', new UniqueSerialPerEquipment($request->input('modelo_id'), $orden?->id)],
             'accesorios_equipo' => ['nullable', 'string'],
@@ -670,7 +667,7 @@ class OrdenController extends Controller
             'bloqueado' => ['boolean'],
             'tipo_bloqueo' => ['nullable', 'in:ninguno,pin,patron,contrasena,huella'],
             'codigo_bloqueo' => ['nullable', 'string', 'max:100'],
-            'prestador_id' => ['nullable', 'exists:sd_prestadores,id'],
+            'prestador_id' => ['nullable', Rule::exists('sd_prestadores', 'id')->where('tenant_id', $tenantId)],
             'tecnico_id' => ['nullable', 'exists:users,id'],
             'tipo_comision' => ['nullable', 'in:FIJO,PORCENTAJE,LIBRE'],
             'valor_comision_fijo' => ['nullable', 'numeric', 'min:0'],
@@ -685,12 +682,12 @@ class OrdenController extends Controller
             'multimedia_archivos.*' => ['file', 'max:51200', 'mimetypes:image/jpeg,image/png,image/webp,image/gif,video/mp4,video/quicktime,video/webm'],
             'estado' => ['nullable', 'in:' . implode(',', array_column(OrdenEstado::cases(), 'value'))],
             'servicios' => ['nullable', 'array'],
-            'servicios.*.servicio_id' => ['required', 'exists:sd_servicios,id'],
+            'servicios.*.servicio_id' => ['required', Rule::exists('sd_servicios', 'id')->where('tenant_id', $tenantId)],
             'servicios.*.cantidad' => ['nullable', 'numeric', 'min:0.01'],
             'servicios.*.precio_aplicado' => ['nullable', 'numeric', 'min:0'],
             'servicios.*.costo_tecnico_aplicado' => ['nullable', 'numeric', 'min:0'],
             'repuestos' => ['nullable', 'array'],
-            'repuestos.*.producto_id' => ['required', 'exists:inventory_productos,id'],
+            'repuestos.*.producto_id' => ['required', Rule::exists('inventory_productos', 'id')->where('tenant_id', $tenantId)],
             'repuestos.*.cantidad' => ['nullable', 'numeric', 'min:0.01'],
             'repuestos.*.precio_unitario' => ['nullable', 'numeric', 'min:0'],
         ]);

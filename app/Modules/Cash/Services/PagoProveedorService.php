@@ -127,7 +127,8 @@ class PagoProveedorService
                 'referencia_id' => $cxp->id,
             ], $lineas);
         } catch (\Exception $e) {
-            Log::warning("No se pudo registrar asiento de pago proveedor: {$e->getMessage()}");
+            Log::error("No se pudo registrar asiento de pago proveedor: {$e->getMessage()}");
+            throw $e;
         }
     }
 

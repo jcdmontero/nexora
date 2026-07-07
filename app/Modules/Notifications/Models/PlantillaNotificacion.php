@@ -2,11 +2,12 @@
 namespace App\Modules\Notifications\Models;
 
 use App\Core\Concerns\BelongsToTenant;
+use App\Core\Services\Auditable;
 use Illuminate\Database\Eloquent\Model;
 
 class PlantillaNotificacion extends Model
 {
-    use BelongsToTenant;
+    use BelongsToTenant, Auditable;
 
     protected $table = 'notif_plantillas';
 

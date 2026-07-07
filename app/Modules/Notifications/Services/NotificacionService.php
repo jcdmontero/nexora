@@ -68,6 +68,16 @@ class NotificacionService
 
         $canales = $canales ?? ($plantilla->canales ?? ['email']);
         $canales = array_values(array_intersect($canales, self::CANALES));
+
+        // Filtrar canales sin datos del destinatario
+        $canales = array_values(array_filter($canales, function ($c) use ($destinatario) {
+            return match ($c) {
+                'email' => !empty($destinatario['email'] ?? null),
+                'whatsapp', 'telegram' => !empty($destinatario['telefono'] ?? null),
+                default => true,
+            };
+        }));
+
         if (empty($canales)) {
             $canales = ['email'];
         }
@@ -109,104 +119,6 @@ class NotificacionService
 
         $noti->enviado_por = $enviadoPor?->id;
         $noti->save();
-    }
-
-    private function enviarCanal(string $canal, Notificacion $noti): bool
-    {
-        return match ($canal) {
-            'email' => $this->enviarEmail($noti),
-            'whatsapp' => $this->enviarWhatsApp($noti),
-            'telegram' => $this->enviarTelegram($noti),
-            default => false,
-        };
-    }
-
-    private function enviarEmail(Notificacion $noti): bool
-    {
-        if (empty($noti->destinatario_email)) {
-            return false;
-        }
-        try {
-            $tenant = app()->has('current_tenant') ? app('current_tenant') : null;
-            $empresa = $tenant?->name ?: config('app.name', 'NEXORA');
-            $logo = $tenant?->logo ? url($tenant->logo) : null;
-
-            Mail::send('emails.notificacion', [
-                'titulo' => $noti->titulo,
-                'cuerpo' => $noti->mensaje,
-                'empresa' => $empresa,
-                'logo' => $logo,
-            ], function ($m) use ($noti, $empresa) {
-                $m->to($noti->destinatario_email)->subject($noti->titulo ?? "Notificación de {$empresa}");
-            });
-            return true;
-        } catch (\Throwable $e) {
-            Log::warning('Notificación email falló: ' . $e->getMessage());
-            $noti->error = $e->getMessage();
-            return false;
-        }
-    }
-
-    private function enviarWhatsApp(Notificacion $noti): bool
-    {
-        $url = rtrim((string) config('services.whatsapp.url'), '/');
-        if (!$url || empty($noti->destinatario_telefono)) {
-            $noti->error = 'Canal WhatsApp no configurado o sin teléfono.';
-            return false;
-        }
-        try {
-            $resp = \Illuminate\Support\Facades\Http::timeout(20)->post("{$url}/send-message", [
-                'phone' => $this->normalizarTelefono($noti->destinatario_telefono),
-                'message' => $noti->mensaje,
-            ]);
-            if ($resp->successful() && ($resp->json('success') === true)) {
-                return true;
-            }
-            $noti->error = 'WhatsApp: ' . ($resp->json('error') ?? $resp->status());
-            return false;
-        } catch (\Throwable $e) {
-            Log::warning('Notificación WhatsApp falló: ' . $e->getMessage());
-            $noti->error = $e->getMessage();
-            return false;
-        }
-    }
-
-    private function enviarTelegram(Notificacion $noti): bool
-    {
-        $token = config('services.telegram.bot_token');
-        // Chat destino: el del cliente si se conoce, o el chat por defecto configurado.
-        $chatId = $noti->destinatario_telefono ?: config('services.telegram.chat_id');
-        if (!$token || !$chatId) {
-            $noti->error = 'Canal Telegram no configurado.';
-            return false;
-        }
-        try {
-            $resp = \Illuminate\Support\Facades\Http::timeout(20)
-                ->post("https://api.telegram.org/bot{$token}/sendMessage", [
-                    'chat_id' => $chatId,
-                    'text' => $noti->mensaje,
-                ]);
-            if ($resp->successful() && ($resp->json('ok') === true)) {
-                return true;
-            }
-            $noti->error = 'Telegram: ' . ($resp->json('description') ?? $resp->status());
-            return false;
-        } catch (\Throwable $e) {
-            Log::warning('Notificación Telegram falló: ' . $e->getMessage());
-            $noti->error = $e->getMessage();
-            return false;
-        }
-    }
-
-    /** Normaliza un teléfono a solo dígitos (con indicativo si lo trae). */
-    private function normalizarTelefono(string $telefono): string
-    {
-        $digits = preg_replace('/\D/', '', $telefono);
-        // Si no trae indicativo (10 dígitos en Colombia), anteponer 57.
-        if (strlen($digits) === 10) {
-            $digits = '57' . $digits;
-        }
-        return $digits;
     }
 
     private function reemplazar(string $texto, array $data): string

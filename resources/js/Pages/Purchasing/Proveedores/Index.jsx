@@ -1,4 +1,4 @@
-import { Link, router } from '@inertiajs/react'
+import { Link } from '@inertiajs/react'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card'
 import { Badge } from '@/Components/ui/badge'
@@ -6,16 +6,11 @@ import { Button } from '@/Components/ui/button'
 import { DataTable } from '@/Components/ui/data-table'
 import { EmptyState } from '@/Components/ui/empty-state'
 import { Skeleton, TableSkeleton } from '@/Components/ui/skeleton'
-import { Truck, Plus } from 'lucide-react'
+import { ConfirmDialog } from '@/Components/ui/confirm-dialog'
+import { Truck, Plus, Trash2 } from 'lucide-react'
 
 export default function ProveedoresIndex({ proveedores }) {
   const loading = proveedores == null
-
-  const deleteProveedor = (p) => {
-    if (confirm(`¿Eliminar al proveedor "${p.razon_social}"?`)) {
-      router.delete(route('purchasing.proveedores.destroy', p.id))
-    }
-  }
 
   const columns = [
     { key: 'razon_social', header: 'Razón Social / Nombre', className: 'font-medium' },
@@ -35,7 +30,15 @@ export default function ProveedoresIndex({ proveedores }) {
       cell: (p) => (
         <div className="flex gap-3 justify-end">
           <Link href={route('purchasing.proveedores.edit', p.id)} className="text-sm text-primary hover:underline">Editar</Link>
-          <button onClick={() => deleteProveedor(p)} className="text-sm text-destructive hover:underline">Eliminar</button>
+          <ConfirmDialog
+            trigger={
+              <button className="text-sm text-destructive hover:underline">
+                Eliminar
+              </button>
+            }
+            title={`¿Eliminar al proveedor "${p.razon_social}"?`}
+            deleteUrl={route('purchasing.proveedores.destroy', p.id)}
+          />
         </div>
       ),
     },
@@ -55,7 +58,7 @@ export default function ProveedoresIndex({ proveedores }) {
           <CardHeader><Skeleton className="h-5 w-40" /></CardHeader>
           <CardContent className="p-0"><TableSkeleton rows={6} cols={5} /></CardContent>
         </Card>
-      ) : proveedores.length === 0 ? (
+      ) : (proveedores.data?.length ?? 0) === 0 ? (
         <Card>
           <EmptyState
             icon={Truck}
@@ -68,7 +71,7 @@ export default function ProveedoresIndex({ proveedores }) {
         <Card>
           <CardHeader><CardTitle>Directorio de proveedores</CardTitle></CardHeader>
           <CardContent className="p-0">
-            <DataTable columns={columns} data={proveedores} rowKey={(p) => p.id} />
+            <DataTable columns={columns} data={proveedores.data} rowKey={(p) => p.id} />
           </CardContent>
         </Card>
       )}

@@ -35,16 +35,21 @@ class LibroController extends Controller
      */
     public function show(Request $request, LibroContable $libro)
     {
+        if ($libro->tenant_id !== tenantId()) abort(403);
+
+        // C-01: Incluir tanto el asiento original como su reverso (ambos suman cero).
+        // Excluir solo los originales que fueron revertidos, ya que el reverso ya
+        // contiene el efecto correcto. Esto preserva el rastro de auditoría
+        // requerido en libros oficiales colombianos.
         $query = AsientoContable::with(['lineas.cuenta', 'registrador'])
-            ->where('estado', 'contabilizado')
+            ->where('estado', '!=', 'reversado')
             ->orderBy('fecha', 'desc')
             ->orderBy('id', 'desc');
 
         // Aplicar filtro de cuentas (ej: "1105%" para libro caja)
         if ($libro->filtro_cuentas) {
-            $patron = str_replace('%', '%%', $libro->filtro_cuentas);
-            $query->whereHas('lineas.cuenta', function ($q) use ($patron) {
-                $q->where('codigo', 'like', $patron);
+            $query->whereHas('lineas.cuenta', function ($q) use ($libro) {
+                $q->where('codigo', 'like', $libro->filtro_cuentas);
             });
         }
 

@@ -92,6 +92,12 @@ class CajaService
         }
 
         return DB::transaction(function () use ($sesion, $tipo, $monto, $metodoPago, $concepto, $referencia) {
+            // M1: Bloqueo pesimista de la sesión dentro de la transacción
+            $sesionLocked = CajaSesion::where('id', $sesion->id)->lockForUpdate()->first();
+            
+            if (!$sesionLocked || $sesionLocked->estado !== 'abierta') {
+                throw new \Exception('No se puede registrar movimientos en una caja cerrada o inexistente.');
+            }
             $movimiento = MovimientoCaja::create([
                 'tenant_id' => $sesion->tenant_id,
                 'sesion_id' => $sesion->id,
@@ -103,11 +109,13 @@ class CajaService
                 'referencia_id' => $referencia ? $referencia->id : null,
             ]);
 
-            // Mantener totales de la sesión sincronizados para el cuadre.
+            // Mantener totales de la sesión sincronizados para el cuadre usando la instancia bloqueada.
             if ($tipo === 'ingreso') {
-                $sesion->increment('ingresos_totales', $monto);
+                $sesionLocked->increment('ingresos_totales', $monto);
+                $sesion->ingresos_totales += $monto;
             } else {
-                $sesion->increment('egresos_totales', $monto);
+                $sesionLocked->increment('egresos_totales', $monto);
+                $sesion->egresos_totales += $monto;
             }
 
             return $movimiento;
@@ -220,6 +228,10 @@ class CajaService
                 throw new \Exception('No se pueden transferir fondos entre cajas de diferentes empresas.');
             }
 
+            if (!$sesionDestino) {
+                throw new \Exception('La caja de destino no tiene un turno abierto. Abre un turno en la caja destino antes de transferir.');
+            }
+
             // Egreso en la caja origen.
             $this->registrarMovimiento(
                 $sesionOrigen,
@@ -229,16 +241,14 @@ class CajaService
                 'Transferencia a caja destino: ' . ($concepto ?? 'Traslado de efectivo'),
             );
 
-            // Ingreso en la caja destino (si tiene turno abierto).
-            if ($sesionDestino) {
-                $this->registrarMovimiento(
-                    $sesionDestino,
-                    'ingreso',
-                    $monto,
-                    'efectivo',
-                    'Transferencia recibida de otra caja: ' . ($concepto ?? 'Traslado de efectivo'),
-                );
-            }
+            // Ingreso en la caja destino.
+            $this->registrarMovimiento(
+                $sesionDestino,
+                'ingreso',
+                $monto,
+                'efectivo',
+                'Transferencia recibida de otra caja: ' . ($concepto ?? 'Traslado de efectivo'),
+            );
 
             return Transferencia::create([
                 'caja_origen_id' => $cajaOrigenId,
@@ -262,7 +272,11 @@ class CajaService
         $desde ??= now()->startOfMonth();
         $hasta ??= now()->endOfDay();
 
-        $query = Caja::with(['sesionActual.usuario', 'sede'])
+        $tenantId = app('current_tenant')->id ?? 0;
+        $cacheKey = "cash_reporte_consolidado_{$tenantId}_" . $desde->format('Y-m-d') . '_' . $hasta->format('Y-m-d') . '_' . ($sedeId ?? 'all');
+
+        return \Illuminate\Support\Facades\Cache::remember($cacheKey, 300, function () use ($desde, $hasta, $sedeId) {
+            $query = Caja::with(['sesionActual.usuario', 'sede'])
             ->withCount([
                 'sesiones as sesiones_periodo' => fn (Builder $q) => $q
                     ->whereBetween('fecha_apertura', [$desde, $hasta]),
@@ -290,15 +304,16 @@ class CajaService
             ];
         });
 
-        return [
-            'desde' => $desde->format('Y-m-d'),
-            'hasta' => $hasta->format('Y-m-d'),
-            'cajas' => $cajas->values()->all(),
-            'totales' => [
-                'ingresos' => (float) $cajas->sum('ingresos'),
-                'egresos' => (float) $cajas->sum('egresos'),
-                'saldo_actual' => (float) $cajas->sum('saldo_actual'),
-            ],
-        ];
+            return [
+                'desde' => $desde->format('Y-m-d'),
+                'hasta' => $hasta->format('Y-m-d'),
+                'cajas' => $cajas->values()->all(),
+                'totales' => [
+                    'ingresos' => (float) $cajas->sum('ingresos'),
+                    'egresos' => (float) $cajas->sum('egresos'),
+                    'saldo_actual' => (float) $cajas->sum('saldo_actual'),
+                ],
+            ];
+        });
     }
 }

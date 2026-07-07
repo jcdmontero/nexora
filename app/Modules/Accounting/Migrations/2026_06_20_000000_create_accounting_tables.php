@@ -26,7 +26,8 @@ return new class extends Migration {
             $table->string('nombre', 150);
             $table->enum('tipo', ['activo', 'pasivo', 'patrimonio', 'ingreso', 'gasto', 'costo']);
             $table->boolean('acepta_movimientos')->default(true);
-            $table->foreignId('parent_id')->nullable()->constrained('cuentas_contables')->cascadeOnDelete();
+            // A-10: restrictOnDelete para evitar borrado accidental de cuentas agrupadoras con hijos
+            $table->foreignId('parent_id')->nullable()->constrained('cuentas_contables')->restrictOnDelete();
             $table->text('descripcion')->nullable();
             $table->timestamps();
 

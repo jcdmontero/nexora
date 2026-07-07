@@ -1,0 +1,446 @@
+<USER_REQUEST>
+Actúa como un Staff Software Engineer, Arquitecto de Software Senior y Tech Lead con más de 20 años de experiencia.
+
+Voy a proporcionarte un informe de auditoría con errores críticos, altos, medios y bajos encontrados en el proyecto.
+
+Tu objetivo NO es simplemente modificar el código.
+
+Tu objetivo es dejar el sistema en un estado apto para producción empresarial.
+
+## Objetivos
+
+Debes corregir TODOS los hallazgos sin introducir nuevos errores.
+
+Antes de modificar cualquier archivo debes comprender completamente:
+
+- la arquitectura
+- la lógica del negocio
+- las relaciones entre módulos
+- los modelos
+- los servicios
+- los controladores
+- los jobs
+- los eventos
+- los listeners
+- el frontend
+- la base de datos
+
+No hagas cambios a ciegas.
+
+No elimines código únicamente para hacer desaparecer un error.
+
+No rompas compatibilidad con el resto del sistema.
+
+Si una corrección afecta otros módulos, debes corregir también esos módulos.
+
+------------------------------------
+
+## Para CADA hallazgo debes seguir este proceso
+
+### 1. Analizar
+
+Explica:
+
+- por qué ocurre
+- cuál es la causa raíz
+- qué archivos están involucrados
+- qué consecuencias produce
+- qué escenarios rompe
+
+No hagas modificaciones todavía.
+
+------------------------------------
+
+### 2. Diseñar la solución
+
+Explica:
+
+- cuál es la mejor solución
+- por qué esa solución es superior
+- qué otras alternativas existen
+- por qué las descartas
+
+------------------------------------
+
+### 3. Implementar
+
+Genera el código completo corregido.
+
+No generes fragmentos.
+
+No uses pseudocódigo.
+
+No omitas líneas.
+
+Respeta:
+
+- estilo del proyecto
+- arquitectura existente
+- convenciones
+- nombres
+- tipado
+- comentarios existentes
+
+------------------------------------
+
+### 4. Revisar
+
+Después de implementar revisa nuevamente el código.
+
+Busca:
+
+- errores de sintaxis
+- errores de lógica
+- errores de compilación
+- imports faltantes
+- imports sobrantes
+- variables sin usar
+- dependencias rotas
+- errores de tipado
+- errores de Laravel
+- errores de Vue/React
+- errores de TypeScript
+- consultas SQL incorrectas
+- relaciones Eloquent rotas
+- problemas de migraciones
+
+Si encuentras alguno debes corregirlo antes de continuar.
+
+------------------------------------
+
+### 5. Verificar impacto
+
+Analiza si el cambio afecta:
+
+- otros servicios
+- otros controladores
+- modelos
+- jobs
+- listeners
+- observers
+- eventos
+- middleware
+- políticas
+- permisos
+- pruebas
+- frontend
+- APIs
+- reportes
+- procesos automáticos
+
+Si afecta algo, realiza las modificaciones necesarias.
+
+------------------------------------
+
+### 6. Seguridad
+
+Comprueba nuevamente:
+
+OWASP Top 10
+
+Mass Assignment
+
+IDOR
+
+XSS
+
+SQL Injection
+
+CSRF
+
+SSRF
+
+Path Traversal
+
+Broken Authentication
+
+Broken Authorization
+
+Race Conditions
+
+Tenant Isolation
+
+Si aparece un nuevo problema debes resolverlo.
+
+------------------------------------
+
+### 7. Rendimiento
+
+Verifica que la solución:
+
+NO genere
+
+N+1
+
+consultas repetidas
+
+loops innecesarios
+
+uso excesivo de memoria
+
+bloqueos
+
+deadlocks
+
+consultas lentas
+
+------------------------------------
+
+### 8. Testing
+
+Para cada corrección genera:
+
+- pruebas unitarias
+- pruebas de integración
+- pruebas de regresión
+- casos borde
+- casos extremos
+
+Incluye datos de prueba reales.
+
+------------------------------------
+
+### 9. Validación Final
+
+Antes de dar el trabajo por terminado realiza una segunda auditoría completa sobre el código modificado.
+
+Debes confirmar que:
+
+✓ el error quedó solucionado
+
+✓ no apareció ningún error nuevo
+
+✓ no rompiste funcionalidades existentes
+
+✓ no rompiste compatibilidad
+
+✓ el código sigue las buenas prácticas
+
+✓ cumple SOLID
+
+✓ cumple DRY
+
+✓ cumple Clean Code
+
+✓ cumple principios de arquitectura
+
+------------------------------------
+
+## Forma de trabajo
+
+NO intentes corregir todo de una sola vez.
+
+Trabaja de manera incremental.
+
+Corrige un hallazgo.
+
+Verifica.
+
+Ejecuta una revisión.
+
+Confirma que quedó correcto.
+
+Solo entonces continúa con el siguiente.
+
+------------------------------------
+
+## Si detectas durante la implementación
+
+- un error adicional
+- un bug oculto
+- una mala práctica
+- una vulnerabilidad
+- una mejora obligatoria
+
+debes detenerte y corregirla aunque no aparezca en el informe.
+
+------------------------------------
+
+## Resultado esperado
+
+Para cada hallazgo entrega:
+
+1. Problema
+
+2. Causa raíz
+
+3. Riesgo
+
+4. Solución aplicada
+
+5. Archivos modificados
+
+6. Código completo
+
+7. Explicación técnica
+
+8. Impacto
+
+9. Pruebas realizadas
+
+10. Confirmación de que no se introdujeron regresiones
+
+No finalices hasta haber corregido todos los errores del informe y validar que el sistema sigue siendo consistente.
+
+Auditoría Integral del Módulo Accounting – Sistema Contable
+Fecha: 2026-07-06
+Auditores: Equipo multidisciplinario (Arquitecto de Software, Staff Engineer, Code Reviewer, QA, Debugging, Seguridad OWASP, Rendimiento, BD, DevOps, Laravel, Frontend)
+Alcance: Código backend, frontend, base de datos, pruebas, infraestructura y configuración del módulo accounting.
+Metodología: Análisis estático, revisión de arquitectura, patrones de seguridad, reglas de negocio contable colombianas y pruebas de concepto.
+
+Resumen Ejecutivo
+El módulo presenta una estructura modular sólida con separación de responsabilidades y uso adecuado de Laravel (Inertia, migraciones, servicios). Sin embargo, se detectaron varios errores críticos que comprometen la integridad contable y la seguridad en producción:
+
+🚨 Fallo en el cierre anual por manejo incorrecto de saldos con cuentas de naturaleza opuesta (ingresos con naturaleza débito como devoluciones).
+
+🚨 Vulnerabilidad de Mass Assignment en AsientoLinea que permite la modificación de campos sensibles como tenant_id.
+
+🚨 Falta de la cuenta 3610 (Utilidades Retenidas) en los aprovisionadores, lo que impediría cualquier cierre anual.
+
+🚨 Ausencia del Job CerrarAnioContableJob y de la página de cierre anual en el frontend, dejando el flujo incompleto.
+
+🔴 Condición de carrera en el cierre de periodos que podría cerrar un periodo con asientos desbalanceados.
+
+🔴 Posible fuga de datos entre tenants en los reportes si el global scope de BelongsToTenant falla en joins complejos.
+
+Además, hay problemas de rendimiento (ausencia de caché en reportes), de seguridad (falta de rate limiting, autorización en jobs) y de mantenibilidad (mezcla de JSX/TSX, código duplicado, constantes sin usar).
+
+Recomendación prioritaria: No pasar a producción sin corregir los errores críticos contables y de seguridad, completar los artefactos faltantes y añadir pruebas de integración exhaustivas.
+
+Listado de Hallazgos por Categoría
+🔴 CRÍTICO (corregir antes de cualquier despliegue)
+ID	Archivo / Ubicación	Descripción	Riesgo
+C1	CierreAnualService.php construirLineasCierre() (líneas ~175‑205)	Fallo en lógica de cierre para cuentas de naturaleza opuesta. El método asume que todas las cuentas de ingreso tienen naturaleza crédito y todas las de gasto/costo débito, cerrando siempre con débito (ingresos) o crédito (gastos) usando abs(saldo). Las cuentas de ingresos con naturaleza débito (ej. 4175 Devoluciones) tendrán un saldo positivo que representa un débito; la línea de cierre les volverá a debitar, no cerrándolas. Esto distorsiona el cierre anual y el saldo de utilidades retenidas.	Alta – Corrupción de estados financieros
+C2	AsientoLinea.php línea ~12	Mass Assignment sin protección ($guarded = []). El modelo permite la asignación masiva de cualquier atributo (incluido tenant_id) aunque también tenga $fillable. Un eventual paso de parámetros inesperados en el servicio o un futuro desarrollador podría modificar el tenant_id de una línea, rompiendo el aislamiento entre empresas.	Crítica – Fuga de datos, violación de integridad
+C3	PucColombiaProvisioner.php y PucSimplificadoProvisioner.php	Ausencia de la cuenta 3610 (Utilidades Retenidas) en ambos provisionadores. El CierreAnualService la exige explícitamente, y sin ella el cierre anual lanzará RuntimeException. Los tests la crean manualmente, ocultando el problema.	Crítica – Funcionalidad rota
+C4	CierreAnualController.php línea ~40 y proyecto	El Job CerrarAnioContableJob no existe en la ruta indicada (App\Jobs\CerrarAnioContableJob). El código intenta despacharlo, produciendo un error en tiempo de ejecución.	Crítica – Funcionalidad rota
+C5	Frontend: CierreAnual/Index.tsx no existe	Página de Cierre Anual no implementada. El controlador renderiza una vista Inertia inexistente, provocando un error 500 al acceder.	Crítica – Funcionalidad rota
+🟠 ALTO (corregir en el siguiente ciclo)
+ID	Archivo / Ubicación	Descripción	Riesgo
+H1	PeriodoContableController.php close()	Condición de carrera en cierre de periodo. La verificación de asientos desbalanceados se realiza sin bloqueo de la tabla asientos_contables ni del propio periodo. Entre la consulta y el update otro proceso podría insertar un asiento descuadrado, cerrando el periodo incorrectamente.	Alta – Integridad contable
+H2	ReporteController.php y CierreAnualService.php (reportes con joins)	Posible fuga de datos entre tenants. Los reportes usan join con AsientoLinea y CuentaContable, confiando en que el global scope BelongsToTenant filtre por tenant automáticamente. Si el scope no se aplica correctamente en subconsultas o joins, podrían mostrarse datos de otros tenants.	Alta – Confidencialidad
+H3	CierreAnualService::aniosDisponiblesParaCierre() línea ~85	SQL específico de PostgreSQL (SUBSTRING ... FROM ...). Si la base de datos no es PostgreSQL, esta consulta fallará. La migración no sugiere un driver específico, pero el uso de ilike también lo confirma. Debe documentarse o abstraerse.	Alta – Compatibilidad
+H4	Todo el módulo	Falta de rate limiting en endpoints de reportes. Un usuario malintencionado o un error en el frontend podría saturar el servidor con consultas de balance, pyg o auxiliar sin límite.	Alta – Disponibilidad
+H5	CierreAnualController.php y CerrarAnioContableJob	Falta de verificación de permisos en el Job. El job recibe $userId y $tenantId pero no comprueba que el usuario tenga el permiso accounting:admin en el momento de la ejecución. Si el job se encola y luego el usuario pierde el permiso, igual se ejecutará.	Alta – Escalación de privilegios
+H6	ContabilidadService::validarLinea()	Verificación de tenant inconsistente en la validación de cuentas. Mientras getCuenta() aplica manualmente el filtro de tenant, validarLinea() usa CuentaContable::find() confiando en el global scope. Si el scope falla, se podría validar una cuenta de otro tenant.	Alta – Integridad
+🟡 MEDIO (planificar corrección en próximas iteraciones)
+ID	Archivo / Ubicación	Descripción	Riesgo
+M1	Múltiples controladores	Múltiples rutas sin verificación explícita de tenant_id en route model binding. Aunque el middleware tenant posiblemente inyecta el alcance, no se realiza una verificación adicional, lo que podría derivar en IDOR si el middleware falla.	Media
+M2	ReporteController.php y otros	Uso de constantes no utilizadas (CODIGOS_INGRESOS, etc.). Código muerto que confunde y puede dar lugar a errores si alguien intenta usarlas en el futuro.	Media
+M3	CierreAnualController.php	Import no utilizado (use Illuminate\Support\Facades\Log;).	Media
+M4	CierreAnualService.php	Import no utilizado (use App\Modules\Accounting\Models\CuentaContable;).	Media
+M5	CuentaController::store() validación	Validación unique con NULL,id,tenant_id,... La regla es compleja y podría omitir el valor de tenant_id correcto si no se pasa el contexto actual. La regla Rule::exists en AsientoController sí lo maneja bien. Revisar.	Media – Integridad
+M6	Varias páginas frontend	Mezcla inconsistente de JSX y TSX. Algunas páginas son .jsx, otras .tsx sin tipado fuerte. Debe unificarse a TypeScript para aprovechar la detección temprana de errores.	Media – Mantenibilidad
+M7	CertificacionContabilidadTest.php	Uso de propiedades inexistentes ($asiento->total_debitos). No se corresponden con el modelo. Los tests fallarán si se ejecutan.	Media – Testing
+M8	Módulo de reportes	Falta de caché en consultas de saldos. Los informes de balance y PyG consultan directamente la base de datos sin ningún mecanismo de caché, lo que se volverá problemático con volúmenes altos.	Media – Rendimiento
+M9	ContabilidadService::siguienteNumero()	Prefijo duro COM- que podría colisionar con otros módulos que generen asientos con el mismo prefijo. Debería ser configurable o usar un prefijo por módulo.	Media – Integridad
+M10	RegimeProvisioner y PucProvisioners	Duplicación de arrays de cuentas en los provisionadores de PUC. Se podrían extraer a una configuración centralizada para facilitar el mantenimiento.	Media – Mantenibilidad
+🟢 BAJO (observaciones para mejora continua)
+ID	Descripción	Riesgo
+L1	AsientoController::create() obtiene todos los centros de costo sin paginación. Si hay muchos centros (>1000), podría afectar la memoria.	Bajo
+L2	LibroController::show() no valida los filtros de fecha (p.ej., formato).	Bajo
+L3	Los modales no gestionan el foco ni tienen atributos ARIA adecuados (accesibilidad).	Bajo
+L4	TributaryRuleService::calculateTaxes() usa un valor por defecto de IVA (19%) que podría no corresponder a la configuración real del tenant en ciertos periodos.	Bajo
+L5	El comando SeedLibrosContables no tiene manejo transaccional por tenant; si falla a mitad, algunos tenants pueden quedar a medio provisionar.	Bajo
+Análisis Específico de Bugs Lógicos y de Negocio
+C1 – Cierre anual con cuentas de naturaleza opuesta
+Archivo: app/Modules/Accounting/Services/CierreAnualService.php
+Método: construirLineasCierre()
+Descripción: Para las cuentas del grupo 4 (ingresos) el código itera y siempre establece 'debito' => round(abs($saldo), 2). Esto es correcto solo si todas las cuentas de ingreso tienen naturaleza crédito y su saldo es positivo (crédito > débito). Sin embargo, el PUC colombiano incluye cuentas de ingresos con naturaleza débito, como:
+
+4175 – Devoluciones en ventas (naturaleza débito)
+
+Otras cuentas de ajuste.
+
+En calcularSaldosPorGrupo, la consulta retorna el saldo según la naturaleza: si es débito, saldo = debito - credito (normalmente positivo). Al tomar abs(saldo) y ponerlo en el débito del asiento de cierre, estamos incrementando el débito de esa cuenta, no cerrándola. Para cerrar una cuenta con saldo débito (naturaleza débito), se debe acreditar.
+
+Ejemplo con datos:
+
+Cuenta 4175 Devoluciones en ventas: débitos = 100.000, créditos = 0 → saldo = 100.000 (débito).
+
+Cierre actual: línea con debito = 100.000, credito = 0. Resultado: la cuenta queda con 200.000 débito (error).
+
+Cierre correcto: línea con debito = 0, credito = 100.000 para dejar saldo cero.
+
+Impacto: Los estados financieros (PyG, Balance) posteriores al cierre mostrarán saldos incorrectos en las cuentas de ingresos con naturaleza débito, y la utilidad neta transferida a patrimonio será errónea. En empresas con devoluciones significativas, el error es material.
+
+Solución recomendada: No usar abs, sino calcular la línea de cierre como el inverso del saldo real:
+
+php
+$saldo = $ingreso['saldo']; // con signo
+if ($saldo > 0) {
+    // saldo acreedor (naturaleza crédito) -> debitar
+    $lineas[] = ['cuenta_contable_id' => $ingreso['cuenta_id'], 'debito' => round($saldo, 2), 'credito' => 0, ...];
+} elseif ($saldo < 0) {
+    // saldo deudor (naturaleza débito) -> acreditar
+    $lineas[] = ['cuenta_contable_id' => $ingreso['cuenta_id'], 'debito' => 0, 'credito' => round(abs($saldo), 2), ...];
+}
+Lo mismo aplica para gastos y costos: si la naturaleza es débito y el saldo es positivo, se acredita; si por alguna razón el saldo es negativo (crédito), se debita. Esta lógica debe basarse en el signo del saldo.
+
+H1 – Condición de carrera en cierre de periodo
+Archivo: PeriodoContableController.php close()
+Problema: Entre la verificación $asientosDesbalanceados y la ejecución de $periodo->update(...), otro usuario podría insertar un nuevo asiento desbalanceado. No hay bloqueo.
+
+Solución: Envolver en una transacción con bloqueo pesimista del periodo:
+
+php
+DB::transaction(function () use ($periodo) {
+    $periodo = PeriodoContable::where('id', $periodo->id)->lockForUpdate()->first();
+    // verificar desbalanceados de nuevo
+    $periodo->update([...]);
+});
+Plan de Corrección Priorizado
+Inmediato (antes de pruebas de integración):
+
+Corregir CierreAnualService::construirLineasCierre para manejar correctamente cuentas con naturaleza opuesta (C1).
+
+Agregar la cuenta 3610 a los provisionadores PucColombiaProvisioner y PucSimplificadoProvisioner (C3).
+
+Remover $guarded = [] de AsientoLinea y confiar solo en $fillable (C2).
+
+Crear el Job CerrarAnioContableJob (C4).
+
+Implementar la página CierreAnual/Index.tsx (C5).
+
+Corregir los tests de certificación para que usen propiedades reales del modelo (M7).
+
+Alta prioridad (siguiente sprint):
+
+Implementar bloqueo en cierre de periodo (H1).
+
+Revisar y reforzar el filtrado por tenant en todos los reportes, añadiendo explícitamente where('tenant_id', tenantId()) si el global scope no es 100% confiable (H2).
+
+Abstraer las expresiones SQL específicas de PostgreSQL (H3) y documentar el motor requerido.
+
+Añadir rate limiting a los endpoints de reportes (H4).
+
+Agregar verificación de permisos dentro de CerrarAnioContableJob (H5).
+
+Medio plazo:
+
+Unificar frontend a TypeScript (M6).
+
+Eliminar código muerto (constantes, imports) (M2, M3, M4).
+
+Implementar caché para reportes (M8).
+
+Revisar validación de unicidad en CuentaController (M5).
+
+Refactorizar provisioners para eliminar duplicación (M10).
+
+Mejora continua:
+
+Añadir logging y monitoreo al cierre anual.
+
+Completar pruebas unitarias y de integración para todos los flujos contables, especialmente cierre anual y regímenes tributarios.
+
+Mejorar accesibilidad de modales (L3).
+
+Conclusión
+El módulo está bien diseñado en su arquitectura modular, pero contiene fallos críticos que impiden su uso en un entorno real con múltiples empresas y transacciones contables complejas. La corrección de los errores de cierre anual y la protección contra mass assignment son innegociables. Se recomienda también incrementar la cobertura de pruebas y añadir validaciones de seguridad adicionales. Con estas mejoras, el sistema estará listo para soportar la carga de miles de usuarios.
+
+Próximo paso: Revisión de la implementación corregida y ejecución de una batería de pruebas de regresión contable.
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-07-06T13:05:36-05:00.
+</ADDITIONAL_METADATA>

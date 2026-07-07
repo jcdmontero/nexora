@@ -42,7 +42,7 @@ class Proveedor extends Model
         if (!$this->tipo_documento && !$this->numero_documento) {
             return '';
         }
-        $tipo = $this->tipo_documento ?? 'Doc';
+        $tipo = $this->tipo_documento ?? 'Identificación';
         return "{$tipo} {$this->numero_documento}";
     }
 

@@ -6,7 +6,9 @@ use App\Core\Http\Middleware\EnsureModuleActive;
 use App\Core\Models\Sede;
 use App\Core\Models\Tenant;
 use App\Models\User;
+use App\Modules\Hr\Models\Cargo;
 use App\Modules\Hr\Models\Contrato;
+use App\Modules\Hr\Models\Departamento;
 use App\Modules\Hr\Models\Empleado;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -18,6 +20,7 @@ class EmpleadoControllerTest extends TestCase
     private Tenant $tenant;
     private User $user;
     private Sede $sede;
+    private Cargo $cargo;
 
     protected function setUp(): void
     {
@@ -41,6 +44,19 @@ class EmpleadoControllerTest extends TestCase
             'nombre' => 'Sede Principal',
             'direccion' => 'Calle 100',
             'es_principal' => true,
+            'activo' => true,
+        ]);
+
+        $departamento = Departamento::create([
+            'tenant_id' => $this->tenant->id,
+            'nombre' => 'Tecnología',
+            'activo' => true,
+        ]);
+
+        $this->cargo = Cargo::create([
+            'tenant_id' => $this->tenant->id,
+            'departamento_id' => $departamento->id,
+            'nombre' => 'Desarrollador',
             'activo' => true,
         ]);
 
@@ -149,6 +165,10 @@ class EmpleadoControllerTest extends TestCase
             'email' => 'maria@test.com',
             'telefono' => '3001234567',
             'sede_id' => $this->sede->id,
+            'cargo_id' => $this->cargo->id,
+            'tipo_contrato' => 'indefinido',
+            'salario_base' => 1500000,
+            'fecha_inicio_contrato' => '2026-01-01',
         ]);
 
         $empleado = Empleado::where('documento', '9876543210')->first();
@@ -236,9 +256,10 @@ class EmpleadoControllerTest extends TestCase
             'estado' => true,
         ]);
 
+        // BelongsToTenant scope returns 404 (no encontrado) en vez de 403
         $response = $this->get(route('hr.empleados.show', $empleadoAjeno->id));
 
-        $response->assertStatus(403);
+        $response->assertStatus(404);
     }
 
     // =========================================================================
@@ -295,6 +316,7 @@ class EmpleadoControllerTest extends TestCase
             'estado' => true,
         ]);
 
+        // BelongsToTenant scope returns 404 (no encontrado) en vez de 403
         $response = $this->put(route('hr.empleados.update', $empleadoAjeno->id), [
             'documento' => '8888888888',
             'nombres' => 'Hacked',
@@ -302,7 +324,7 @@ class EmpleadoControllerTest extends TestCase
             'sede_id' => $otraSede->id,
         ]);
 
-        $response->assertStatus(403);
+        $response->assertStatus(404);
     }
 
     // =========================================================================

@@ -136,9 +136,10 @@ readonly class XmlSigner implements SignatureProviderInterface
     private function computeXmlDigest(string $xmlContent): string
     {
         // Remove existing UBLExtensions (signature placeholder) before digesting
+        // Handle both <ext:ExtensionContent/> (DOMDocument) and <ext:ExtensionContent></ext:ExtensionContent>
         $cleanXml = preg_replace(
             '/<ext:UBLExtensions>.*?<\/ext:UBLExtensions>/s',
-            '<ext:UBLExtensions><ext:UBLExtension><ext:ExtensionContent></ext:ExtensionContent></ext:UBLExtension></ext:UBLExtensions>',
+            '<ext:UBLExtensions><ext:UBLExtension><ext:ExtensionContent/></ext:UBLExtension></ext:UBLExtensions>',
             $xmlContent
         );
 
@@ -164,8 +165,8 @@ readonly class XmlSigner implements SignatureProviderInterface
         $issuerName = $this->normalizeX509Name($certData['issuer'] ?? []);
         $serialNumber = $certData['serialNumberHex'] ?? strtoupper(bin2hex(random_bytes(8)));
 
-        // Compute signature value
-        $signatureValue = $this->computeSignatureValue($xmlDigest, $uuid, $timestamp, $certificate, $privateKey);
+        // Compute signature value — must use the exact same SignedInfo that appears in the XML
+        $signatureValue = $this->computeSignatureValue($xmlDigest, $uuid, $timestamp, $certificate, $privateKey, $serialNumber);
 
         return <<<XML
 <ds:Signature xmlns:ds="http://www.w3.org/2000/09/xmldsig#" Id="{$uuid}">
@@ -222,11 +223,12 @@ XML;
         string $uuid,
         string $timestamp,
         string $certificate,
-        string $privateKey
+        string $privateKey,
+        string $serialNumber
     ): string {
-        // Build the SignedInfo canonical form for signing
+        // Build the SignedInfo canonical form for signing — must match EXACTLY what's in the final XML
         $signedInfoCanonical = <<<XML
-<ds:SignedInfo xmlns:ds="http://www.w3.org/2000/09/xmldsig#"><ds:CanonicalizationMethod Algorithm="http://www.w3.org/2001/10/xml-exc-c14n#"/><ds:SignatureMethod Algorithm="http://www.w3.org/2001/04/xmldsig-more#rsa-sha256"/><ds:Reference URI=""><ds:Transforms><ds:Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature"/><ds:Transform Algorithm="http://www.w3.org/2001/10/xml-exc-c14n#"/></ds:Transforms><ds:DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"/><ds:DigestValue>{$xmlDigest}</ds:DigestValue></ds:Reference><ds:Reference URI="#{$uuid}-SignedProperties"><ds:Transforms><ds:Transform Algorithm="http://www.w3.org/2001/10/xml-exc-c14n#"/></ds:Transforms><ds:DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"/><ds:DigestValue>{$this->computeSignedPropertiesDigest($uuid, $timestamp, $certificate, $this->getSerialNumber($certificate))}</ds:DigestValue></ds:Reference></ds:SignedInfo>
+<ds:SignedInfo xmlns:ds="http://www.w3.org/2000/09/xmldsig#"><ds:CanonicalizationMethod Algorithm="http://www.w3.org/2001/10/xml-exc-c14n#"/><ds:SignatureMethod Algorithm="http://www.w3.org/2001/04/xmldsig-more#rsa-sha256"/><ds:Reference URI=""><ds:Transforms><ds:Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature"/><ds:Transform Algorithm="http://www.w3.org/2001/10/xml-exc-c14n#"/></ds:Transforms><ds:DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"/><ds:DigestValue>{$xmlDigest}</ds:DigestValue></ds:Reference><ds:Reference URI="#{$uuid}-SignedProperties"><ds:Transforms><ds:Transform Algorithm="http://www.w3.org/2001/10/xml-exc-c14n#"/></ds:Transforms><ds:DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"/><ds:DigestValue>{$this->computeSignedPropertiesDigest($uuid, $timestamp, $certificate, $serialNumber)}</ds:DigestValue></ds:Reference></ds:SignedInfo>
 XML;
 
         $signatureValue = '';
@@ -263,8 +265,8 @@ XML;
 
     private function insertSignatureIntoXml(string $xmlContent, string $signature): string
     {
-        // Replace the placeholder in ExtensionContent
-        $pattern = '/<ext:ExtensionContent>\s*<\/ext:ExtensionContent>/';
+        // Match both <ext:ExtensionContent></ext:ExtensionContent> and self-closing <ext:ExtensionContent/>
+        $pattern = '/<ext:ExtensionContent(?:\s*\/?>|\s*>\s*<\/ext:ExtensionContent>)/';
         $replacement = '<ext:ExtensionContent>' . "\n" . $signature . "\n" . '</ext:ExtensionContent>';
 
         $result = preg_replace($pattern, $replacement, $xmlContent, 1);

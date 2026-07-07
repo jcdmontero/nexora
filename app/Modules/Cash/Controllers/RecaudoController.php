@@ -7,7 +7,7 @@ use App\Modules\Cash\Services\RecaudoService;
 use App\Modules\Crm\Models\Cliente;
 use App\Modules\Sales\Models\Factura;
 use Illuminate\Http\Request;
-use Illuminate\Routing\Controller;
+use App\Http\Controllers\Controller;
 use Inertia\Inertia;
 
 class RecaudoController extends Controller
@@ -27,8 +27,8 @@ class RecaudoController extends Controller
             $q->where('estado', 'pendiente');
         })
             ->when($busqueda, fn ($q) => $q->where(function ($q) use ($busqueda) {
-                $q->where('nombre_completo', 'ilike', "%{$busqueda}%")
-                  ->orWhere('numero_documento', 'ilike', "%{$busqueda}%");
+                $q->whereRaw('LOWER(nombre_completo) LIKE ?', ['%' . strtolower($busqueda) . '%'])
+                  ->orWhereRaw('LOWER(numero_documento) LIKE ?', ['%' . strtolower($busqueda) . '%']);
             }))
             ->with(['cuentasPorCobrar' => fn ($q) => $q->where('estado', 'pendiente')])
             ->orderBy('nombre_completo')

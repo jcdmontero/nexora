@@ -143,7 +143,8 @@ class RecaudoService
                 'referencia_id' => $factura->id,
             ], $lineas);
         } catch (\Exception $e) {
-            Log::warning("No se pudo registrar asiento de recaudo {$factura->numero}: {$e->getMessage()}");
+            Log::error("No se pudo registrar asiento de recaudo {$factura->numero}: {$e->getMessage()}");
+            throw $e;
         }
     }
 

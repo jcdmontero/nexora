@@ -99,7 +99,7 @@ class ReciboService
                 'egreso',
                 (float) $recibo->monto,
                 $recibo->metodo_pago,
-                "Anulación recibo RC-" . str_pad($recibo->numero, 6, '0', STR_PAD_LEFT),
+                "Anulación recibo " . $recibo->numero_formateado,
                 $recibo->referencia,
             );
 
@@ -136,8 +136,9 @@ class ReciboService
         $contabilidadService = app(ContabilidadService::class);
         $tenantId = $orden->tenant_id;
 
-        // Determinar cuenta de débito según método de pago
-        $cuentaDebito = ContabilidadConfig::cuentaPorMetodoPago($metodoPago, 'simplificado', $tenantId);
+        // Determinar cuenta de débito según método de pago y régimen
+        $regimen = \App\Core\Models\Configuracion::get('regimen_fiscal', 'simplificado', $tenantId);
+        $cuentaDebito = ContabilidadConfig::cuentaPorMetodoPago($metodoPago, $regimen, $tenantId);
 
         $cuentaDebitoModel = $contabilidadService->getCuenta($cuentaDebito);
         $cuentaCreditoModel = $contabilidadService->getCuenta(ContabilidadConfig::anticipos($tenantId)); // Anticipos de clientes
@@ -164,7 +165,7 @@ class ReciboService
         try {
             $contabilidadService->registrarAsiento([
                 'fecha' => now()->toDateString(),
-                'concepto' => "Abono OT {$orden->numero_orden} — RC-" . str_pad($recibo->numero, 6, '0', STR_PAD_LEFT),
+                'concepto' => "Abono OT {$orden->numero_orden} — " . $recibo->numero_formateado,
                 'modulo_origen' => 'service-desk',
                 'documento_tipo' => 'RC',
                 'documento_numero' => $recibo->numero,
@@ -172,7 +173,8 @@ class ReciboService
                 'referencia_id' => $recibo->id,
             ], $lineas);
         } catch (\Exception $e) {
-            Log::warning("No se pudo registrar asiento contable para abono RC-{$recibo->numero}: {$e->getMessage()}");
+            Log::error("No se pudo registrar asiento contable para abono RC-{$recibo->numero}: {$e->getMessage()}");
+            throw $e;
         }
     }
 
@@ -192,7 +194,7 @@ class ReciboService
                 'service-desk',
                 ReciboCaja::class,
                 $recibo->id,
-                "Anulación RC-" . str_pad($recibo->numero, 6, '0', STR_PAD_LEFT)
+                "Anulación " . $recibo->numero_formateado
             );
         } catch (\Exception $e) {
             Log::warning("No se pudo reversar asiento contable para RC-{$recibo->numero}: {$e->getMessage()}");
@@ -203,6 +205,7 @@ class ReciboService
     {
         $prefijo = now()->format('Ymd');
         $ultimo = ReciboCaja::where('numero', 'like', "{$prefijo}-%")
+            ->lockForUpdate()
             ->orderByDesc('numero')
             ->value('numero');
 

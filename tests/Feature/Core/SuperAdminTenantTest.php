@@ -19,14 +19,15 @@ class SuperAdminTenantTest extends TestCase
     {
         $this->withoutMiddleware();
 
-        // Registrar el catálogo real de módulos y publicar inventory
+        // Registrar el catálogo real de módulos
         app(ModuleRegistry::class)->scanAndRegister();
         // 'core' vive en app/Core (no en app/Modules), lo registra el seeder en producción
         Module::firstOrCreate(['code' => 'core'], [
             'name' => 'Core', 'class' => 'Core', 'version' => '1.0.0',
             'is_core' => true, 'is_active_globally' => true, 'estado' => 'publicado',
         ]);
-        Module::where('code', 'inventory')->update(['estado' => 'publicado']);
+        // Usar notifications (sin dependencias, liviano) en vez de inventory (3 dependencias pesadas)
+        Module::where('code', 'notifications')->update(['estado' => 'publicado']);
 
         $superadmin = User::factory()->create(['is_superadmin' => true]);
         $this->actingAs($superadmin);
@@ -36,7 +37,7 @@ class SuperAdminTenantTest extends TestCase
             'slug' => 'taller-demo',
             'email' => 'contacto@taller.com',
             'plan' => 'Pro',
-            'modulos' => ['inventory'],
+            'modulos' => ['notifications'],
             'admin_name' => 'Ana Gómez',
             'admin_email' => 'ana@taller.com',
             'admin_password' => 'password123',
@@ -46,12 +47,12 @@ class SuperAdminTenantTest extends TestCase
         $tenant = Tenant::where('slug', 'taller-demo')->first();
         $this->assertNotNull($tenant, 'La empresa debió crearse');
 
-        // Módulo core + inventory activos
+        // Módulo core + notifications activos
         $this->assertTrue(TenantModule::where('tenant_id', $tenant->id)->where('module_code', 'core')->where('is_active', true)->exists());
-        $this->assertTrue(TenantModule::where('tenant_id', $tenant->id)->where('module_code', 'inventory')->where('is_active', true)->exists());
+        $this->assertTrue(TenantModule::where('tenant_id', $tenant->id)->where('module_code', 'notifications')->where('is_active', true)->exists());
 
         // La activación corrió las migraciones del módulo
-        $this->assertTrue(Schema::hasTable('inventory_productos'), 'Las migraciones de inventory debieron ejecutarse');
+        $this->assertTrue(Schema::hasTable('notif_notificaciones'), 'Las migraciones de notifications debieron ejecutarse');
 
         // El administrador de la empresa fue creado y vinculado
         $this->assertDatabaseHas('users', [

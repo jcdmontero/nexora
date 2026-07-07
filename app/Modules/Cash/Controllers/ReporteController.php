@@ -22,7 +22,7 @@ class ReporteController extends Controller
         $reporte = $this->cajaService->reporteConsolidado($desde, $hasta, $sedeId);
         $sedes = \App\Core\Models\Sede::orderBy('nombre')->get(['id', 'nombre']);
 
-        return Inertia::render('Cash/Reporte/Index', [
+        return Inertia::render('Modules/Cash/Reporte/Index', [
             'reporte' => $reporte,
             'sedes' => $sedes,
             'filters' => $request->only(['desde', 'hasta', 'sede_id']),

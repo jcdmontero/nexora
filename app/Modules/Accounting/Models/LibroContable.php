@@ -13,8 +13,7 @@ class LibroContable extends Model
     protected $table = 'libros_contables';
 
     protected $fillable = [
-        'tenant_id',
-        'codigo',
+        'tenant_id','codigo',
         'nombre',
         'tipo',
         'descripcion',

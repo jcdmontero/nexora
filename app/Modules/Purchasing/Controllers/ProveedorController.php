@@ -10,23 +10,15 @@ use Inertia\Inertia;
 class ProveedorController extends Controller
 {
     public function __construct(
-        private PurchasingService $purchasingService = new PurchasingService(),
+        private PurchasingService $purchasingService,
     ) {}
+
     public function index()
     {
         return Inertia::render('Purchasing/Proveedores/Index', [
             'proveedores' => Inertia::defer(fn () => Proveedor::orderBy('razon_social', 'asc')
-                ->get()
-                ->map(fn ($p) => [
-                    'id' => $p->id,
-                    'documento' => $p->documento,
-                    'razon_social' => $p->razon_social,
-                    'nombre_contacto' => $p->nombre_contacto,
-                    'email' => $p->email,
-                    'telefono' => $p->telefono,
-                    'ciudad' => $p->ciudad,
-                    'activo' => $p->activo,
-                ])),
+                ->paginate(20)
+                ->withQueryString()),
         ]);
     }
 
@@ -48,6 +40,8 @@ class ProveedorController extends Controller
         return Inertia::render('Purchasing/Proveedores/Edit', [
             'proveedor' => $proveedore->only([
                 'id', 'tipo_documento', 'numero_documento', 'razon_social',
+                'regimen_tributario', 'porcentaje_retencion_fuente',
+                'porcentaje_retencion_iva', 'porcentaje_retencion_ica',
                 'nombre_contacto', 'email', 'telefono', 'direccion', 'ciudad', 'notas', 'activo'
             ]),
         ]);

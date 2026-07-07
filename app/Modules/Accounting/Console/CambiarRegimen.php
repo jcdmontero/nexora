@@ -34,7 +34,7 @@ class CambiarRegimen extends Command
         }
 
         foreach ($tenants as $tenant) {
-            $resultado = $provisioner->cambiarRegimen($tenant, $regimen);
+            $resultado = $provisioner->cambiarRegimen($tenant, $regimen, null, auth()->id());
             $creadas = count($resultado['cuentas_creadas']);
 
             $this->info("Tenant \"{$tenant->name}\" (ID: {$tenant->id}):");

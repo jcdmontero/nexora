@@ -6,7 +6,7 @@ use App\Modules\Accounting\Models\CuentaPorPagar;
 use App\Modules\Cash\Services\PagoProveedorService;
 use App\Modules\Purchasing\Models\Proveedor;
 use Illuminate\Http\Request;
-use Illuminate\Routing\Controller;
+use App\Http\Controllers\Controller;
 use Inertia\Inertia;
 
 class PagoProveedorController extends Controller
@@ -26,8 +26,8 @@ class PagoProveedorController extends Controller
             $q->where('estado', 'pendiente');
         })
             ->when($busqueda, fn ($q) => $q->where(function ($q) use ($busqueda) {
-                $q->where('razon_social', 'ilike', "%{$busqueda}%")
-                  ->orWhere('numero_documento', 'ilike', "%{$busqueda}%");
+                $q->whereRaw('LOWER(razon_social) LIKE ?', ['%' . strtolower($busqueda) . '%'])
+                  ->orWhereRaw('LOWER(numero_documento) LIKE ?', ['%' . strtolower($busqueda) . '%']);
             }))
             ->with(['cuentasPorPagar' => fn ($q) => $q->where('estado', 'pendiente')])
             ->orderBy('razon_social')

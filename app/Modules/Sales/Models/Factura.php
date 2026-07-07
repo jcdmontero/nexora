@@ -28,6 +28,22 @@ class Factura extends Model
         static::creating(function ($model) {
             $model->verification_token = (string) \Illuminate\Support\Str::uuid();
         });
+
+        // #13: Sincronizar estado y booleano anulada para evitar desincronización
+        static::saving(function ($model) {
+            if ($model->isDirty('estado') && $model->estado === 'anulada') {
+                $model->anulada = true;
+                if (is_null($model->anulada_at)) {
+                    $model->anulada_at = now();
+                }
+            }
+            if ($model->isDirty('anulada') && $model->anulada === true && $model->estado !== 'anulada') {
+                $model->estado = 'anulada';
+                if (is_null($model->anulada_at)) {
+                    $model->anulada_at = now();
+                }
+            }
+        });
     }
 
     protected $fillable = [

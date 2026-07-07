@@ -1,18 +1,24 @@
-﻿# Auditoría: Payroll (Nómina) — Código Completo
+# Auditoría: Payroll (Nómina)
+> Actualizado: 2026-07-06
 
-> **Código del módulo:** payroll
-> **Nombre:** Nómina
-> **Versión:** 1.0.0
-> **Dependencias:** hr
-> **Fecha de auditoría:** 2026-07-05
-> **Total archivos analizados:** 22
+---
+
+## Tabla de Contenidos
+
+1. [module.json](#modulejson)
+2. [Routes](#routes)
+3. [Controllers](#controllers)
+4. [Models](#models)
+5. [Services](#services)
+6. [Migrations](#migrations)
+7. [Frontend Pages](#frontend-pages)
+8. [Tests](#tests)
+9. [Correcciones](#correcciones)
 
 ---
 
 ## module.json
-
-**Ruta:** `app\Modules\Payroll\module.json`
-
+**Ruta:** `app/Modules/Payroll/module.json`
 ```json
 {
     "code": "payroll",
@@ -47,10 +53,15 @@
 
 ---
 
+## Providers
+**Ruta:** `app/Modules/Payroll/Providers/`
+
+> No existen archivos de Provider en el módulo Payroll. El módulo depende del módulo HR (`"dependencies": ["hr"]`) y no declara providers propios.
+
+---
+
 ## Routes
-
-**Ruta:** `app\Modules\Payroll\Routes\web.php`
-
+**Ruta:** `app/Modules/Payroll/Routes/web.php`
 ```php
 <?php
 
@@ -65,7 +76,9 @@ use App\Modules\Payroll\Models\PeriodoNomina;
 Route::middleware(['web', 'auth', 'tenant', 'module:payroll'])->group(function () {
     Route::prefix('payroll')->name('payroll.')->group(function () {
 
-        // PERÍODOS DE NÓMINA
+        // ========================================================================
+        // PERÍODOS DE NÓMINA (reemplazan LiquidacionController legacy)
+        // ========================================================================
         Route::get('periodos', [PeriodoController::class, 'index'])
             ->name('periodos.index')
             ->middleware('permission:payroll:view');
@@ -90,7 +103,9 @@ Route::middleware(['web', 'auth', 'tenant', 'module:payroll'])->group(function (
             ->name('periodos.anular')
             ->middleware('permission:payroll:manage');
 
+        // ========================================================================
         // NÓMINAS INDIVIDUALES
+        // ========================================================================
         Route::get('nominas', [NominaController::class, 'index'])
             ->name('nominas.index')
             ->middleware('permission:payroll:view');
@@ -103,7 +118,9 @@ Route::middleware(['web', 'auth', 'tenant', 'module:payroll'])->group(function (
             ->name('nominas.update-concepto')
             ->middleware('permission:payroll:edit');
 
+        // ========================================================================
         // NOVEDADES
+        // ========================================================================
         Route::get('novedades', [NovedadController::class, 'index'])
             ->name('novedades.index')
             ->middleware('permission:payroll:view');
@@ -120,7 +137,9 @@ Route::middleware(['web', 'auth', 'tenant', 'module:payroll'])->group(function (
             ->name('novedades.destroy')
             ->middleware('permission:payroll:delete');
 
+        // ========================================================================
         // REPORTES
+        // ========================================================================
         Route::get('reportes', [ReporteController::class, 'index'])
             ->name('reportes.index')
             ->middleware('permission:payroll:report');
@@ -133,7 +152,9 @@ Route::middleware(['web', 'auth', 'tenant', 'module:payroll'])->group(function (
             ->name('reportes.desprendible')
             ->middleware('permission:payroll:report');
 
-        // LIQUIDACIONES LEGACY
+        // ========================================================================
+        // LIQUIDACIONES LEGACY (compatibilidad — se mantienen temporalmente)
+        // ========================================================================
         Route::get('liquidaciones', [LiquidacionController::class, 'index'])
             ->name('liquidaciones.index')
             ->middleware('permission:payroll:view');
@@ -144,8 +165,7 @@ Route::middleware(['web', 'auth', 'tenant', 'module:payroll'])->group(function (
 
         Route::get('liquidaciones/{periodo}', [LiquidacionController::class, 'show'])
             ->name('liquidaciones.show')
-            ->middleware('permission:payroll:view')
-            ->defaults('binding', 'periodo');
+            ->middleware('permission:payroll:view');
 
     });
 });
@@ -155,10 +175,8 @@ Route::middleware(['web', 'auth', 'tenant', 'module:payroll'])->group(function (
 
 ## Controllers
 
-### LiquidacionController.php
-
-**Ruta:** `app\Modules\Payroll\Controllers\LiquidacionController.php`
-
+### NovedadController
+**Ruta:** `app/Modules/Payroll/Controllers/NovedadController.php`
 ```php
 <?php
 
@@ -167,126 +185,192 @@ declare(strict_types=1);
 namespace App\Modules\Payroll\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Modules\Hr\Models\Empleado;
+use App\Modules\Payroll\Models\Novedad;
 use App\Modules\Payroll\Models\PeriodoNomina;
+use App\Modules\Payroll\Models\ConceptoNomina;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
+use Illuminate\Support\Facades\DB;
 
-class LiquidacionController extends Controller
+class NovedadController extends Controller
 {
-    public function index()
+    /**
+     * Listar novedades con filtros.
+     */
+    public function index(Request $request)
     {
         $tenantId = auth()->user()->tenant_id;
 
-        $periodos = PeriodoNomina::where('tenant_id', $tenantId)
-            ->withCount('nominas')
-            ->orderBy('created_at', 'desc')
-            ->paginate(10);
+        $query = Novedad::with(['empleado', 'concepto', 'periodo'])
+            ->whereHas('empleado', fn ($q) => $q->where('tenant_id', $tenantId));
 
-        return Inertia::render('Payroll/Liquidaciones/Index', [
-            'periodos' => $periodos,
-        ]);
-    }
-
-    public function show(PeriodoNomina $periodo)
-    {
-        if ($periodo->tenant_id !== auth()->user()->tenant_id) {
-            abort(403);
+        if ($request->periodo_id) {
+            $query->where('periodo_id', $request->periodo_id);
         }
 
-        $periodo->load([
-            'nominas.contrato.empleado',
-            'nominas.detalles.concepto',
-        ]);
+        if ($request->concepto_id) {
+            $query->where('concepto_id', $request->concepto_id);
+        }
 
-        $nominas = $periodo->nominas->map(fn ($n) => [
-            'id'                  => $n->id,
-            'empleado_nombre'     => trim(
-                ($n->contrato?->empleado?->nombres ?? '') . ' '
-                . ($n->contrato?->empleado?->apellidos ?? '')
-            ),
-            'empleado_documento'  => $n->contrato?->empleado?->documento,
-            'dias_laborados'      => $n->dias_laborados,
-            'total_devengado'     => (float) $n->total_devengado,
-            'total_deducciones'   => (float) $n->total_deducciones,
-            'neto_pagar'          => (float) $n->neto_pagar,
-            'ibc_seguridad_social'=> (float) $n->ibc_seguridad_social,
-            'costo_laboral_total' => (float) $n->costo_laboral_total,
-            'detalles'            => $n->detalles->map(fn ($d) => [
-                'concepto_codigo' => $d->concepto?->codigo,
-                'concepto_nombre' => $d->concepto?->nombre,
-                'concepto_tipo'   => $d->concepto?->tipo,
-                'cantidad'        => (float) $d->cantidad,
-                'valor'           => (float) $d->valor,
-            ]),
-        ]);
+        if ($request->tipo) {
+            $query->where('tipo', $request->tipo);
+        }
 
-        return Inertia::render('Payroll/Liquidaciones/Show', [
-            'periodo' => [
-                'id'           => $periodo->id,
-                'codigo'       => $periodo->codigo,
-                'mes_contable' => $periodo->mes_contable,
-                'fecha_inicio' => $periodo->fecha_inicio?->format('Y-m-d'),
-                'fecha_fin'    => $periodo->fecha_fin?->format('Y-m-d'),
-                'estado'       => $periodo->estado,
-                'observaciones'=> $periodo->observaciones,
-                'created_at'   => $periodo->created_at?->format('Y-m-d H:i'),
-            ],
-            'nominas' => $nominas,
-            'resumen' => [
-                'total_empleados'   => $periodo->nominas->count(),
-                'total_devengado'   => (float) $periodo->total_devengado,
-                'total_deducciones' => (float) $periodo->total_deducciones,
-                'total_provisiones' => (float) $periodo->total_provisiones,
-                'total_aportes'     => (float) $periodo->total_aportes_patronales,
-                'neto_pagar'        => (float) $periodo->neto_pagar,
-            ],
+        if ($request->estado) {
+            $query->where('estado', $request->estado);
+        }
+
+        $novedades = $query->orderBy('fecha_registro', 'desc')
+            ->paginate(15)
+            ->through(fn ($nv) => [
+                'id'            => $nv->id,
+                'empleado_id'   => $nv->empleado_id,
+                'empleado_nombre' => $nv->empleado?->nombres . ' ' . $nv->empleado?->apellidos,
+                'empleado_documento' => $nv->empleado?->documento,
+                'tipo'          => $nv->tipo,
+                'codigo'        => $nv->codigo,
+                'descripcion'   => $nv->descripcion,
+                'concepto_id'   => $nv->concepto_id,
+                'concepto_codigo' => $nv->concepto?->codigo,
+                'concepto_nombre' => $nv->concepto?->nombre,
+                'periodo_id'    => $nv->periodo_id,
+                'periodo_codigo' => $nv->periodo?->codigo,
+                'valor'         => (float) $nv->valor,
+                'fecha_registro'=> $nv->fecha_registro?->format('Y-m-d'),
+                'estado'        => $nv->estado,
+                'created_at'    => $nv->created_at?->format('Y-m-d H:i'),
+            ]);
+
+        // Datos para selects
+        $empleados = Empleado::where('tenant_id', $tenantId)
+            ->where('estado', true)
+            ->get(['id', 'nombres', 'apellidos', 'documento']);
+
+        $conceptos = ConceptoNomina::where('tenant_id', $tenantId)
+            ->where('activo', true)
+            ->whereIn('tipo', ['DEVENGADO', 'DEDUCCION'])
+            ->get(['id', 'codigo', 'nombre', 'tipo']);
+
+        $periodos = PeriodoNomina::where('tenant_id', $tenantId)
+            ->orderBy('created_at', 'desc')
+            ->get(['id', 'codigo', 'mes_contable', 'estado']);
+
+        return Inertia::render('Payroll/Novedades/Index', [
+            'novedades' => $novedades,
+            'empleados' => $empleados,
+            'conceptos' => $conceptos,
+            'periodos'  => $periodos,
+            'filters'   => $request->only(['periodo_id', 'concepto_id', 'tipo', 'estado']),
         ]);
     }
 
+    /**
+     * Crear una novedad individual.
+     */
     public function store(Request $request)
     {
         $tenantId = auth()->user()->tenant_id;
 
         $validated = $request->validate([
-            'codigo'       => 'required|string|max:30',
-            'mes_contable' => 'required|string|size:7',
-            'fecha_inicio' => 'required|date',
-            'fecha_fin'    => 'required|date|after_or_equal:fecha_inicio',
-            'observaciones'=> 'nullable|string|max:500',
+            'empleado_id'  => ['required', Rule::in(Empleado::where('tenant_id', $tenantId)->pluck('id'))],
+            'tipo'         => 'required|in:ingreso,descuento',
+            'descripcion'  => 'nullable|string|max:250',
+            'concepto_id'  => ['nullable', Rule::in(ConceptoNomina::where('tenant_id', $tenantId)->pluck('id'))],
+            'periodo_id'   => ['nullable', Rule::in(PeriodoNomina::where('tenant_id', $tenantId)->pluck('id'))],
+            'codigo'       => 'nullable|string|max:30',
+            'valor'        => 'required|numeric|min:1',
+            'fecha_registro'=> 'required|date',
+            'fecha_inicio' => 'nullable|date',
+            'fecha_fin'    => 'nullable|date|after_or_equal:fecha_inicio',
         ]);
 
-        $exists = PeriodoNomina::where('tenant_id', $tenantId)
-            ->where('mes_contable', $validated['mes_contable'])
-            ->exists();
+        $validated['tenant_id'] = $tenantId;
+        $validated['estado'] = 'pendiente';
 
-        if ($exists) {
-            return back()->with('error', 'Ya existe un período para el mes contable seleccionado.');
+        Novedad::create($validated);
+
+        return back()->with('success', 'Novedad registrada con éxito.');
+    }
+
+    /**
+     * Crear novedades en lote para múltiples empleados.
+     */
+    public function storeBulk(Request $request)
+    {
+        $tenantId = auth()->user()->tenant_id;
+
+        $validated = $request->validate([
+            'empleados_ids' => 'required|array|min:1',
+            'empleados_ids.*' => ['exists:hr_empleados,id'],
+            'tipo'          => 'required|in:ingreso,descuento',
+            'descripcion'   => 'nullable|string|max:250',
+            'concepto_id'   => ['nullable', Rule::in(ConceptoNomina::where('tenant_id', $tenantId)->pluck('id'))],
+            'periodo_id'    => ['nullable', Rule::in(PeriodoNomina::where('tenant_id', $tenantId)->pluck('id'))],
+            'codigo'        => 'nullable|string|max:30',
+            'valor'         => 'required|numeric|min:1',
+            'fecha_registro'=> 'required|date',
+        ]);
+
+        $tenantId = auth()->user()->tenant_id;
+
+        $empleadosValidos = Empleado::whereIn('id', $validated['empleados_ids'])
+            ->where('tenant_id', $tenantId)
+            ->pluck('id')
+            ->toArray();
+
+        if (empty($empleadosValidos)) {
+            return back()->with('error', 'Ningún empleado válido encontrado.');
         }
 
-        $periodo = PeriodoNomina::create([
-            'tenant_id'    => $tenantId,
-            'codigo'       => $validated['codigo'],
-            'fecha_inicio' => $validated['fecha_inicio'],
-            'fecha_fin'    => $validated['fecha_fin'],
-            'mes_contable' => $validated['mes_contable'],
-            'estado'       => 'BORRADOR',
-            'observaciones'=> $validated['observaciones'] ?? null,
-            'created_by'   => auth()->id(),
-        ]);
+        $creadas = 0;
 
-        \App\Jobs\LiquidarNominaJob::dispatch($periodo->id, $tenantId)
-            ->onQueue('payroll');
+        foreach ($empleadosValidos as $empleadoId) {
+            Novedad::create([
+                'tenant_id'     => $tenantId,
+                'empleado_id'   => $empleadoId,
+                'tipo'          => $validated['tipo'],
+                'descripcion'   => $validated['descripcion'] ?? null,
+                'concepto_id'   => $validated['concepto_id'] ?? null,
+                'periodo_id'    => $validated['periodo_id'] ?? null,
+                'codigo'        => $validated['codigo'] ?? null,
+                'valor'         => $validated['valor'],
+                'fecha_registro'=> $validated['fecha_registro'],
+                'estado'        => 'pendiente',
+            ]);
+            $creadas++;
+        }
 
-        return redirect()->route('payroll.liquidaciones.show', $periodo->id)
-            ->with('success', 'Período creado. Liquidación enviada a cola de procesamiento.');
+        return back()->with('success', "{$creadas} novedad(es) creada(s) en lote.");
+    }
+
+    /**
+     * Eliminar una novedad.
+     */
+    public function destroy(Novedad $novedad)
+    {
+        $tenantId = auth()->user()->tenant_id;
+
+        // Verificar pertenencia al tenant vía empleado
+        $empleado = $novedad->empleado;
+        if (!$empleado || $empleado->tenant_id !== $tenantId) {
+            abort(403);
+        }
+
+        if ($novedad->estado === 'aplicada') {
+            return back()->with('error', 'No se puede eliminar una novedad ya aplicada a una nómina.');
+        }
+
+        $novedad->delete();
+
+        return back()->with('success', 'Novedad eliminada correctamente.');
     }
 }
 ```
 
-### NominaController.php
-
-**Ruta:** `app\Modules\Payroll\Controllers\NominaController.php`
-
+### NominaController
+**Ruta:** `app/Modules/Payroll/Controllers/NominaController.php`
 ```php
 <?php
 
@@ -308,12 +392,22 @@ class NominaController extends Controller
         private readonly NominaService $nominaService,
     ) {}
 
+    /**
+     * Listar nóminas individuales.
+     */
     public function index(Request $request)
     {
         $tenantId = auth()->user()->tenant_id;
 
         $nominas = Nomina::where('tenant_id', $tenantId)
             ->with(['contrato.empleado', 'periodo'])
+            ->when($request->search, function ($q, $search) {
+                $q->whereHas('contrato.empleado', function ($sub) use ($search) {
+                    $sub->where('nombres', 'ilike', "%{$search}%")
+                        ->orWhere('apellidos', 'ilike', "%{$search}%")
+                        ->orWhere('documento', 'like', "%{$search}%");
+                });
+            })
             ->orderBy('id', 'desc')
             ->paginate(15)
             ->through(fn ($n) => [
@@ -336,6 +430,9 @@ class NominaController extends Controller
         ]);
     }
 
+    /**
+     * Mostrar detalle de una nómina individual con conceptos.
+     */
     public function show(Nomina $nomina)
     {
         if ($nomina->tenant_id !== auth()->user()->tenant_id) {
@@ -397,14 +494,17 @@ class NominaController extends Controller
         ]);
     }
 
+    /**
+     * Crear / actualizar el valor de un concepto en una nómina liquidada.
+     */
     public function updateConcepto(Request $request, Nomina $nomina)
     {
         if ($nomina->tenant_id !== auth()->user()->tenant_id) {
             abort(403);
         }
 
-        if (!in_array($nomina->periodo?->estado, ['BORRADOR', 'LIQUIDADA'], true)) {
-            return back()->with('error', 'No se pueden modificar conceptos en una nómina ' . $nomina->periodo?->estado . '.');
+        if ($nomina->periodo?->estado !== 'BORRADOR') {
+            return back()->with('error', 'Solo se pueden modificar conceptos en períodos en estado BORRADOR.');
         }
 
         $validated = $request->validate([
@@ -419,6 +519,7 @@ class NominaController extends Controller
                 (float) $validated['valor']
             );
 
+            // Actualizar totales del período padre
             $periodo = $nomina->periodo;
             if ($periodo) {
                 $totales = $periodo->nominas()
@@ -448,197 +549,8 @@ class NominaController extends Controller
 }
 ```
 
-### NovedadController.php
-
-**Ruta:** `app\Modules\Payroll\Controllers\NovedadController.php`
-
-```php
-<?php
-
-declare(strict_types=1);
-
-namespace App\Modules\Payroll\Controllers;
-
-use App\Http\Controllers\Controller;
-use App\Modules\Hr\Models\Empleado;
-use App\Modules\Payroll\Models\Novedad;
-use App\Modules\Payroll\Models\PeriodoNomina;
-use App\Modules\Payroll\Models\ConceptoNomina;
-use Illuminate\Http\Request;
-use Inertia\Inertia;
-use Illuminate\Support\Facades\DB;
-
-class NovedadController extends Controller
-{
-    public function index(Request $request)
-    {
-        $tenantId = auth()->user()->tenant_id;
-
-        $query = Novedad::with(['empleado', 'concepto', 'periodo'])
-            ->whereHas('empleado', fn ($q) => $q->where('tenant_id', $tenantId));
-
-        if ($request->periodo_id) {
-            $query->where('periodo_id', $request->periodo_id);
-        }
-
-        if ($request->concepto_id) {
-            $query->where('concepto_id', $request->concepto_id);
-        }
-
-        if ($request->tipo) {
-            $query->where('tipo', $request->tipo);
-        }
-
-        if ($request->estado) {
-            $query->where('estado', $request->estado);
-        }
-
-        $novedades = $query->orderBy('fecha_registro', 'desc')
-            ->paginate(15)
-            ->through(fn ($nv) => [
-                'id'            => $nv->id,
-                'empleado_id'   => $nv->empleado_id,
-                'empleado_nombre' => $nv->empleado?->nombres . ' ' . $nv->empleado?->apellidos,
-                'empleado_documento' => $nv->empleado?->documento,
-                'tipo'          => $nv->tipo,
-                'codigo'        => $nv->codigo,
-                'descripcion'   => $nv->descripcion,
-                'concepto_id'   => $nv->concepto_id,
-                'concepto_codigo' => $nv->concepto?->codigo,
-                'concepto_nombre' => $nv->concepto?->nombre,
-                'periodo_id'    => $nv->periodo_id,
-                'periodo_codigo' => $nv->periodo?->codigo,
-                'valor'         => (float) $nv->valor,
-                'fecha_registro'=> $nv->fecha_registro?->format('Y-m-d'),
-                'estado'        => $nv->estado,
-                'created_at'    => $nv->created_at?->format('Y-m-d H:i'),
-            ]);
-
-        $empleados = Empleado::where('tenant_id', $tenantId)
-            ->where('estado', true)
-            ->get(['id', 'nombres', 'apellidos', 'documento']);
-
-        $conceptos = ConceptoNomina::where('tenant_id', $tenantId)
-            ->where('activo', true)
-            ->whereIn('tipo', ['DEVENGADO', 'DEDUCCION'])
-            ->get(['id', 'codigo', 'nombre', 'tipo']);
-
-        $periodos = PeriodoNomina::where('tenant_id', $tenantId)
-            ->orderBy('created_at', 'desc')
-            ->get(['id', 'codigo', 'mes_contable', 'estado']);
-
-        return Inertia::render('Payroll/Novedades/Index', [
-            'novedades' => $novedades,
-            'empleados' => $empleados,
-            'conceptos' => $conceptos,
-            'periodos'  => $periodos,
-            'filters'   => $request->only(['periodo_id', 'concepto_id', 'tipo', 'estado']),
-        ]);
-    }
-
-    public function store(Request $request)
-    {
-        $validated = $request->validate([
-            'empleado_id'  => 'required|exists:hr_empleados,id',
-            'tipo'         => 'required|in:ingreso,descuento',
-            'descripcion'  => 'nullable|string|max:250',
-            'concepto_id'  => 'nullable|exists:pay_conceptos_nomina,id',
-            'periodo_id'   => 'nullable|exists:pay_periodos_nomina,id',
-            'codigo'       => 'nullable|string|max:30',
-            'valor'        => 'required|numeric|min:1',
-            'fecha_registro'=> 'required|date',
-            'fecha_inicio' => 'nullable|date',
-            'fecha_fin'    => 'nullable|date|after_or_equal:fecha_inicio',
-        ]);
-
-        $empleado = Empleado::findOrFail($validated['empleado_id']);
-        if ($empleado->tenant_id !== auth()->user()->tenant_id) {
-            abort(403);
-        }
-
-        $validated['tenant_id'] = auth()->user()->tenant_id;
-        $validated['estado'] = 'pendiente';
-
-        Novedad::create($validated);
-
-        return back()->with('success', 'Novedad registrada con éxito.');
-    }
-
-    public function storeBulk(Request $request)
-    {
-        $validated = $request->validate([
-            'empleados_ids' => 'required|array|min:1',
-            'empleados_ids.*' => 'exists:hr_empleados,id',
-            'tipo'          => 'required|in:ingreso,descuento',
-            'descripcion'   => 'nullable|string|max:250',
-            'concepto_id'   => 'nullable|exists:pay_conceptos_nomina,id',
-            'periodo_id'    => 'nullable|exists:pay_periodos_nomina,id',
-            'codigo'        => 'nullable|string|max:30',
-            'valor'         => 'required|numeric|min:1',
-            'fecha_registro'=> 'required|date',
-        ]);
-
-        $tenantId = auth()->user()->tenant_id;
-
-        $empleadosValidos = Empleado::whereIn('id', $validated['empleados_ids'])
-            ->where('tenant_id', $tenantId)
-            ->pluck('id')
-            ->toArray();
-
-        if (empty($empleadosValidos)) {
-            return back()->with('error', 'Ningún empleado válido encontrado.');
-        }
-
-        $creadas = 0;
-        $data = [];
-
-        foreach ($empleadosValidos as $empleadoId) {
-            $data[] = [
-                'tenant_id'     => $tenantId,
-                'empleado_id'   => $empleadoId,
-                'tipo'          => $validated['tipo'],
-                'descripcion'   => $validated['descripcion'] ?? null,
-                'concepto_id'   => $validated['concepto_id'] ?? null,
-                'periodo_id'    => $validated['periodo_id'] ?? null,
-                'codigo'        => $validated['codigo'] ?? null,
-                'valor'         => $validated['valor'],
-                'fecha_registro'=> $validated['fecha_registro'],
-                'estado'        => 'pendiente',
-                'created_at'    => now(),
-                'updated_at'    => now(),
-            ];
-            $creadas++;
-        }
-
-        Novedad::insert($data);
-
-        return back()->with('success', "{$creadas} novedad(es) creada(s) en lote.");
-    }
-
-    public function destroy(Novedad $novedad)
-    {
-        $tenantId = auth()->user()->tenant_id;
-
-        $empleado = $novedad->empleado;
-        if (!$empleado || $empleado->tenant_id !== $tenantId) {
-            abort(403);
-        }
-
-        if ($novedad->estado === 'aplicada') {
-            return back()->with('error', 'No se puede eliminar una novedad ya aplicada a una nómina.');
-        }
-
-        $novedad->delete();
-
-        return back()->with('success', 'Novedad eliminada correctamente.');
-    }
-}
-```
-
-### PeriodoController.php
-
-**Ruta:** `app\Modules\Payroll\Controllers\PeriodoController.php`
-
+### PeriodoController
+**Ruta:** `app/Modules/Payroll/Controllers/PeriodoController.php`
 ```php
 <?php
 
@@ -660,6 +572,9 @@ class PeriodoController extends Controller
         private readonly NominaService $nominaService,
     ) {}
 
+    /**
+     * Listar períodos de nómina con estadísticas.
+     */
     public function index(Request $request)
     {
         $tenantId = auth()->user()->tenant_id;
@@ -667,8 +582,10 @@ class PeriodoController extends Controller
         $periodos = PeriodoNomina::where('tenant_id', $tenantId)
             ->withCount('nominas')
             ->when($request->search, function ($q, $search) {
-                $q->where('codigo', 'ilike', "%{$search}%")
-                  ->orWhere('mes_contable', 'ilike', "%{$search}%");
+                $q->where(function ($sub) use ($search) {
+                    $sub->where('codigo', 'ilike', "%{$search}%")
+                        ->orWhere('mes_contable', 'ilike', "%{$search}%");
+                });
             })
             ->orderBy('created_at', 'desc')
             ->paginate(15)
@@ -692,6 +609,9 @@ class PeriodoController extends Controller
         ]);
     }
 
+    /**
+     * Crear un nuevo período de nómina.
+     */
     public function store(Request $request)
     {
         $tenantId = auth()->user()->tenant_id;
@@ -700,10 +620,11 @@ class PeriodoController extends Controller
             'codigo'       => 'required|string|max:30',
             'fecha_inicio' => 'required|date',
             'fecha_fin'    => 'required|date|after_or_equal:fecha_inicio',
-            'mes_contable' => 'required|string|size:7',
+            'mes_contable' => 'required|string|regex:/^\d{4}-\d{2}$/|size:7',
             'observaciones'=> 'nullable|string|max:500',
         ]);
 
+        // Validar duplicado de mes_contable por tenant
         $exists = PeriodoNomina::where('tenant_id', $tenantId)
             ->where('mes_contable', $validated['mes_contable'])
             ->exists();
@@ -712,6 +633,7 @@ class PeriodoController extends Controller
             return back()->with('error', 'Ya existe un período para el mes contable seleccionado.');
         }
 
+        // Validar duplicado de código
         $codigoExists = PeriodoNomina::where('tenant_id', $tenantId)
             ->where('codigo', $validated['codigo'])
             ->exists();
@@ -735,6 +657,9 @@ class PeriodoController extends Controller
             ->with('success', 'Período creado exitosamente.');
     }
 
+    /**
+     * Mostrar detalle de un período con todas sus nóminas.
+     */
     public function show(PeriodoNomina $periodo)
     {
         $this->authorizeTenant($periodo);
@@ -791,6 +716,17 @@ class PeriodoController extends Controller
         ]);
     }
 
+    /**
+     * Liquidar TODOS los empleados activos para el período.
+     *
+     * Delega completamente a NominaService::liquidarPeriodo() que:
+     *  1. Obtiene ConfiguracionLegal del año vigente
+     *  2. Encuentra contratos activos dentro del período
+     *  3. Calcula devengados, deducciones, provisiones y aportes patronales
+     *  4. Persiste Nóminas y NominaDetalles
+     *  5. Aplica cuotas de préstamo y actualiza provisiones acumuladas
+     *  6. Actualiza totales del período
+     */
     public function liquidar(PeriodoNomina $periodo)
     {
         $this->authorizeTenant($periodo);
@@ -808,12 +744,15 @@ class PeriodoController extends Controller
             ->with('success', 'Liquidación enviada a cola de procesamiento. Se notificará al finalizar.');
     }
 
+    /**
+     * Aprobar / contabilizar el período.
+     */
     public function aprobar(PeriodoNomina $periodo, ContabilidadNominaService $contabilidadService)
     {
         $this->authorizeTenant($periodo);
 
         if ($periodo->estado !== 'LIQUIDADA') {
-            throw new \Exception('Solo se puede aprobar un período en estado LIQUIDADA.');
+            return back()->with('error', 'Solo se puede aprobar un período en estado LIQUIDADA.');
         }
 
         DB::transaction(function () use ($periodo, $contabilidadService) {
@@ -824,6 +763,9 @@ class PeriodoController extends Controller
         return back()->with('success', 'Período contabilizado exitosamente.');
     }
 
+    /**
+     * Anular período y eliminar sus nóminas.
+     */
     public function anular(PeriodoNomina $periodo)
     {
         $this->authorizeTenant($periodo);
@@ -833,7 +775,8 @@ class PeriodoController extends Controller
         }
 
         DB::transaction(function () use ($periodo) {
-            $periodo->nominas()->each(function ($nomina) {
+            // Liberar novedades asociadas
+            $periodo->nominas()->with('novedades', 'detalles')->each(function ($nomina) {
                 $nomina->novedades()->update([
                     'estado'    => 'pendiente',
                     'nomina_id' => null,
@@ -857,6 +800,9 @@ class PeriodoController extends Controller
             ->with('success', 'Período anulado y nóminas eliminadas.');
     }
 
+    /**
+     * Verificar que el período pertenece al tenant del usuario autenticado.
+     */
     private function authorizeTenant(PeriodoNomina $periodo): void
     {
         if ($periodo->tenant_id !== auth()->user()->tenant_id) {
@@ -866,10 +812,155 @@ class PeriodoController extends Controller
 }
 ```
 
-### ReporteController.php
+### LiquidacionController (LEGACY)
+**Ruta:** `app/Modules/Payroll/Controllers/LiquidacionController.php`
+```php
+<?php
 
-**Ruta:** `app\Modules\Payroll\Controllers\ReporteController.php`
+declare(strict_types=1);
 
+namespace App\Modules\Payroll\Controllers;
+
+use App\Http\Controllers\Controller;
+use App\Modules\Payroll\Models\PeriodoNomina;
+use Illuminate\Http\Request;
+use Inertia\Inertia;
+
+/**
+ * Controlador de Liquidaciones de Nómina.
+ *
+ * La liquidación se procesa de forma asíncrona vía LiquidarNominaJob.
+ */
+class LiquidacionController extends Controller
+{
+    /**
+     * Listar períodos de nómina.
+     */
+    public function index()
+    {
+        $tenantId = auth()->user()->tenant_id;
+
+        $periodos = PeriodoNomina::where('tenant_id', $tenantId)
+            ->withCount('nominas')
+            ->orderBy('created_at', 'desc')
+            ->paginate(10);
+
+        return Inertia::render('Payroll/Liquidaciones/Index', [
+            'periodos' => $periodos,
+        ]);
+    }
+
+    /**
+     * Mostrar un período con sus nóminas individuales.
+     */
+    public function show(PeriodoNomina $periodo)
+    {
+        if ($periodo->tenant_id !== auth()->user()->tenant_id) {
+            abort(403);
+        }
+
+        $nominasPaginadas = $periodo->nominas()
+            ->with(['contrato.empleado', 'detalles.concepto'])
+            ->orderBy('id')
+            ->paginate(20)
+            ->through(fn ($n) => [
+                'id'                  => $n->id,
+                'empleado_nombre'     => trim(
+                    ($n->contrato?->empleado?->nombres ?? '') . ' '
+                    . ($n->contrato?->empleado?->apellidos ?? '')
+                ),
+                'empleado_documento'  => $n->contrato?->empleado?->documento,
+                'dias_laborados'      => $n->dias_laborados,
+                'total_devengado'     => (float) $n->total_devengado,
+                'total_deducciones'   => (float) $n->total_deducciones,
+                'neto_pagar'          => (float) $n->neto_pagar,
+                'ibc_seguridad_social'=> (float) $n->ibc_seguridad_social,
+                'costo_laboral_total' => (float) $n->costo_laboral_total,
+                'detalles'            => $n->detalles->map(fn ($d) => [
+                    'concepto_codigo' => $d->concepto?->codigo,
+                    'concepto_nombre' => $d->concepto?->nombre,
+                    'concepto_tipo'   => $d->concepto?->tipo,
+                    'cantidad'        => (float) $d->cantidad,
+                    'valor'           => (float) $d->valor,
+                ]),
+            ]);
+
+        return Inertia::render('Payroll/Liquidaciones/Show', [
+            'periodo' => [
+                'id'           => $periodo->id,
+                'codigo'       => $periodo->codigo,
+                'mes_contable' => $periodo->mes_contable,
+                'fecha_inicio' => $periodo->fecha_inicio?->format('Y-m-d'),
+                'fecha_fin'    => $periodo->fecha_fin?->format('Y-m-d'),
+                'estado'       => $periodo->estado,
+                'observaciones'=> $periodo->observaciones,
+                'created_at'   => $periodo->created_at?->format('Y-m-d H:i'),
+            ],
+            'nominas' => $nominasPaginadas,
+            'resumen' => [
+                'total_empleados'   => $periodo->nominas()->count(),
+                'total_devengado'   => (float) $periodo->total_devengado,
+                'total_deducciones' => (float) $periodo->total_deducciones,
+                'total_provisiones' => (float) $periodo->total_provisiones,
+                'total_aportes'     => (float) $periodo->total_aportes_patronales,
+                'neto_pagar'        => (float) $periodo->neto_pagar,
+            ],
+        ]);
+    }
+
+    /**
+     * Crear un período y despachar liquidación asíncrona.
+     */
+    public function store(Request $request)
+    {
+        $tenantId = auth()->user()->tenant_id;
+
+        $validated = $request->validate([
+            'codigo'       => 'required|string|max:30',
+            'mes_contable' => 'required|string|size:7',
+            'fecha_inicio' => 'required|date',
+            'fecha_fin'    => 'required|date|after_or_equal:fecha_inicio',
+            'observaciones'=> 'nullable|string|max:500',
+        ]);
+
+        $exists = PeriodoNomina::where('tenant_id', $tenantId)
+            ->where('mes_contable', $validated['mes_contable'])
+            ->exists();
+
+        if ($exists) {
+            return back()->with('error', 'Ya existe un período para el mes contable seleccionado.');
+        }
+
+        $codigoExists = PeriodoNomina::where('tenant_id', $tenantId)
+            ->where('codigo', $validated['codigo'])
+            ->exists();
+
+        if ($codigoExists) {
+            return back()->with('error', 'El código de período ya está en uso.');
+        }
+
+        $periodo = PeriodoNomina::create([
+            'tenant_id'    => $tenantId,
+            'codigo'       => $validated['codigo'],
+            'fecha_inicio' => $validated['fecha_inicio'],
+            'fecha_fin'    => $validated['fecha_fin'],
+            'mes_contable' => $validated['mes_contable'],
+            'estado'       => 'BORRADOR',
+            'observaciones'=> $validated['observaciones'] ?? null,
+            'created_by'   => auth()->id(),
+        ]);
+
+        \App\Jobs\LiquidarNominaJob::dispatch($periodo->id, $tenantId)
+            ->onQueue('payroll');
+
+        return redirect()->route('payroll.liquidaciones.show', $periodo->id)
+            ->with('success', 'Período creado. Liquidación enviada a cola de procesamiento.');
+    }
+}
+```
+
+### ReporteController
+**Ruta:** `app/Modules/Payroll/Controllers/ReporteController.php`
 ```php
 <?php
 
@@ -884,6 +975,9 @@ use Inertia\Inertia;
 
 class ReporteController extends Controller
 {
+    /**
+     * Página índice de reportes de nómina disponibles.
+     */
     public function index()
     {
         $periodos = PeriodoNomina::where('tenant_id', auth()->user()->tenant_id)
@@ -895,6 +989,9 @@ class ReporteController extends Controller
         ]);
     }
 
+    /**
+     * Resumen consolidado de un período de nómina.
+     */
     public function resumen(PeriodoNomina $periodo)
     {
         if ($periodo->tenant_id !== auth()->user()->tenant_id) {
@@ -903,6 +1000,7 @@ class ReporteController extends Controller
 
         $periodo->load(['nominas.contrato.empleado', 'nominas.detalles.concepto']);
 
+        // Consolidado por tipo de concepto
         $consolidado = [
             'DEVENGADO'       => ['total' => 0, 'conceptos' => []],
             'DEDUCCION'       => ['total' => 0, 'conceptos' => []],
@@ -935,6 +1033,7 @@ class ReporteController extends Controller
             }
         }
 
+        // Estadísticas generales
         $totalEmpleados = $periodo->nominas->count();
         $totalDevengado = (float) $periodo->total_devengado;
         $totalDeducciones = (float) $periodo->total_deducciones;
@@ -965,6 +1064,10 @@ class ReporteController extends Controller
         ]);
     }
 
+    /**
+     * Desprendible de pago (payslip) para un empleado.
+     * Datos preparados para impresión / PDF.
+     */
     public function desprendible(Nomina $nomina)
     {
         if ($nomina->tenant_id !== auth()->user()->tenant_id) {
@@ -1052,10 +1155,8 @@ class ReporteController extends Controller
 
 ## Models
 
-### ConceptoNomina.php
-
-**Ruta:** `app\Modules\Payroll\Models\ConceptoNomina.php`
-
+### ConceptoNomina
+**Ruta:** `app/Modules/Payroll/Models/ConceptoNomina.php`
 ```php
 <?php
 
@@ -1065,9 +1166,17 @@ use App\Core\Models\Tenant;
 use App\Modules\Accounting\Models\CuentaContable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
+/**
+ * Modelo de Concepto de Nómina.
+ * Catalogo fijo de conceptos retributivos (devengados, deducciones,
+ * provisiones y aportes patronales) parametrizables por empresa.
+ */
 class ConceptoNomina extends Model
 {
+    use SoftDeletes;
+
     protected $table = 'pay_conceptos_nomina';
 
     protected $fillable = [
@@ -1101,10 +1210,74 @@ class ConceptoNomina extends Model
 }
 ```
 
-### Nomina.php
+### PeriodoNomina
+**Ruta:** `app/Modules/Payroll/Models/PeriodoNomina.php`
+```php
+<?php
 
-**Ruta:** `app\Modules\Payroll\Models\Nomina.php`
+namespace App\Modules\Payroll\Models;
 
+use App\Core\Models\Tenant;
+use App\Models\User;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+
+/**
+ * Modelo de Periodo de Nómina.
+ * Agrupa las liquidaciones individuales dentro de un mismo ciclo de pago.
+ */
+class PeriodoNomina extends Model
+{
+    public const ESTADOS = ['BORRADOR', 'LIQUIDADA', 'CONTABILIZADA', 'PAGADA', 'ANULADA'];
+
+    protected $table = 'pay_periodos_nomina';
+
+    protected $fillable = [
+        'tenant_id',
+        'codigo',
+        'fecha_inicio',
+        'fecha_fin',
+        'mes_contable',
+        'estado',
+        'observaciones',
+        'total_devengado',
+        'total_deducciones',
+        'total_provisiones',
+        'total_aportes_patronales',
+        'neto_pagar',
+        'created_by',
+    ];
+
+    protected $casts = [
+        'fecha_inicio' => 'date',
+        'fecha_fin' => 'date',
+        'total_devengado' => 'decimal:2',
+        'total_deducciones' => 'decimal:2',
+        'total_provisiones' => 'decimal:2',
+        'total_aportes_patronales' => 'decimal:2',
+        'neto_pagar' => 'decimal:2',
+    ];
+
+    public function tenant(): BelongsTo
+    {
+        return $this->belongsTo(Tenant::class);
+    }
+
+    public function nominas(): HasMany
+    {
+        return $this->hasMany(Nomina::class, 'periodo_id');
+    }
+
+    public function creador(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+}
+```
+
+### Nomina
+**Ruta:** `app/Modules/Payroll/Models/Nomina.php`
 ```php
 <?php
 
@@ -1117,6 +1290,10 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+/**
+ * Modelo de Nómina Individual.
+ * Representa la liquidación de un empleado dentro de un período.
+ */
 class Nomina extends Model
 {
     protected $table = 'pay_nominas';
@@ -1193,25 +1370,31 @@ class Nomina extends Model
 }
 ```
 
-### NominaDetalle.php
-
-**Ruta:** `app\Modules\Payroll\Models\NominaDetalle.php`
-
+### NominaDetalle
+**Ruta:** `app/Modules/Payroll/Models/NominaDetalle.php`
 ```php
 <?php
 
 namespace App\Modules\Payroll\Models;
 
+use App\Core\Concerns\BelongsToTenant;
 use App\Modules\Hr\Models\Contrato;
 use App\Modules\Hr\Models\Empleado;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * Modelo de Detalle de Nómina.
+ * Desagregación por concepto de cada liquidación individual.
+ */
 class NominaDetalle extends Model
 {
+    use BelongsToTenant;
+
     protected $table = 'pay_nomina_detalles';
 
     protected $fillable = [
+        'tenant_id',
         'nomina_id',
         'concepto_id',
         'empleado_id',
@@ -1249,10 +1432,8 @@ class NominaDetalle extends Model
 }
 ```
 
-### Novedad.php
-
-**Ruta:** `app\Modules\Payroll\Models\Novedad.php`
-
+### Novedad
+**Ruta:** `app/Modules/Payroll/Models/Novedad.php`
 ```php
 <?php
 
@@ -1264,6 +1445,11 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 
+/**
+ * Modelo de Novedad de Nómina.
+ * Incidencias que afectan la liquidación: incapacidades,
+ * licencias, horas extras, bonificaciones, descuentos, etc.
+ */
 class Novedad extends Model
 {
     protected $table = 'pay_novedades';
@@ -1327,10 +1513,8 @@ class Novedad extends Model
 }
 ```
 
-### ParametroContable.php
-
-**Ruta:** `app\Modules\Payroll\Models\ParametroContable.php`
-
+### ParametroContable
+**Ruta:** `app/Modules/Payroll/Models/ParametroContable.php`
 ```php
 <?php
 
@@ -1342,6 +1526,11 @@ use App\Modules\Accounting\Models\CuentaContable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * Modelo de Parámetro Contable de Nómina.
+ * Define la contrapartida contable de cada concepto de nómina
+ * según la categoría laboral del empleado.
+ */
 class ParametroContable extends Model
 {
     protected $table = 'pay_parametros_contables';
@@ -1391,74 +1580,8 @@ class ParametroContable extends Model
 }
 ```
 
-### PeriodoNomina.php
-
-**Ruta:** `app\Modules\Payroll\Models\PeriodoNomina.php`
-
-```php
-<?php
-
-namespace App\Modules\Payroll\Models;
-
-use App\Core\Models\Tenant;
-use App\Models\User;
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
-
-class PeriodoNomina extends Model
-{
-    public const ESTADOS = ['BORRADOR', 'LIQUIDADA', 'CONTABILIZADA', 'PAGADA', 'ANULADA'];
-
-    protected $table = 'pay_periodos_nomina';
-
-    protected $fillable = [
-        'tenant_id',
-        'codigo',
-        'fecha_inicio',
-        'fecha_fin',
-        'mes_contable',
-        'estado',
-        'observaciones',
-        'total_devengado',
-        'total_deducciones',
-        'total_provisiones',
-        'total_aportes_patronales',
-        'neto_pagar',
-        'created_by',
-    ];
-
-    protected $casts = [
-        'fecha_inicio' => 'date',
-        'fecha_fin' => 'date',
-        'total_devengado' => 'decimal:2',
-        'total_deducciones' => 'decimal:2',
-        'total_provisiones' => 'decimal:2',
-        'total_aportes_patronales' => 'decimal:2',
-        'neto_pagar' => 'decimal:2',
-    ];
-
-    public function tenant(): BelongsTo
-    {
-        return $this->belongsTo(Tenant::class);
-    }
-
-    public function nominas(): HasMany
-    {
-        return $this->hasMany(Nomina::class, 'periodo_id');
-    }
-
-    public function creador(): BelongsTo
-    {
-        return $this->belongsTo(User::class, 'created_by');
-    }
-}
-```
-
-### ProvisionAcumulada.php
-
-**Ruta:** `app\Modules\Payroll\Models\ProvisionAcumulada.php`
-
+### ProvisionAcumulada
+**Ruta:** `app/Modules/Payroll/Models/ProvisionAcumulada.php`
 ```php
 <?php
 
@@ -1469,6 +1592,11 @@ use App\Modules\Hr\Models\Empleado;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * Modelo de Provisión Acumulada.
+ * Registro anual del acumulado de prestaciones sociales
+ * para efectos contables y de liquidación.
+ */
 class ProvisionAcumulada extends Model
 {
     protected $table = 'pay_provisiones_acumuladas';
@@ -1504,12 +1632,545 @@ class ProvisionAcumulada extends Model
 
 ---
 
+## Services
+
+### NominaService
+**Ruta:** `app/Modules/Payroll/Services/NominaService.php`
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace App\Modules\Payroll\Services;
+
+use App\Modules\Hr\Models\ConfiguracionLegal;
+use App\Modules\Hr\Models\Contrato;
+use App\Modules\Hr\Models\Empleado;
+use App\Modules\Hr\Models\Incapacidad;
+use App\Modules\Hr\Models\Prestamo;
+use App\Modules\Payroll\Models\ConceptoNomina;
+use App\Modules\Payroll\Models\Nomina;
+use App\Modules\Payroll\Models\NominaDetalle;
+use App\Modules\Payroll\Models\Novedad;
+use App\Modules\Payroll\Models\PeriodoNomina;
+use App\Modules\Payroll\Models\ProvisionAcumulada;
+use Carbon\Carbon;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
+
+/**
+ * Servicio de Liquidación de Nómina Colombiana.
+ *
+ * Motor central de nómina que calcula todos los conceptos retributivos
+ * (devengados, deducciones, provisiones y aportes patronales) según la
+ * legislación laboral colombiana (CST, Ley 100/93, Ley 797/2003,
+ * Ley 2101 de 2021, Estatuto Tributario Art. 383).
+ *
+ * Convenciones:
+ *   - Mes de 30 días para cálculos proporcionales.
+ *   - Horas semanales según Ley 2101 (reducción gradual: 46h → 42h desde jul/2026).
+ *   - IBC mínimo: 1 SMMLV proporcional; máximo: 25 SMMLV.
+ *   - Retefuente: Procedimiento 2 (Art. 383 ET) con tabla de 7 tramos marginales en UVT.
+ */
+class NominaService
+{
+    /** Cache de modelos ConceptoNomina por código */
+    private array $conceptoCache = [];
+
+    // -------------------------------------------------------------------------
+    //  MÉTODOS PÚBLICOS
+    // -------------------------------------------------------------------------
+
+    /**
+     * Liquida un empleado para un período de nómina.
+     */
+    public function liquidarEmpleado(
+        Empleado $empleado,
+        PeriodoNomina $periodo,
+        ConfiguracionLegal $configLegal,
+    ): array {
+        // Preliminares
+        $contrato = $this->getContratoActivo($empleado, $periodo);
+        $datosPeriodo = $this->calcularDiasProporcionales($contrato, $periodo);
+        $diasTrabajados = $datosPeriodo['dias_trabajados'];
+
+        $horasSemanales = $this->getHorasSemanales($periodo, $configLegal);
+        $valorHoraOrdinaria = $this->calcularValorHoraOrdinaria(
+            (float) $contrato->salario_base,
+            $horasSemanales,
+        );
+
+        $incapacidades = $this->obtenerIncapacidades($empleado, $periodo);
+        $diasIncapacidad = (int) $incapacidades->sum('dias');
+        $diasEfectivos = max(0, $diasTrabajados - $diasIncapacidad);
+
+        $novedades = $this->obtenerNovedades($empleado, $periodo);
+
+        // Acumuladores
+        $conceptos = [];
+        $totalDevengado = 0.0;
+        $totalDeducciones = 0.0;
+
+        $ibcSeguridadSocial = 0.0;
+        $ibcParafiscales = 0.0;
+        $basePrestaciones = 0.0;
+        $baseVacaciones = 0.0;
+
+        // 1. SALARIO BÁSICO PROPORCIONAL (SAL01)
+        {
+            $salarioProporcional = round(((float) $contrato->salario_base / 30) * $diasEfectivos);
+            $conceptos[] = $this->entry('SAL01', $salarioProporcional, (float) $contrato->salario_base);
+            $totalDevengado += $salarioProporcional;
+            $ibcSeguridadSocial += $salarioProporcional;
+            $ibcParafiscales += $salarioProporcional;
+            $basePrestaciones += $salarioProporcional;
+            $baseVacaciones += $salarioProporcional;
+        }
+
+        // 2. INCAPACIDADES (INC01)
+        foreach ($incapacidades as $incapacidad) {
+            $diasInc = (int) $incapacidad->dias;
+            if ($diasInc <= 0) continue;
+
+            $tasa = (float) ($incapacidad->porcentaje_pago ?? 66.67) / 100;
+            $valorInc = round(((float) $contrato->salario_base / 30) * $diasInc * $tasa);
+
+            if ($valorInc > 0) {
+                $conceptos[] = $this->entry('INC01', $valorInc, round(((float) $contrato->salario_base / 30) * $diasInc));
+                $totalDevengado += $valorInc;
+                $ibcSeguridadSocial += $valorInc;
+                $basePrestaciones += $valorInc;
+            }
+        }
+
+        // 3. NOVEDADES (horas extras, recargos, bonos, comisiones)
+        foreach ($novedades as $novedad) {
+            $codigoConcepto = $novedad->codigo ?? $novedad->conceptoNomina?->codigo ?? 'NOV01';
+            $multiplicador = $this->getMultiplicadorConcepto($codigoConcepto);
+
+            $valorNovedad = (float) ($novedad->valor ?? 0);
+            if ($valorNovedad <= 0) {
+                $cantidad = \is_numeric($novedad->getAttribute('cantidad') ?? null) ? (float) $novedad->cantidad : 0;
+                $unidades = max(1, $cantidad);
+                $valorNovedad = round($valorHoraOrdinaria * $multiplicador * $unidades);
+            }
+
+            if ($valorNovedad <= 0) continue;
+
+            $conceptos[] = $this->entry($codigoConcepto, $valorNovedad, round($valorNovedad / max($multiplicador, 1)));
+            $totalDevengado += $valorNovedad;
+
+            if ($novedad->conceptoNomina?->base_seguridad_social) $ibcSeguridadSocial += $valorNovedad;
+            if ($novedad->conceptoNomina?->base_parafiscales) $ibcParafiscales += $valorNovedad;
+            if ($novedad->conceptoNomina?->base_prestaciones) $basePrestaciones += $valorNovedad;
+        }
+
+        // 4. AUXILIO DE TRANSPORTE (AUX01)
+        {
+            $salarioMinimo = (float) $configLegal->salario_minimo;
+            $topeSalarios = (float) ($configLegal->tope_auxilio_transporte_salarios ?? 2);
+            $topeAuxilio = $salarioMinimo * $topeSalarios;
+
+            if ((float) $contrato->salario_base <= $topeAuxilio && $diasEfectivos > 0) {
+                $valorAuxilio = round(((float) $configLegal->auxilio_transporte / 30) * $diasEfectivos);
+                if ($valorAuxilio > 0) {
+                    $conceptos[] = $this->entry('AUX01', $valorAuxilio, $valorAuxilio);
+                    $totalDevengado += $valorAuxilio;
+                    $basePrestaciones += $valorAuxilio;
+                }
+            }
+        }
+
+        // 5. IBC — INGRESO BASE DE COTIZACIÓN
+        {
+            $ibcMinimo = round($salarioMinimo / 30 * $diasTrabajados);
+            $ibcSeguridadSocial = max($ibcSeguridadSocial, (float) $ibcMinimo);
+            $ibcParafiscales = max($ibcParafiscales, (float) $ibcMinimo);
+
+            $ibcMaximo = 25 * $salarioMinimo;
+            $ibcSeguridadSocial = min($ibcSeguridadSocial, (float) $ibcMaximo);
+        }
+
+        // 6. SALUD (DED01) — 4% empleado
+        {
+            $tasaSalud = (float) ($configLegal->aporte_salud_empleado ?? 4) / 100;
+            $valorSalud = round($ibcSeguridadSocial * $tasaSalud);
+            $conceptos[] = $this->entry('DED01', $valorSalud, $ibcSeguridadSocial);
+            $totalDeducciones += $valorSalud;
+        }
+
+        // 7. PENSIÓN (DED02) — 4% empleado
+        {
+            $tasaPension = (float) ($configLegal->aporte_pension_empleado ?? 4) / 100;
+            $valorPension = round($ibcSeguridadSocial * $tasaPension);
+            $conceptos[] = $this->entry('DED02', $valorPension, $ibcSeguridadSocial);
+            $totalDeducciones += $valorPension;
+        }
+
+        // 8. FONDO DE SOLIDARIDAD PENSIONAL (DED05)
+        {
+            $salariosMinimos = $salarioMinimo > 0 ? $ibcSeguridadSocial / $salarioMinimo : 0;
+            $tasaFsp = $this->getTasaFondoSolidaridad($salariosMinimos);
+
+            if ($tasaFsp > 0) {
+                $valorFsp = round($ibcSeguridadSocial * ($tasaFsp / 100));
+                $conceptos[] = $this->entry('DED05', $valorFsp, $ibcSeguridadSocial);
+                $totalDeducciones += $valorFsp;
+            }
+        }
+
+        // 9. RETENCIÓN EN LA FUENTE (DED03) — Procedimiento 2 Art. 383 ET
+        {
+            $valorRetefuente = $this->calcularRetefuente(
+                ingresoLaboral: $totalDevengado,
+                deducciones: $totalDeducciones,
+                configLegal: $configLegal,
+            );
+
+            if ($valorRetefuente > 0) {
+                $conceptos[] = $this->entry('DED03', $valorRetefuente, $totalDevengado);
+                $totalDeducciones += $valorRetefuente;
+            }
+        }
+
+        // 10. PRÉSTAMOS (DED04)
+        {
+            $fechaFinStr = $this->dateToString($periodo->fecha_fin);
+
+            $prestamosActivos = Prestamo::with('cuotas')
+                ->where('empleado_id', $empleado->id)
+                ->where('estado', 'ACTIVO')
+                ->get();
+
+            foreach ($prestamosActivos as $prestamo) {
+                $cuotaVencida = $prestamo->cuotas()
+                    ->where('estado', 'PENDIENTE')
+                    ->where('fecha_vencimiento', '<=', $fechaFinStr)
+                    ->orderBy('numero_cuota')
+                    ->first();
+
+                if (!$cuotaVencida) continue;
+
+                $conceptos[] = $this->entry('DED04', (float) $cuotaVencida->monto, (float) $cuotaVencida->monto);
+                $totalDeducciones += (float) $cuotaVencida->monto;
+            }
+        }
+
+        // 11. PROVISIONES
+        $totalProvisiones = 0.0;
+        foreach ($this->calcularProvisiones($basePrestaciones, $baseVacaciones) as $entry) {
+            $conceptos[] = $entry;
+            $totalProvisiones += $entry['valor'];
+        }
+
+        // 12. APORTES PATRONALES
+        $riesgoArl = $contrato->getAttribute('riesgo_arl_clase') ?? 'I';
+        $exonerado = (bool) ($contrato->getAttribute('aplica_exoneracion_aportes') ?? false);
+
+        $totalPatronales = 0.0;
+        foreach ($this->calcularAportesPatronales(
+            ibcSeguridadSocial: $ibcSeguridadSocial,
+            ibcParafiscales: $ibcParafiscales,
+            configLegal: $configLegal,
+            riesgoArlClase: $riesgoArl,
+            exonerado: $exonerado,
+        ) as $entry) {
+            $conceptos[] = $entry;
+            $totalPatronales += $entry['valor'];
+        }
+
+        // Vincular novedades al período
+        $this->vincularNovedades($novedades, $periodo);
+
+        // Resumen
+        $netoPagar = $totalDevengado - $totalDeducciones;
+
+        return [
+            'conceptos' => $conceptos,
+            'resumen'   => [
+                'dias_laborados'           => $diasTrabajados,
+                'dias_incapacidad'         => $diasIncapacidad,
+                'ibc_seguridad_social'     => $ibcSeguridadSocial,
+                'ibc_parafiscales'         => $ibcParafiscales,
+                'total_devengado'          => $totalDevengado,
+                'total_deducciones'        => $totalDeducciones,
+                'neto_pagar'               => $netoPagar,
+                'total_provisiones'        => $totalProvisiones,
+                'total_aportes_patronales' => $totalPatronales,
+                'costo_laboral_total'      => $totalDevengado + $totalProvisiones + $totalPatronales,
+            ],
+        ];
+    }
+
+    /**
+     * Liquida la nómina completa para todos los empleados activos.
+     */
+    public function liquidarPeriodo(PeriodoNomina $periodo): int
+    {
+        $estado = strtoupper($periodo->estado ?? '');
+        if (!\in_array($estado, ['BORRADOR', 'DRAFT'], true)) {
+            throw new \RuntimeException("El período {$periodo->codigo} no está en estado BORRADOR ({$periodo->estado}).");
+        }
+
+        return DB::transaction(function () use ($periodo): int {
+            $this->revertirCuotasDelPeriodo($periodo);
+
+            $periodo->nominas()->each(function (Nomina $nomina): void {
+                $nomina->detalles()->delete();
+                $nomina->delete();
+            });
+
+            $fechaInicio = $this->dateToString($periodo->fecha_inicio);
+            $ano = (int) date('Y', strtotime($fechaInicio));
+
+            $configLegal = ConfiguracionLegal::where('ano_vigencia', $ano)
+                ->where('tenant_id', $periodo->tenant_id)
+                ->first();
+
+            if (!$configLegal) {
+                throw new \RuntimeException("No se encontró configuración legal para el año {$ano}.");
+            }
+
+            $fechaFin = $this->dateToString($periodo->fecha_fin);
+
+            $contratos = Contrato::with('empleado')
+                ->where('estado', true)
+                ->where('fecha_inicio', '<=', $fechaFin)
+                ->where(function ($q) use ($fechaInicio): void {
+                    $q->whereNull('fecha_fin')->orWhere('fecha_fin', '>=', $fechaInicio);
+                })
+                ->get();
+
+            $contador = 0;
+
+            foreach ($contratos as $contrato) {
+                $empleado = $contrato->empleado;
+                if (!$empleado) continue;
+
+                $resultado = $this->liquidarEmpleado($empleado, $periodo, $configLegal);
+                $this->persistirLiquidacion($periodo, $contrato, $empleado, $resultado, $ano);
+                $contador++;
+            }
+
+            $periodo->refresh();
+            $periodo->update([
+                'total_devengado'          => round($periodo->nominas()->sum('total_devengado'), 2),
+                'total_deducciones'        => round($periodo->nominas()->sum('total_deducciones'), 2),
+                'total_provisiones'        => round($periodo->nominas()->sum('total_provisiones'), 2),
+                'total_aportes_patronales' => round($periodo->nominas()->sum('total_aportes_patronales'), 2),
+                'neto_pagar'               => round($periodo->nominas()->sum('neto_pagar'), 2),
+                'estado'                   => 'LIQUIDADA',
+            ]);
+
+            return $contador;
+        });
+    }
+
+    /**
+     * Recalcula los totales de una nómina a partir de sus detalles.
+     */
+    public function recalcularTotales(Nomina $nomina): void { /* ... */ }
+
+    /**
+     * Actualiza un concepto individual en una nómina ya liquidada.
+     */
+    public function actualizarConcepto(Nomina $nomina, int $conceptoId, float $nuevoValor): void { /* ... */ }
+
+    // -------------------------------------------------------------------------
+    //  CÁLCULOS ESPECÍFICOS
+    // -------------------------------------------------------------------------
+
+    public function calcularRetefuente(
+        float $ingresoLaboral,
+        float $deducciones,
+        ConfiguracionLegal $configLegal,
+    ): float { /* ... tramos Art. 383 ET ... */ }
+
+    public function calcularProvisiones(float $basePrestaciones, float $baseVacaciones): array
+    {
+        // PRO01: Prima = base / 12
+        // PRO02: Cesantías = base / 12
+        // PRO03: Intereses Cesantías = cesantías × 12%
+        // PRO04: Vacaciones = baseVacaciones / 24
+    }
+
+    public function calcularAportesPatronales(
+        float $ibcSeguridadSocial,
+        float $ibcParafiscales,
+        ConfiguracionLegal $configLegal,
+        string $riesgoArlClase = 'I',
+        bool $exonerado = false,
+    ): array
+    {
+        // PAT01: Pensión patronal 12%
+        // PAT02: Salud patronal 8.5% (si no exonerado)
+        // PAT03: ARL según clase (0.522% a 6.960%)
+        // PAT04: Caja Compensación 4%
+        // PAT05: SENA 2% (si no exonerado)
+        // PAT06: ICBF 3% (si no exonerado)
+    }
+
+    // -------------------------------------------------------------------------
+    //  CÓDIGOS DE CONCEPTOS
+    // -------------------------------------------------------------------------
+    // SAL01  — Salario Básico Proporcional
+    // INC01  — Auxilio por Incapacidad
+    // AUX01  — Auxilio de Transporte
+    // HEX01  — Hora Extra Diurna (×1.25)
+    // HEX02  — Hora Extra Nocturna (×1.75)
+    // HEX03  — Hora Extra Diurna Festiva (×2.00)
+    // HEX04  — Hora Extra Nocturna Festiva (×2.50)
+    // REC01  — Recargo Nocturno (×1.35)
+    // REC02  — Recargo Festivo (×1.75)
+    // REC03  — Recargo Nocturno Festivo (×2.10)
+    // EDF01  — Dominical/Festivo diurno (×1.75)
+    // ENF01  — Dominical/Festivo nocturno (×2.10)
+    // BON01  — Bonificación No Salarial
+    // BON02  — Bonificación Salarial
+    // COM01  — Comisiones
+    // DED01  — Aporte Salud (4%)
+    // DED02  — Aporte Pensión (4%)
+    // DED03  — Retención en la Fuente
+    // DED04  — Préstamos
+    // DED05  — Fondo Solidaridad Pensional
+    // PRO01  — Prima de Servicios
+    // PRO02  — Cesantías
+    // PRO03  — Intereses a las Cesantías
+    // PRO04  — Vacaciones
+    // PAT01  — Pensión Patronal (12%)
+    // PAT02  — Salud Patronal (8.5%)
+    // PAT03  — ARL
+    // PAT04  — Caja de Compensación (4%)
+    // PAT05  — SENA (2%)
+    // PAT06  — ICBF (3%)
+}
+```
+
+### PayrollLiquidator (DEPRECATED)
+**Ruta:** `app/Modules/Payroll/Services/PayrollLiquidator.php`
+```php
+<?php
+
+namespace App\Modules\Payroll\Services;
+
+use App\Modules\Hr\Models\Empleado;
+use App\Modules\Payroll\Models\Novedad;
+
+/**
+ * @deprecated 2026-06-26 — Eliminado de LiquidacionController y PeriodoController.
+ *             Ambos controladores ahora usan NominaService exclusivamente.
+ *             Este archivo solo se mantiene por referencia histórica.
+ */
+class PayrollLiquidator
+{
+    public const SMLMV = 1400000;
+    public const AUXILIO_TRANSPORTE = 200000;
+    public const PORCENTAJE_SALUD = 0.04;
+    public const PORCENTAJE_PENSION = 0.04;
+
+    public function liquidarMensualidad(Empleado $empleado, array $novedadesPeriodo = []): array
+    {
+        // Cálculo simplificado (legacy) — no usa ConfiguracionLegal
+    }
+}
+```
+
+### PayrollProvisioner
+**Ruta:** `app/Modules/Payroll/Services/PayrollProvisioner.php`
+```php
+<?php
+
+namespace App\Modules\Payroll\Services;
+
+use App\Core\Models\Tenant;
+use App\Modules\Hr\Models\ConfiguracionLegal;
+use App\Modules\Payroll\Models\ConceptoNomina;
+use Spatie\Permission\Models\Permission;
+use Spatie\Permission\PermissionRegistrar;
+
+class PayrollProvisioner
+{
+    public function provisionForTenant(Tenant $tenant): void
+    {
+        // 1. Configuración legal por defecto (año actual)
+        // 2. Catálogo de 27 conceptos de nómina (DEVENGADO, DEDUCCION, PROVISION, APORTE_PATRONAL)
+        // 3. Permisos extra (payroll:edit, payroll:delete, payroll:manage) al rol ADMIN_EMPRESA
+    }
+}
+```
+
+### ContabilidadNominaService
+**Ruta:** `app/Modules/Payroll/Services/ContabilidadNominaService.php`
+```php
+<?php
+
+namespace App\Modules\Payroll\Services;
+
+use App\Modules\Accounting\Models\CuentaContable;
+use App\Modules\Accounting\Services\ContabilidadService;
+use App\Modules\Payroll\Models\PeriodoNomina;
+
+class ContabilidadNominaService
+{
+    public function __construct(private ContabilidadService $contabilidadService) {}
+
+    public function contabilizarPeriodo(PeriodoNomina $periodo): void
+    {
+        $tenantId = $periodo->tenant_id;
+
+        // Cuentas contables requeridas:
+        // 2505 — Salarios por pagar (pasivo)
+        // 5105 — Gastos de nómina (gasto)
+        // 2370 — Aportes parafiscales por pagar (pasivo)
+
+        $periodo->load(['nominas.empleado', 'nominas.detalles.concepto']);
+
+        $centroCostoDefault = CentroCosto::firstOrCreate(
+            ['tenant_id' => $tenantId, 'codigo' => '01'],
+            ['nombre' => 'General', 'es_activo' => true]
+        );
+
+        $lineas = [];
+
+        foreach ($periodo->nominas as $nomina) {
+            $empleado = $nomina->empleado;
+            if (!$empleado) continue;
+
+            foreach ($nomina->detalles as $detalle) {
+                $concepto = $detalle->concepto;
+                if (!$concepto->cuenta_contable_id) continue;
+
+                if ($concepto->tipo === 'PROVISION') {
+                    // Débito al Gasto (5105), Crédito al Pasivo (cuenta del concepto)
+                } elseif ($concepto->tipo === 'APORTE_PATRONAL') {
+                    // Débito al Gasto (cuenta del concepto), Crédito al Pasivo (2370)
+                } else {
+                    // DEVENGADO: Débito | DEDUCCION: Crédito
+                }
+            }
+
+            // Neto a pagar → Crédito cuenta 2505 (Salarios por pagar)
+        }
+
+        $cabecera = [
+            'fecha' => clone $periodo->fecha_fin,
+            'concepto' => 'Causación Nómina Periodo ' . $periodo->codigo,
+            'modulo_origen' => 'PAYROLL',
+            'referencia_id' => $periodo->id,
+            'referencia_type' => PeriodoNomina::class,
+        ];
+
+        $this->contabilidadService->registrarAsiento($cabecera, $lineas);
+    }
+}
+```
+
+---
+
 ## Migrations
 
-### 2026_06_20_135501_create_payroll_tables.php
-
-**Ruta:** `app\Modules\Payroll\Migrations\2026_06_20_135501_create_payroll_tables.php`
-
+### 2026_06_20_135501_create_payroll_tables
+**Ruta:** `app/Modules/Payroll/Migrations/2026_06_20_135501_create_payroll_tables.php`
 ```php
 <?php
 
@@ -1535,11 +2196,14 @@ return new class extends Migration
             $table->id();
             $table->foreignId('nomina_id')->constrained('pay_nominas')->cascadeOnDelete();
             $table->foreignId('empleado_id')->constrained('hr_empleados')->cascadeOnDelete();
+
             $table->integer('dias_laborados');
             $table->decimal('salario_base', 15, 2);
             $table->decimal('auxilio_transporte', 15, 2)->default(0);
+
             $table->decimal('salud_deduccion', 15, 2)->default(0);
             $table->decimal('pension_deduccion', 15, 2)->default(0);
+
             $table->decimal('total_devengos', 15, 2);
             $table->decimal('total_deducciones', 15, 2);
             $table->decimal('neto_pagar', 15, 2);
@@ -1550,6 +2214,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('empleado_id')->constrained('hr_empleados')->cascadeOnDelete();
             $table->foreignId('nomina_id')->nullable()->constrained('pay_nominas')->nullOnDelete();
+
             $table->string('tipo', 50);
             $table->string('concepto', 150);
             $table->decimal('valor', 15, 2);
@@ -1568,10 +2233,8 @@ return new class extends Migration
 };
 ```
 
-### 2026_06_20_135502_create_payroll_conceptos_tables.php
-
-**Ruta:** `app\Modules\Payroll\Migrations\2026_06_20_135502_create_payroll_conceptos_tables.php`
-
+### 2026_06_20_135502_create_payroll_conceptos_tables
+**Ruta:** `app/Modules/Payroll/Migrations/2026_06_20_135502_create_payroll_conceptos_tables.php`
 ```php
 <?php
 
@@ -1583,521 +2246,147 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('pay_conceptos_nomina', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('tenant_id')->constrained()->cascadeOnDelete();
-            $table->string('codigo', 20);
-            $table->string('nombre', 200);
-            $table->string('tipo', 30);
-            $table->foreignId('cuenta_contable_id')->nullable()->index();
-            $table->boolean('base_seguridad_social')->default(false);
-            $table->boolean('base_parafiscales')->default(false);
-            $table->boolean('base_prestaciones')->default(false);
-            $table->boolean('activo')->default(true);
-            $table->timestamps();
-            $table->softDeletes();
-            $table->unique(['tenant_id', 'codigo']);
-        });
+        // pay_conceptos_nomina — catálogo de conceptos retributivos
+        // pay_periodos_nomina — períodos de liquidación
+        // pay_provisiones_acumuladas — acumulado anual de prestaciones
+        // pay_parametros_contables — contrapartida contable por concepto
+        // Extiende pay_nominas con campos de liquidación
+        // Reestructura pay_nomina_detalles para usar conceptos
+        // Extiende pay_novedades con concepto_id, periodo_id, referencia
+    }
 
-        Schema::create('pay_periodos_nomina', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('tenant_id')->constrained()->cascadeOnDelete();
-            $table->string('codigo', 30);
-            $table->date('fecha_inicio');
-            $table->date('fecha_fin');
-            $table->string('mes_contable', 7);
-            $table->string('estado', 30)->default('BORRADOR');
-            $table->decimal('total_devengado', 15, 2)->default(0);
-            $table->decimal('total_deducciones', 15, 2)->default(0);
-            $table->decimal('total_provisiones', 15, 2)->default(0);
-            $table->decimal('total_aportes_patronales', 15, 2)->default(0);
-            $table->decimal('neto_pagar', 15, 2)->default(0);
-            $table->text('observaciones')->nullable();
-            $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
-            $table->timestamps();
-            $table->unique(['tenant_id', 'codigo']);
-            $table->index(['tenant_id', 'estado']);
-        });
+    public function down(): void { /* ... */ }
+};
+```
 
-        Schema::create('pay_provisiones_acumuladas', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('tenant_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('empleado_id')->constrained('hr_empleados')->cascadeOnDelete();
-            $table->string('tipo_provision', 30);
-            $table->integer('ano');
-            $table->decimal('saldo_inicial', 15, 2)->default(0);
-            $table->decimal('movimiento_mes', 15, 2)->default(0);
-            $table->decimal('saldo_final', 15, 2)->default(0);
-            $table->timestamps();
-            $table->unique(['empleado_id', 'tipo_provision', 'ano']);
-        });
+### 2026_07_05_300000_add_tenant_id_to_pay_nomina_detalles
+**Ruta:** `app/Modules/Payroll/Migrations/2026_07_05_300000_add_tenant_id_to_pay_nomina_detalles.php`
+```php
+<?php
 
-        Schema::create('pay_parametros_contables', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('tenant_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('concepto_id')->constrained('pay_conceptos_nomina')->cascadeOnDelete();
-            $table->string('categoria_laboral', 50);
-            $table->foreignId('cuenta_debito_id')->nullable()->index();
-            $table->foreignId('cuenta_credito_id')->nullable()->index();
-            $table->foreignId('centro_costo_id')->nullable()->index();
-            $table->date('fecha_inicio');
-            $table->date('fecha_fin')->nullable();
-            $table->boolean('activo')->default(true);
-            $table->timestamps();
-            $table->index(['concepto_id', 'categoria_laboral']);
-        });
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
 
-        Schema::table('pay_nominas', function (Blueprint $table) {
-            $table->dropColumn('mes');
-            $table->foreignId('periodo_id')->nullable()->after('id')->constrained('pay_periodos_nomina')->nullOnDelete();
-            $table->foreignId('empleado_id')->nullable()->after('periodo_id')->constrained('hr_empleados')->nullOnDelete();
-            $table->foreignId('contrato_id')->nullable()->after('empleado_id')->constrained('hr_contratos')->nullOnDelete();
-            $table->decimal('ibc_seguridad_social', 15, 2)->default(0)->after('salario_base');
-            $table->decimal('ibc_parafiscales', 15, 2)->default(0)->after('ibc_seguridad_social');
-            $table->decimal('total_devengado', 15, 2)->default(0)->after('ibc_parafiscales');
-            $table->decimal('total_deducciones', 15, 2)->default(0)->after('total_devengado');
-            $table->decimal('neto_pagar', 15, 2)->default(0)->after('total_deducciones');
-            $table->decimal('total_provisiones', 15, 2)->default(0)->after('neto_pagar');
-            $table->decimal('total_aportes_patronales', 15, 2)->default(0)->after('total_provisiones');
-            $table->decimal('costo_laboral_total', 15, 2)->default(0)->after('total_aportes_patronales');
-            $table->decimal('auxilio_transporte', 15, 2)->default(0)->after('salario_base');
-            $table->integer('dias_laborados')->default(30)->after('empleado_id');
-            $table->foreignId('created_by')->nullable()->after('costo_laboral_total')->constrained('users')->nullOnDelete();
-        });
-
-        Schema::table('pay_nomina_detalles', function (Blueprint $table) {
-            $table->dropColumn(['salario_base', 'auxilio_transporte', 'salud_deduccion', 'pension_deduccion', 'total_devengos', 'total_deducciones', 'neto_pagar', 'dias_laborados']);
-            $table->foreignId('concepto_id')->nullable()->after('nomina_id')->constrained('pay_conceptos_nomina')->nullOnDelete();
-            $table->foreignId('contrato_id')->nullable()->after('empleado_id')->constrained('hr_contratos')->nullOnDelete();
-            $table->decimal('cantidad', 10, 2)->default(1)->after('concepto_id');
-            $table->decimal('valor', 15, 2)->default(0)->after('cantidad');
-            $table->decimal('base_calculo', 15, 2)->nullable()->after('valor');
-        });
-
-        Schema::table('pay_novedades', function (Blueprint $table) {
-            $table->foreignId('concepto_id')->nullable()->after('empleado_id')->constrained('pay_conceptos_nomina')->nullOnDelete();
-            $table->foreignId('periodo_id')->nullable()->after('nomina_id')->constrained('pay_periodos_nomina')->nullOnDelete();
-            $table->nullableMorphs('referencia');
-        });
+return new class extends Migration
+{
+    public function up(): void
+    {
+        // Agrega tenant_id a pay_nomina_detalles
+        // Backfill desde pay_nominas.tenant_id
+        // Agrega FK y índice
     }
 
     public function down(): void
     {
-        Schema::table('pay_novedades', function (Blueprint $table) {
-            $table->dropMorphs('referencia');
-            $table->dropForeign(['periodo_id']);
-            $table->dropColumn('periodo_id');
-            $table->dropForeign(['concepto_id']);
-            $table->dropColumn('concepto_id');
-        });
-
-        Schema::table('pay_nomina_detalles', function (Blueprint $table) {
-            $table->dropForeign(['concepto_id']);
-            $table->dropColumn(['concepto_id', 'contrato_id', 'cantidad', 'valor', 'base_calculo']);
-            $table->decimal('salario_base', 15, 2)->default(0);
-            $table->decimal('auxilio_transporte', 15, 2)->default(0);
-            $table->decimal('salud_deduccion', 15, 2)->default(0);
-            $table->decimal('pension_deduccion', 15, 2)->default(0);
-            $table->decimal('total_devengos', 15, 2)->default(0);
-            $table->decimal('total_deducciones', 15, 2)->default(0);
-            $table->decimal('neto_pagar', 15, 2)->default(0);
-            $table->integer('dias_laborados')->default(30);
-        });
-
-        Schema::table('pay_nominas', function (Blueprint $table) {
-            $table->dropForeign(['periodo_id']);
-            $table->dropForeign(['contrato_id']);
-            $table->dropForeign(['created_by']);
-            $table->dropColumn(['periodo_id', 'contrato_id', 'dias_laborados', 'ibc_seguridad_social', 'ibc_parafiscales', 'auxilio_transporte', 'total_provisiones', 'total_aportes_patronales', 'costo_laboral_total', 'created_by']);
-        });
-
-        Schema::dropIfExists('pay_parametros_contables');
-        Schema::dropIfExists('pay_provisiones_acumuladas');
-        Schema::dropIfExists('pay_periodos_nomina');
-        Schema::dropIfExists('pay_conceptos_nomina');
+        // Elimina FK, índice y columna tenant_id
     }
 };
 ```
 
 ---
 
-## Services
+## Frontend Pages
 
-### ContabilidadNominaService.php
+### Periodos/Index.jsx
+**Ruta:** `resources/js/Pages/Payroll/Periodos/Index.jsx`
+> 319 líneas. Componente funcional con DataTable, Dialog para crear período, búsqueda en tiempo real, Badges de estado con colores. Usa `usePermissions`, `useForm`, `router`. Formateo de fechas con `date-fns/locale es`.
 
-**Ruta:** `app\Modules\Payroll\Services\ContabilidadNominaService.php`
+### Periodos/Show.jsx
+**Ruta:** `resources/js/Pages/Payroll/Periodos/Show.jsx`
+> 363 líneas. Detalle de período con StatsCards (Empleados, Devengado, Deducciones, Provisiones, Aportes, Neto). Sábana de nómina con DataTable. Acciones: Liquidar, Aprobar/Contabilizar, Anular. EmptyState personalizado.
 
-```php
-<?php
+### Nominas/Index.jsx
+**Ruta:** `resources/js/Pages/Payroll/Nominas/Index.jsx`
+> 311 líneas. Listado de nóminas individuales con búsqueda, badges de estado, links a detalle. Dialog de "Generar Nómina" (legacy, apunta a `payroll.nominas.store` que no existe en rutas actuales).
 
-namespace App\Modules\Payroll\Services;
+### Nominas/Show.jsx
+**Ruta:** `resources/js/Pages/Payroll/Nominas/Show.jsx`
+> 450 líneas. Detalle completo de nómina: StatsCards, Neto a Pagar destacado, Costo Laboral Total, desglose de conceptos por tipo (DEVENGADO, DEDUCCION, PROVISION, APORTE_PATRONAL) con tablas desktop y cards móvil. Novedades aplicadas. Links a Desprendible PDF e Imprimir.
 
-use App\Modules\Accounting\Models\CuentaContable;
-use App\Modules\Accounting\Services\ContabilidadService;
-use App\Modules\Payroll\Models\PeriodoNomina;
+### Novedades/Index.jsx
+**Ruta:** `resources/js/Pages/Payroll/Novedades/Index.jsx`
+> 549 líneas. Layout 2 columnas: formulario de registro (izq) + listado con filtros (der). Filtros expandibles por período, concepto, tipo, estado. Toggle Ingreso/Descuento. Eliminación con confirmación.
 
-class ContabilidadNominaService
-{
-    public function __construct(private ContabilidadService $contabilidadService)
-    {
-    }
+### Reportes/Index.jsx
+**Ruta:** `resources/js/Pages/Payroll/Reportes/Index.jsx`
+> 60 líneas. Índice de reportes: lista de períodos con link a Resumen.
 
-    public function contabilizarPeriodo(PeriodoNomina $periodo): void
-    {
-        $tenantId = $periodo->tenant_id;
-        
-        $cuentaSalariosPorPagar = CuentaContable::withoutGlobalScopes()
-            ->where('tenant_id', $tenantId)
-            ->where('codigo', '2505')
-            ->first();
+### Reportes/Desprendible.jsx
+**Ruta:** `resources/js/Pages/Payroll/Reportes/Desprendible.jsx`
+> 475 líneas. Desprendible de pago (payslip) para impresión/PDF. Secciones: Encabezado empresa, datos empleado, Devengados (tabla), Deducciones (tabla), Neto a Pagar, IBC, Provisiones, Aportes Patronales. CSS `@media print` con `@page A4`. Botón "Imprimir / PDF".
 
-        if (!$cuentaSalariosPorPagar) {
-            throw new \Exception('No se encontró la cuenta contable 2505 (Salarios por pagar) para el tenant.');
-        }
+### Liquidaciones/Index.tsx (LEGACY)
+**Ruta:** `resources/js/Pages/Payroll/Liquidaciones/Index.tsx`
+> 169 líneas. Página legacy de liquidaciones con formulario inline para crear período y despachar liquidación asíncrona. DataTable con tipos TypeScript.
 
-        $periodo->load([
-            'nominas.empleado', 
-            'nominas.detalles.concepto'
-        ]);
-
-        $centroCostoDefault = \App\Modules\Accounting\Models\CentroCosto::firstOrCreate(
-            ['tenant_id' => $tenantId, 'codigo' => '01'],
-            ['nombre' => 'General', 'es_activo' => true]
-        );
-
-        $lineas = [];
-
-        foreach ($periodo->nominas as $nomina) {
-            $empleado = $nomina->empleado;
-            $documento = $empleado->documento;
-            $nombre = $empleado->nombres . ' ' . $empleado->apellidos;
-
-            foreach ($nomina->detalles as $detalle) {
-                $concepto = $detalle->concepto;
-                
-                if (!$concepto->cuenta_contable_id) {
-                    continue; 
-                }
-
-                if ($concepto->tipo === 'PROVISION') {
-                    $cuentaGasto = CuentaContable::withoutGlobalScopes()
-                        ->where('tenant_id', $tenantId)
-                        ->where('codigo', '5105')
-                        ->value('id');
-
-                    $lineas[] = [
-                        'cuenta_contable_id' => $cuentaGasto,
-                        'centro_costo_id' => $centroCostoDefault->id,
-                        'tercero_numero_documento' => $documento,
-                        'tercero_nombre' => $nombre,
-                        'debito' => $detalle->valor,
-                        'credito' => 0,
-                        'descripcion' => $concepto->nombre . ' - ' . $empleado->nombres,
-                    ];
-
-                    $lineas[] = [
-                        'cuenta_contable_id' => $concepto->cuenta_contable_id,
-                        'centro_costo_id' => $centroCostoDefault->id,
-                        'tercero_numero_documento' => $documento,
-                        'tercero_nombre' => $nombre,
-                        'debito' => 0,
-                        'credito' => $detalle->valor,
-                        'descripcion' => $concepto->nombre . ' - ' . $empleado->nombres,
-                    ];
-
-                } elseif ($concepto->tipo === 'APORTE_PATRONAL') {
-                    $lineas[] = [
-                        'cuenta_contable_id' => $concepto->cuenta_contable_id, 
-                        'centro_costo_id' => $centroCostoDefault->id,
-                        'tercero_numero_documento' => $documento,
-                        'tercero_nombre' => $nombre,
-                        'debito' => $detalle->valor,
-                        'credito' => 0,
-                        'descripcion' => $concepto->nombre . ' - ' . $empleado->nombres,
-                    ];
-
-                    $cuentaPasivoAporte = CuentaContable::withoutGlobalScopes()
-                        ->where('tenant_id', $tenantId)
-                        ->where('codigo', '2370')
-                        ->value('id');
-                        
-                    $lineas[] = [
-                        'cuenta_contable_id' => $cuentaPasivoAporte,
-                        'centro_costo_id' => $centroCostoDefault->id,
-                        'tercero_numero_documento' => $documento,
-                        'tercero_nombre' => $nombre,
-                        'debito' => 0,
-                        'credito' => $detalle->valor,
-                        'descripcion' => $concepto->nombre . ' - ' . $empleado->nombres,
-                    ];
-
-                } else {
-                    $debito = $concepto->tipo === 'DEVENGADO' ? $detalle->valor : 0;
-                    $credito = $concepto->tipo === 'DEDUCCION' ? $detalle->valor : 0;
-
-                    $lineas[] = [
-                        'cuenta_contable_id' => $concepto->cuenta_contable_id,
-                        'centro_costo_id' => $centroCostoDefault->id,
-                        'tercero_numero_documento' => $documento,
-                        'tercero_nombre' => $nombre,
-                        'debito' => $debito,
-                        'credito' => $credito,
-                        'descripcion' => $concepto->nombre . ' - ' . $empleado->nombres,
-                    ];
-                }
-            }
-
-            if ($nomina->neto_pagar > 0) {
-                $lineas[] = [
-                    'cuenta_contable_id' => $cuentaSalariosPorPagar->id,
-                    'centro_costo_id' => $centroCostoDefault->id,
-                    'tercero_numero_documento' => $documento,
-                    'tercero_nombre' => $nombre,
-                    'debito' => 0,
-                    'credito' => $nomina->neto_pagar,
-                    'descripcion' => 'Neto a pagar nómina - ' . $empleado->nombres,
-                ];
-            }
-        }
-
-        $cabecera = [
-            'fecha' => clone $periodo->fecha_fin,
-            'concepto' => 'Causación Nómina Periodo ' . $periodo->codigo,
-            'modulo_origen' => 'PAYROLL',
-            'referencia_id' => $periodo->id,
-            'referencia_type' => PeriodoNomina::class,
-        ];
-
-        $this->contabilidadService->registrarAsiento($cabecera, $lineas);
-    }
-}
-```
-
-### NominaService.php
-
-**Ruta:** `app\Modules\Payroll\Services\NominaService.php` (1121 líneas)
-
-> Archivo completo incluido en este documento. Es el motor central de liquidación de nómina colombiana con 12 etapas de cálculo, 23 códigos de concepto, y 18 métodos privados.
-
-**(Ver archivo completo en `app\Modules\Payroll\Services\NominaService.php`)**
-
-### PayrollLiquidator.php
-
-**Ruta:** `app\Modules\Payroll\Services\PayrollLiquidator.php`
-
-> **ESTADO:** DEPRECADO desde 2026-06-26. Eliminado de LiquidacionController y PeriodoController. Ambos ahora usan NominaService exclusivamente. Mantenido solo por referencia histórica.
-
-```php
-<?php
-
-namespace App\Modules\Payroll\Services;
-
-use App\Modules\Hr\Models\Empleado;
-use App\Modules\Payroll\Models\Novedad;
-
-/**
- * @deprecated 2026-06-26 — Usar NominaService en su lugar.
- */
-class PayrollLiquidator
-{
-    public const SMLMV = 1300000;
-    public const AUXILIO_TRANSPORTE = 162000;
-    public const PORCENTAJE_SALUD = 0.04;
-    public const PORCENTAJE_PENSION = 0.04;
-
-    public function liquidarMensualidad(Empleado $empleado, array $novedadesPeriodo = []): array
-    {
-        $contrato = $empleado->contratoActivo;
-        
-        if (!$contrato) {
-            throw new \Exception("El empleado {$empleado->documento} no tiene contrato activo.");
-        }
-
-        $salarioBase = $contrato->salario_base;
-        $diasLaborados = 30;
-
-        $salarioProporcional = ($salarioBase / 30) * $diasLaborados;
-        
-        $auxilioTransporte = 0;
-        if ($salarioBase <= (self::SMLMV * 2)) {
-            $auxilioTransporte = (self::AUXILIO_TRANSPORTE / 30) * $diasLaborados;
-        }
-
-        $ingresosAdicionales = 0;
-        $descuentosAdicionales = 0;
-
-        foreach ($novedadesPeriodo as $novedad) {
-            if ($novedad->tipo === 'ingreso') {
-                $ingresosAdicionales += $novedad->valor;
-            } elseif ($novedad->tipo === 'descuento') {
-                $descuentosAdicionales += $novedad->valor;
-            }
-        }
-
-        $totalDevengos = $salarioProporcional + $auxilioTransporte + $ingresosAdicionales;
-
-        $ibc = $salarioProporcional + $ingresosAdicionales;
-        
-        $ibcMinimo = (self::SMLMV / 30) * $diasLaborados;
-        if ($ibc < $ibcMinimo) {
-            $ibc = $ibcMinimo;
-        }
-
-        $salud = round($ibc * self::PORCENTAJE_SALUD, 0);
-        $pension = round($ibc * self::PORCENTAJE_PENSION, 0);
-
-        $totalDeducciones = $salud + $pension + $descuentosAdicionales;
-
-        $neto = $totalDevengos - $totalDeducciones;
-
-        return [
-            'empleado_id' => $empleado->id,
-            'dias_laborados' => $diasLaborados,
-            'salario_base' => $salarioBase,
-            'auxilio_transporte' => $auxilioTransporte,
-            'total_devengos' => $totalDevengos,
-            'salud_deduccion' => $salud,
-            'pension_deduccion' => $pension,
-            'total_deducciones' => $totalDeducciones,
-            'neto_pagar' => $neto,
-        ];
-    }
-}
-```
-
-### PayrollProvisioner.php
-
-**Ruta:** `app\Modules\Payroll\Services\PayrollProvisioner.php`
-
-```php
-<?php
-
-namespace App\Modules\Payroll\Services;
-
-use App\Core\Models\Tenant;
-use App\Modules\Hr\Models\ConfiguracionLegal;
-use App\Modules\Payroll\Models\ConceptoNomina;
-use Spatie\Permission\Models\Permission;
-use Spatie\Permission\PermissionRegistrar;
-
-class PayrollProvisioner
-{
-    public function provisionForTenant(Tenant $tenant): void
-    {
-        $tenantId = $tenant->id;
-
-        $currentYear = (int) date('Y');
-        ConfiguracionLegal::firstOrCreate(
-            ['tenant_id' => $tenantId, 'ano_vigencia' => $currentYear],
-            [
-                'salario_minimo' => 1400000,
-                'auxilio_transporte' => 200000,
-                'tope_auxilio_transporte_salarios' => 2,
-                'valor_uvt' => 47000,
-                'horas_semanales' => 46,
-                'aporte_salud_empleado' => 4,
-                'aporte_pension_empleado' => 4,
-                'aporte_salud_patronal' => 8.5,
-                'aporte_pension_patronal' => 12,
-                'caja_compensacion' => 4,
-                'sena' => 2,
-                'icbf' => 3,
-            ]
-        );
-
-        $conceptos = [
-            ['codigo' => 'SAL01', 'nombre' => 'Salario Básico', 'tipo' => 'DEVENGADO', 'base_seguridad_social' => true, 'base_parafiscales' => true, 'base_prestaciones' => true],
-            ['codigo' => 'INC01', 'nombre' => 'Auxilio por Incapacidad', 'tipo' => 'DEVENGADO'],
-            ['codigo' => 'AUX01', 'nombre' => 'Auxilio de Transporte', 'tipo' => 'DEVENGADO'],
-            ['codigo' => 'HEX01', 'nombre' => 'Hora Extra Diurna', 'tipo' => 'DEVENGADO', 'base_seguridad_social' => true, 'base_parafiscales' => true, 'base_prestaciones' => true],
-            ['codigo' => 'HEX02', 'nombre' => 'Hora Extra Nocturna', 'tipo' => 'DEVENGADO', 'base_seguridad_social' => true, 'base_parafiscales' => true, 'base_prestaciones' => true],
-            ['codigo' => 'HEX03', 'nombre' => 'Hora Extra Diurna Festiva', 'tipo' => 'DEVENGADO', 'base_seguridad_social' => true, 'base_parafiscales' => true, 'base_prestaciones' => true],
-            ['codigo' => 'HEX04', 'nombre' => 'Hora Extra Nocturna Festiva', 'tipo' => 'DEVENGADO', 'base_seguridad_social' => true, 'base_parafiscales' => true, 'base_prestaciones' => true],
-            ['codigo' => 'REC01', 'nombre' => 'Recargo Nocturno', 'tipo' => 'DEVENGADO', 'base_seguridad_social' => true, 'base_parafiscales' => true, 'base_prestaciones' => true],
-            ['codigo' => 'REC02', 'nombre' => 'Recargo Festivo', 'tipo' => 'DEVENGADO', 'base_seguridad_social' => true, 'base_parafiscales' => true, 'base_prestaciones' => true],
-            ['codigo' => 'REC03', 'nombre' => 'Recargo Nocturno Festivo', 'tipo' => 'DEVENGADO', 'base_seguridad_social' => true, 'base_parafiscales' => true, 'base_prestaciones' => true],
-            ['codigo' => 'EDF01', 'nombre' => 'Domingo / Festivo', 'tipo' => 'DEVENGADO', 'base_seguridad_social' => true, 'base_parafiscales' => true, 'base_prestaciones' => true],
-            ['codigo' => 'ENF01', 'nombre' => 'Nocturno Festivo', 'tipo' => 'DEVENGADO', 'base_seguridad_social' => true, 'base_parafiscales' => true, 'base_prestaciones' => true],
-            ['codigo' => 'BON01', 'nombre' => 'Bonificación No Salarial', 'tipo' => 'DEVENGADO'],
-            ['codigo' => 'BON02', 'nombre' => 'Bonificación Salarial', 'tipo' => 'DEVENGADO', 'base_seguridad_social' => true, 'base_parafiscales' => true, 'base_prestaciones' => true],
-            ['codigo' => 'COM01', 'nombre' => 'Comisiones', 'tipo' => 'DEVENGADO', 'base_seguridad_social' => true, 'base_parafiscales' => true, 'base_prestaciones' => true],
-            ['codigo' => 'DED01', 'nombre' => 'Aporte Salud (4%)', 'tipo' => 'DEDUCCION'],
-            ['codigo' => 'DED02', 'nombre' => 'Aporte Pensión (4%)', 'tipo' => 'DEDUCCION'],
-            ['codigo' => 'DED03', 'nombre' => 'Retención en la Fuente', 'tipo' => 'DEDUCCION'],
-            ['codigo' => 'DED04', 'nombre' => 'Préstamos', 'tipo' => 'DEDUCCION'],
-            ['codigo' => 'DED05', 'nombre' => 'Fondo Solidaridad Pensional', 'tipo' => 'DEDUCCION'],
-            ['codigo' => 'PRO01', 'nombre' => 'Prima de Servicios', 'tipo' => 'PROVISION'],
-            ['codigo' => 'PRO02', 'nombre' => 'Cesantías', 'tipo' => 'PROVISION'],
-            ['codigo' => 'PRO03', 'nombre' => 'Intereses a las Cesantías', 'tipo' => 'PROVISION'],
-            ['codigo' => 'PRO04', 'nombre' => 'Vacaciones', 'tipo' => 'PROVISION'],
-            ['codigo' => 'PAT01', 'nombre' => 'Aporte Pensión Patronal (12%)', 'tipo' => 'APORTE_PATRONAL'],
-            ['codigo' => 'PAT02', 'nombre' => 'Aporte Salud Patronal (8.5%)', 'tipo' => 'APORTE_PATRONAL'],
-            ['codigo' => 'PAT03', 'nombre' => 'ARL', 'tipo' => 'APORTE_PATRONAL'],
-            ['codigo' => 'PAT04', 'nombre' => 'Caja de Compensación (4%)', 'tipo' => 'APORTE_PATRONAL'],
-            ['codigo' => 'PAT05', 'nombre' => 'SENA (2%)', 'tipo' => 'APORTE_PATRONAL'],
-            ['codigo' => 'PAT06', 'nombre' => 'ICBF (3%)', 'tipo' => 'APORTE_PATRONAL'],
-        ];
-
-        $cuentaGasto = \App\Modules\Accounting\Models\CuentaContable::withoutGlobalScopes()->where('tenant_id', $tenantId)->where('codigo', '5105')->value('id');
-        $cuentaRetenciones = \App\Modules\Accounting\Models\CuentaContable::withoutGlobalScopes()->where('tenant_id', $tenantId)->where('codigo', '2370')->value('id');
-        $cuentaProvisiones = \App\Modules\Accounting\Models\CuentaContable::withoutGlobalScopes()->where('tenant_id', $tenantId)->where('codigo', '2610')->value('id');
-
-        foreach ($conceptos as $data) {
-            $data['tenant_id'] = $tenantId;
-            
-            if ($data['tipo'] === 'DEVENGADO' || $data['tipo'] === 'APORTE_PATRONAL') {
-                $data['cuenta_contable_id'] = $cuentaGasto;
-            } elseif ($data['tipo'] === 'DEDUCCION') {
-                $data['cuenta_contable_id'] = $cuentaRetenciones;
-            } elseif ($data['tipo'] === 'PROVISION') {
-                $data['cuenta_contable_id'] = $cuentaProvisiones;
-            }
-
-            ConceptoNomina::firstOrCreate(
-                ['tenant_id' => $tenantId, 'codigo' => $data['codigo']],
-                $data
-            );
-        }
-
-        $registrar = app(PermissionRegistrar::class);
-        $previous = $registrar->getPermissionsTeamId();
-        $registrar->setPermissionsTeamId($tenantId);
-
-        foreach (['payroll:edit', 'payroll:delete', 'payroll:manage'] as $perm) {
-            Permission::firstOrCreate(['name' => $perm, 'guard_name' => 'web']);
-            $role = \Spatie\Permission\Models\Role::where('team_id', $tenantId)
-                ->where('name', config('roles.default_tenant_admin', 'ADMIN_EMPRESA'))
-                ->first();
-            if ($role) {
-                $role->givePermissionTo($perm);
-            }
-        }
-
-        $registrar->setPermissionsTeamId($previous);
-    }
-}
-```
+### Liquidaciones/Show.tsx (LEGACY)
+**Ruta:** `resources/js/Pages/Payroll/Liquidaciones/Show.tsx`
+> 128 líneas. Detalle legacy de período con StatsCards y sábana de nómina. Botón "Cerrar y Liquidar" que despacha `payroll.periodos.liquidar`.
 
 ---
 
 ## Tests
 
-### NominaServiceTest.php
-
+### NominaServiceTest
 **Ruta:** `tests/Feature/Modules/Payroll/NominaServiceTest.php`
+> 513 líneas. 10 tests que validan: salud/pensión 4%, auxilio de transporte (umbral 2 SMMLV), IBC mínimo, novedades, persistencia de liquidación de período, múltiples empleados, rechazo de estado no BORRADOR, falla sin configuración legal, provisiones, aportes patronales, consistencia del resumen numérico.
 
-> 11 tests unitarios: salud/pensión, auxilio transporte, IBC mínimo, novedades, liquidación de período, provisiones, aportes patronales, consistencia numérica.
-
-**(Ver archivo completo en `tests/Feature/Modules/Payroll/NominaServiceTest.php`)**
-
-### CertificacionNominaTest.php
-
+### CertificacionNominaTest
 **Ruta:** `tests/Feature/Modules/Payroll/CertificacionNominaTest.php`
-
-> 5 tests de certificación: configuración, salario mínimo con extras, salario alto con retefuente, incapacidad, aprobación contable.
-
-**(Ver archivo completo en `tests/Feature/Modules/Payroll/CertificacionNominaTest.php`)**
+> 489 líneas. 4 tests de certificación end-to-end que validan: configuración del entorno, salario mínimo con extras y auxilio, salario alto sin auxilio con retefuente, empleado con incapacidad, y aprobación de nómina generando asientos contables cuadrados.
 
 ---
 
-*Fin del documento de auditoría. 22 archivos analizados.*
+## Correcciones
+
+### CRÍTICO — Columna `concepto` legacy en `pay_novedades`
+
+**Problema:** La migración `2026_06_20_135501` crea `pay_novedades.concepto` (string), pero el modelo `Novedad` tiene `$fillable` con `'concepto'` y también una relación `conceptoNomina()` BelongsTo a `ConceptoNomina`. Esto genera un conflicto: la columna string `concepto` en la BD no es una relación Eloquent, así que `$novedad->concepto` retorna el string en lugar del modelo.
+
+**Impacto:** En `NominaService::obtenerNovedades()`, cuando hace `Novedad::with('conceptoNomina')`, el accessor `concepto` no funciona como relación. El servicio resuelve esto usando `->conceptoNomina?->codigo` explícitamente, pero la columna `concepto` (string) en `$fillable` entra en conflicto con la relación `concepto()` si se hubiera definido como `BelongsTo('concepto')`.
+
+**Corrección recomendada:** Renombrar la columna `concepto` a `concepto_legacy` o eliminarla, ya que ahora se usa `concepto_id` (FK a `pay_conceptos_nomina`). Agregar migración:
+```php
+Schema::table('pay_novedades', function (Blueprint $table) {
+    $table->renameColumn('concepto', 'concepto_legacy');
+});
+```
+Y quitar `'concepto'` de `$fillable` en `Novedad.php`.
+
+### ALTO — LiquidacionController duplica lógica de PeriodoController
+
+**Problema:** `LiquidacionController::store()` crea períodos y despacha `LiquidarNominaJob` directamente, duplicando la validación de `PeriodoController::store()`. Las rutas `/payroll/liquidaciones/*` son redundantes con `/payroll/periodos/*`.
+
+**Corrección recomendada:** Marcar `LiquidacionController` como `@deprecated` y redirigir las páginas `Liquidaciones/Index.tsx` y `Liquidaciones/Show.tsx` hacia `Periodos/Index.jsx` y `Periodos/Show.jsx`. Mantener las rutas legacy solo por compatibilidad temporal.
+
+### ALTO — LiquidarNominaJob referenciado pero no existe
+
+**Problema:** `PeriodoController::liquidar()` y `LiquidacionController::store()` despachan `\App\Jobs\LiquidarNominaJob`, pero no se encontró este archivo en `app/Jobs/`. El job probablemente no está creado aún o fue eliminado.
+
+**Corrección recomendada:** Crear `app/Jobs/LiquidarNominaJob.php` que invoque `NominaService::liquidarPeriodo()` dentro de `handle()`, o eliminar las referencias y usar la liquidación síncrona directamente.
+
+### MEDIO — NovedadController::storeBulk redeclara `$tenantId`
+
+**Problema:** En `NovedadController::storeBulk()`, la línea 136 redeclara `$tenantId = auth()->user()->tenant_id;` después de haberlo declarado en la línea 122. Es redundante.
+
+**Corrección recomendada:** Eliminar la línea duplicada 136.
+
+### MEDIO — Falta Provider de módulo
+
+**Problema:** El módulo no tiene `Providers/PayrollServiceProvider.php` para registrar rutas de forma explícita. Depende completamente del escaneo automático (`modules:scan`).
+
+**Corrección recomendada:** Crear `PayrollServiceProvider` que registre las rutas, similar a otros módulos.
+
+### BAJO — FSP usa `$salarioMinimo` que podría ser 0
+
+**Problema:** En `NominaService`, `$salariosMinimos = $salarioMinimo > 0 ? $ibcSeguridadSocial / $salarioMinimo : 0;` protege contra división por cero, pero `$salarioMinimo` viene de `ConfiguracionLegal` que podría no tener el campo configurado.
+
+**Corrección recomendada:** Agregar validación en `PayrollProvisioner` para asegurar que `ConfiguracionLegal` siempre tenga `salario_minimo` > 0.
+
+### BAJO — `Nominas/Index.jsx` usa route inexistente
+
+**Problema:** El componente `Nominas/Index.jsx` tiene un Dialog de "Generar Nómina" que envía POST a `route('payroll.nominas.store')`, pero esta ruta no existe en `web.php`. Las nóminas se crean al liquidar un período, no individualmente.
+
+**Corrección recomendada:** Eliminar el Dialog o redirigir al usuario a la página de Períodos.

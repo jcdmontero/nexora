@@ -2,7 +2,7 @@
     "code": "hr",
     "name": "Recursos Humanos",
     "version": "1.0.0",
-    "description": "Empleados, cargos, contratos laborales y estructura organizacional.",
+    "description": "Empleados, cargos, contratos laborales, préstamos, incapacidades y afiliaciones a seguridad social.",
     "icon": "Users",
     "core": false,
     "dependencies": [],
@@ -18,7 +18,12 @@
             "icon": "Users",
             "items": [
                 { "label": "Dashboard", "route": "hr.dashboard", "permission": "hr:view" },
-                { "label": "Empleados", "route": "hr.empleados.index", "permission": "hr:view" }
+                { "label": "Empleados", "route": "hr.empleados.index", "permission": "hr:view" },
+                { "label": "Préstamos", "route": "hr.prestamos.index", "permission": "hr:view" },
+                { "label": "Incapacidades", "route": "hr.incapacidades.index", "permission": "hr:view" },
+                { "label": "Afiliaciones", "route": "hr.afiliaciones.index", "permission": "hr:view" },
+                { "label": "Organigrama", "route": "hr.catalogos.organigrama", "permission": "hr:view" },
+                { "label": "Config. Legal", "route": "hr.configuracion-legal.index", "permission": "hr:view" }
             ]
         }
     ]

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Modules\Crm\Models\Oportunidad;
 use App\Modules\Crm\Models\Cliente;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
 class OportunidadController extends Controller
@@ -17,12 +18,17 @@ class OportunidadController extends Controller
         $oportunidades = Oportunidad::query()
             ->with('cliente')
             ->when($search, function ($query, $search) {
-                $query->where('titulo', 'ilike', "%{$search}%")
-                      ->orWhereHas('cliente', function($q) use ($search) {
-                          $q->where('nombres', 'ilike', "%{$search}%")
-                            ->orWhere('apellidos', 'ilike', "%{$search}%")
-                            ->orWhere('razon_social', 'ilike', "%{$search}%");
+                $cleanSearch = addcslashes($search, '%_');
+                $operator = \Illuminate\Support\Facades\DB::connection()->getDriverName() === 'pgsql' ? 'ILIKE' : 'LIKE';
+                
+                $query->where(function ($q) use ($cleanSearch, $operator) {
+                    $q->where('titulo', $operator, "%{$cleanSearch}%")
+                      ->orWhereHas('cliente', function ($c) use ($cleanSearch, $operator) {
+                          $c->where('nombres', $operator, "%{$cleanSearch}%")
+                            ->orWhere('apellidos', $operator, "%{$cleanSearch}%")
+                            ->orWhere('razon_social', $operator, "%{$cleanSearch}%");
                       });
+                });
             })
             ->orderBy('id', 'desc')
             ->paginate(15)
@@ -30,7 +36,11 @@ class OportunidadController extends Controller
 
         return Inertia::render('Crm/Oportunidades/Index', [
             'oportunidades' => $oportunidades,
-            'clientes' => Cliente::select('id', 'nombres', 'apellidos', 'razon_social')->orderBy('id', 'desc')->get(),
+            'clientes' => Cliente::select('id', 'nombres', 'apellidos', 'razon_social')
+                ->where('activo', true)
+                ->orderBy('id', 'desc')
+                ->take(50)
+                ->get(),
             'filters' => $request->only(['search']),
         ]);
     }
@@ -38,7 +48,10 @@ class OportunidadController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'cliente_id' => 'required|exists:crm_clientes,id',
+            'cliente_id' => [
+                'required',
+                Rule::exists('crm_clientes', 'id')->where('tenant_id', app('current_tenant')->id),
+            ],
             'titulo' => 'required|string|max:150',
             'valor_estimado' => 'required|numeric|min:0',
             'etapa' => 'required|in:prospecto,calificado,propuesta,negociacion,ganado,perdido',
@@ -49,7 +62,8 @@ class OportunidadController extends Controller
 
         Oportunidad::create($validated);
 
-        return back()->with('success', 'Oportunidad creada exitosamente.');
+        return redirect()->route('crm.oportunidades.index')
+            ->with('success', 'Oportunidad creada exitosamente.');
     }
 
     public function update(Request $request, Oportunidad $oportunidad)
@@ -65,7 +79,8 @@ class OportunidadController extends Controller
 
         $oportunidad->update($validated);
 
-        return back()->with('success', 'Oportunidad actualizada.');
+        return redirect()->route('crm.oportunidades.index')
+            ->with('success', 'Oportunidad actualizada.');
     }
 
     public function updateEtapa(Request $request, Oportunidad $oportunidad)

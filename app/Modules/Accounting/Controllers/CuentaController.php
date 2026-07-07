@@ -5,6 +5,7 @@ namespace App\Modules\Accounting\Controllers;
 use App\Http\Controllers\Controller;
 use App\Modules\Accounting\Models\CuentaContable;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
 class CuentaController extends Controller
@@ -14,6 +15,7 @@ class CuentaController extends Controller
         $search = $request->input('search');
 
         $cuentas = CuentaContable::query()
+            // M-01: 'ilike' (PostgreSQL) para texto case-insensitive, 'like' para códigos case-sensitive
             ->when($search, function ($query, $search) {
                 $query->where('codigo', 'like', "%{$search}%")
                       ->orWhere('nombre', 'ilike', "%{$search}%");
@@ -31,7 +33,10 @@ class CuentaController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'codigo' => 'required|string|max:20|unique:cuentas_contables,codigo,NULL,id,tenant_id,' . auth()->user()->tenant_id,
+            'codigo' => [
+                'required', 'string', 'max:20',
+                Rule::unique('cuentas_contables', 'codigo')->where('tenant_id', tenantId())
+            ],
             'nombre' => 'required|string|max:100',
             'tipo' => 'required|in:activo,pasivo,patrimonio,ingreso,gasto,costo',
             'naturaleza' => 'required|in:debito,credito',
@@ -40,11 +45,57 @@ class CuentaController extends Controller
             'acepta_movimientos' => 'boolean',
             'requiere_tercero' => 'boolean',
             'requiere_centro_costo' => 'boolean',
+            'parent_id' => [
+                'nullable',
+                Rule::exists('cuentas_contables', 'id')->where('tenant_id', tenantId()),
+            ],
             'descripcion' => 'nullable|string',
         ]);
 
         CuentaContable::create($validated);
 
         return redirect()->route('accounting.cuentas.index')->with('success', 'Cuenta contable creada correctamente.');
+    }
+
+    public function update(Request $request, CuentaContable $cuenta)
+    {
+        if ($cuenta->tenant_id !== tenantId()) abort(403);
+
+        $validated = $request->validate([
+            'nombre' => 'required|string|max:100',
+            'tipo' => 'required|in:activo,pasivo,patrimonio,ingreso,gasto,costo',
+            'naturaleza' => 'required|in:debito,credito',
+            'nivel' => 'required|integer|min:1|max:6',
+            'clase' => 'nullable|string|max:1',
+            'acepta_movimientos' => 'boolean',
+            'requiere_tercero' => 'boolean',
+            'requiere_centro_costo' => 'boolean',
+            'parent_id' => [
+                'nullable',
+                Rule::exists('cuentas_contables', 'id')->where('tenant_id', tenantId()),
+            ],
+            'descripcion' => 'nullable|string',
+        ]);
+
+        $cuenta->update($validated);
+
+        return back()->with('success', 'Cuenta contable actualizada correctamente.');
+    }
+
+    public function destroy(CuentaContable $cuenta)
+    {
+        if ($cuenta->tenant_id !== tenantId()) abort(403);
+
+        if ($cuenta->children()->exists()) {
+            return back()->with('error', 'No se puede eliminar una cuenta que tiene cuentas hijas. Elimine primero las subcuentas.');
+        }
+
+        if ($cuenta->lineas()->exists()) {
+            return back()->with('error', 'No se puede eliminar una cuenta que tiene movimientos contables registrados.');
+        }
+
+        $cuenta->delete();
+
+        return back()->with('success', 'Cuenta contable eliminada correctamente.');
     }
 }

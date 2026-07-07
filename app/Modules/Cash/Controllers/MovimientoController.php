@@ -3,6 +3,7 @@
 namespace App\Modules\Cash\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Modules\Cash\Concerns\HasReciboLoader;
 use App\Modules\Cash\Models\MovimientoCaja;
 use App\Modules\Cash\Services\CajaService;
 use Illuminate\Http\Request;
@@ -10,13 +11,17 @@ use Inertia\Inertia;
 
 class MovimientoController extends Controller
 {
+    use HasReciboLoader;
     public function index(Request $request)
     {
         // BelongsToTenant aplica el scope automáticamente (no hace falta where tenant_id).
         $movimientos = MovimientoCaja::with(['sesion.caja', 'sesion.usuario'])
             ->orderBy('id', 'desc')
-            ->paginate(20)
-            ->through(fn ($m) => [
+            ->paginate(20);
+
+        $reciboMap = $this->loadRecibosParaMovimientos($movimientos->getCollection());
+
+        $movimientos->through(fn ($m) => [
                 'id' => $m->id,
                 'tipo' => $m->tipo,
                 'monto' => (float) $m->monto,
@@ -27,11 +32,11 @@ class MovimientoController extends Controller
                     'caja' => ['nombre' => $m->sesion->caja?->nombre],
                     'usuario' => ['name' => $m->sesion->usuario?->name],
                 ] : null,
-                'recibo_id' => $m->recibo_id,
+                'recibo_id' => $reciboMap[$m->referencia_type . '::' . $m->referencia_id . '::' . (float) $m->monto] ?? null,
                 'es_anulacion' => $m->es_anulacion,
             ]);
 
-        return Inertia::render('Cash/Movimientos/Index', [
+        return Inertia::render('Modules/Cash/Movimientos/Index', [
             'movimientos' => $movimientos,
         ]);
     }

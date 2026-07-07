@@ -7,6 +7,7 @@ import { Button } from '@/Components/ui/button'
 import { Input } from '@/Components/ui/input'
 import { DataTable } from '@/Components/ui/data-table'
 import { EmptyState } from '@/Components/ui/empty-state'
+import { Pagination } from '@/Components/ui/pagination'
 import { Search, IdCard, Plus, UserCircle2 } from 'lucide-react'
 
 export default function EmpleadosIndex({ empleados, filters }) {
@@ -38,7 +39,7 @@ export default function EmpleadosIndex({ empleados, filters }) {
     { 
         key: 'cargo', 
         header: 'Cargo Actual', 
-        cell: (e) => e.contrato_activo ? e.contrato_activo.cargo : <span className="text-muted-foreground italic">Sin contrato activo</span>
+        cell: (e) => e.contrato_activo ? e.contrato_activo.cargo_rel?.nombre : <span className="text-muted-foreground italic">Sin contrato activo</span>
     },
     { 
         key: 'salario', 
@@ -96,7 +97,14 @@ export default function EmpleadosIndex({ empleados, filters }) {
       <Card>
         <CardContent className="p-0">
           {empleados.data.length > 0 ? (
-            <DataTable columns={columns} data={empleados.data} />
+            <>
+              <DataTable columns={columns} data={empleados.data} />
+              <Pagination
+                page={empleados.current_page}
+                totalPages={empleados.last_page}
+                onPage={(page) => router.get(route('hr.empleados.index'), { search, page }, { preserveState: true })}
+              />
+            </>
           ) : (
             <div className="py-12">
               <EmptyState

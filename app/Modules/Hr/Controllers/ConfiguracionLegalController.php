@@ -67,8 +67,10 @@ class ConfiguracionLegalController extends Controller
         return back()->with('success', 'Configuración legal creada.');
     }
 
-    public function update(Request $request, ConfiguracionLegal $configuracionLegal)
+    public function update(Request $request, $id)
     {
+        $configuracionLegal = ConfiguracionLegal::findOrFail($id);
+
         if ($configuracionLegal->tenant_id !== auth()->user()->tenant_id) {
             abort(403);
         }

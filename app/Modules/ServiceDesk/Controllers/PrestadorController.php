@@ -160,11 +160,14 @@ class PrestadorController extends Controller
             $apellidos = $parts[1] ?? '';
 
             $sede = Sede::where('tenant_id', $tenantId)->first();
+            if (!$sede) {
+                return back()->with('error', 'No se puede crear el empleado: el tenant no tiene una sede configurada. Crea al menos una sede en Configuración.');
+            }
 
             $empleado = Empleado::firstOrCreate(
                 ['tenant_id' => $tenantId, 'documento' => $data['numero_documento']],
                 [
-                    'sede_id' => $sede ? $sede->id : 1, // Fallback if no sede
+                    'sede_id' => $sede->id,
                     'nombres' => $nombres,
                     'apellidos' => $apellidos,
                     'email' => $data['email'],
@@ -255,11 +258,14 @@ class PrestadorController extends Controller
             $apellidos = $parts[1] ?? '';
 
             $sede = Sede::where('tenant_id', $tenantId)->first();
+            if (!$sede) {
+                return back()->with('error', 'No se puede crear el empleado: el tenant no tiene una sede configurada.');
+            }
 
             $empleado = Empleado::firstOrCreate(
                 ['tenant_id' => $tenantId, 'documento' => $data['numero_documento']],
                 [
-                    'sede_id' => $sede ? $sede->id : 1,
+                    'sede_id' => $sede->id,
                     'nombres' => $nombres,
                     'apellidos' => $apellidos,
                     'email' => $data['email'],
@@ -288,8 +294,9 @@ class PrestadorController extends Controller
             abort(403);
         }
 
-        if ($prestador->ordenes()->count() > 0) {
-            return back()->with('error', 'No se puede eliminar: el prestador tiene órdenes asignadas.');
+        // Contar órdenes incluyendo soft-deleted para proteger historial financiero
+        if ($prestador->ordenes()->withTrashed()->count() > 0) {
+            return back()->with('error', 'No se puede eliminar: el prestador tiene órdenes en su historial.');
         }
 
         $prestador->delete();

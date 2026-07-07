@@ -108,7 +108,8 @@ class ComisionController extends Controller
             return back()->with('error', 'No hay órdenes completadas en ese período para este prestador.');
         }
 
-        $liquidacion = DB::transaction(function () use ($tenantId, $data, $prestador, $ordenes) {
+        try {
+            $liquidacion = DB::transaction(function () use ($tenantId, $data, $prestador, $ordenes) {
             // Generar código
             $count = ComisionLiquidacion::where('tenant_id', $tenantId)->count() + 1;
             $codigo = 'LIQ-' . str_pad((string) $count, 5, '0', STR_PAD_LEFT);
@@ -182,6 +183,9 @@ class ComisionController extends Controller
 
             return $liquidacion;
         });
+        } catch (\RuntimeException $e) {
+            return back()->with('error', $e->getMessage());
+        }
 
         return redirect()->route('service-desk.comisiones.show', $liquidacion->id)
             ->with('success', "Liquidación {$liquidacion->codigo} generada por $" . number_format($liquidacion->total_comisiones, 0, ',', '.'));
@@ -249,10 +253,9 @@ class ComisionController extends Controller
             return back()->with('error', 'Solo se pueden pagar liquidaciones aprobadas.');
         }
 
-        // Validar que el período de la liquidación no esté cerrado
-        $fecha = \Carbon\Carbon::parse($liquidacion->periodo_inicio);
+        // Validar que el período actual esté abierto (no el de la liquidación, que puede ser pasado)
         try {
-            app(\App\Modules\Accounting\Services\ContabilidadService::class)->resolverPeriodoAbierto($fecha);
+            app(\App\Modules\Accounting\Services\ContabilidadService::class)->resolverPeriodoAbierto(now());
         } catch (\Exception $e) {
             return back()->with('error', 'No se puede procesar el pago: ' . $e->getMessage());
         }
@@ -263,6 +266,10 @@ class ComisionController extends Controller
         ]);
 
         DB::transaction(function () use ($liquidacion, $data) {
+            // 1. Registrar asiento contable PRIMERO — si falla, se revierte toda la transacción
+            $this->registrarAsientoPago($liquidacion, $data['metodo_pago'] ?? 'efectivo');
+
+            // 2. Marcar pago como realizado
             $pago = $liquidacion->pagos()->first();
             if ($pago) {
                 $pago->update([
@@ -274,9 +281,6 @@ class ComisionController extends Controller
             }
 
             $liquidacion->update(['estado' => 'PAGADO']);
-
-            // Registrar asiento contable: Gasto Comisiones (D) / Caja-Banco (C)
-            $this->registrarAsientoPago($liquidacion, $data['metodo_pago'] ?? 'efectivo');
         });
 
         return back()->with('success', 'Comisión pagada correctamente.');

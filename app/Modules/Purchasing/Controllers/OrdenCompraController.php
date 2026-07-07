@@ -6,25 +6,29 @@ use App\Modules\Purchasing\Models\Proveedor;
 use App\Modules\Inventory\Models\Producto;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\DB;
 
 class OrdenCompraController extends Controller
 {
+    /** Estados válidos y sus transiciones permitidas */
+    private const ESTADOS = [
+        'borrador'  => ['enviada', 'cancelada'],
+        'enviada'   => ['cancelada'], // #6: recibida solo vía recepción de inventario
+        'recibida'  => [],
+        'cancelada' => [],
+    ];
+
+    private const ESTADOS_LISTA = ['borrador', 'enviada', 'recibida', 'cancelada'];
+
     public function index()
     {
         return Inertia::render('Purchasing/Ordenes/Index', [
             'ordenes' => Inertia::defer(fn () => OrdenCompra::with('proveedor:id,razon_social')
                 ->orderBy('created_at', 'desc')
-                ->get()
-                ->map(fn ($o) => [
-                    'id' => $o->id,
-                    'numero' => $o->numero,
-                    'proveedor' => $o->proveedor->razon_social ?? '—',
-                    'estado' => $o->estado,
-                    'fecha_emision' => $o->fecha_emision ? $o->fecha_emision->format('Y-m-d') : null,
-                    'total' => $o->total,
-                ])),
+                ->paginate(20)
+                ->withQueryString()),
         ]);
     }
 
@@ -36,7 +40,7 @@ class OrdenCompraController extends Controller
         return Inertia::render('Purchasing/Ordenes/Create', [
             'proveedores' => $proveedores,
             'productos' => $productos,
-            'numero_sugerido' => 'OC-' . date('Ymd-His'), // Numeración automática temporal
+            'numero_sugerido' => 'OC-' . now()->format('YmdHis') . '-' . bin2hex(random_bytes(2)),
         ]);
     }
 
@@ -70,7 +74,6 @@ class OrdenCompraController extends Controller
                 $subtotal += $lineSubtotal;
             }
 
-            // Aplicar impuestos si hay lógica (simplificado a 0 en esta versión)
             $orden->update([
                 'subtotal' => $subtotal,
                 'total' => $subtotal,
@@ -81,7 +84,7 @@ class OrdenCompraController extends Controller
             ->with('success', 'Orden de compra creada correctamente.');
     }
 
-    public function show(OrdenCompra $ordene) // Resource param is usually singular form of ordenes -> ordene
+    public function show(OrdenCompra $ordene)
     {
         $ordene->load(['proveedor', 'detalles.producto:id,codigo,nombre']);
 
@@ -126,7 +129,6 @@ class OrdenCompraController extends Controller
                 'notas' => $data['notas'] ?? null,
             ]);
 
-            // Eliminar detalles viejos e insertar los nuevos (enfoque más seguro)
             $ordene->detalles()->delete();
 
             $subtotal = 0;
@@ -166,21 +168,13 @@ class OrdenCompraController extends Controller
     public function updateEstado(Request $request, OrdenCompra $ordene)
     {
         $data = $request->validate([
-            'estado' => 'required|in:borrador,enviada,recibida,cancelada',
+            'estado' => ['required', Rule::in(self::ESTADOS_LISTA)],
         ]);
 
         $nuevoEstado = $data['estado'];
         $estadoActual = $ordene->estado;
 
-        // Validar transiciones válidas
-        $transicionesValidas = [
-            'borrador'  => ['enviada', 'cancelada'],
-            'enviada'   => ['recibida', 'cancelada'],
-            'recibida'  => [],
-            'cancelada' => [],
-        ];
-
-        if (!in_array($nuevoEstado, $transicionesValidas[$estadoActual] ?? [])) {
+        if (!in_array($nuevoEstado, self::ESTADOS[$estadoActual] ?? [])) {
             return back()->with('error', "No se puede cambiar de \"{$estadoActual}\" a \"{$nuevoEstado}\".");
         }
 
@@ -191,16 +185,21 @@ class OrdenCompraController extends Controller
 
     private function validateData(Request $request, $ignoreId = null): array
     {
-        $ruleUnique = 'unique:purchasing_ordenes,numero' . ($ignoreId ? ',' . $ignoreId : '');
+        $tenantId = auth()->user()->tenant_id;
 
         return $request->validate([
-            'proveedor_id' => ['required', 'exists:purchasing_proveedores,id'],
-            'numero' => ['required', 'string', 'max:50'], // Idealmente validado con TenantScope (en backend lo manejamos unique x tenant en bd)
+            'proveedor_id' => ['required', Rule::in(Proveedor::pluck('id'))],
+            'numero' => [
+                'required', 'string', 'max:50',
+                Rule::unique('purchasing_ordenes', 'numero')
+                    ->where('tenant_id', $tenantId)
+                    ->ignore($ignoreId),
+            ],
             'fecha_emision' => ['required', 'date'],
             'fecha_esperada' => ['nullable', 'date'],
             'notas' => ['nullable', 'string'],
             'detalles' => ['required', 'array', 'min:1'],
-            'detalles.*.producto_id' => ['required', 'exists:inventory_productos,id'],
+            'detalles.*.producto_id' => ['required', Rule::in(Producto::pluck('id'))],
             'detalles.*.cantidad' => ['required', 'numeric', 'min:0.01'],
             'detalles.*.precio_unitario' => ['required', 'numeric', 'min:0'],
         ]);

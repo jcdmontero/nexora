@@ -20,7 +20,7 @@ Route::middleware(['web', 'auth', 'tenant', 'module:notifications'])->group(func
         });
     });
 
-    Route::prefix('chat')->name('chat.')->group(function () {
+    Route::prefix('chat')->name('chat.')->middleware('permission:notifications:send')->group(function () {
         Route::get('/conversaciones', [ChatController::class, 'index'])->name('index');
         Route::post('/conversaciones', [ChatController::class, 'store'])->name('store');
         Route::get('/{conversacionId}/mensajes', [ChatController::class, 'mensajes'])->name('mensajes');

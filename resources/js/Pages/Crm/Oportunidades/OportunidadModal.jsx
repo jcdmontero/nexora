@@ -80,7 +80,7 @@ export default function OportunidadModal({ isOpen, onClose, clienteId = null, cl
                 <div className="grid gap-2">
                     <Label htmlFor="cliente_id">Cliente <span className="text-destructive">*</span></Label>
                     <Select 
-                        value={data.cliente_id.toString()} 
+                        value={data.cliente_id ? data.cliente_id.toString() : ''} 
                         onValueChange={(val) => setData('cliente_id', val)}
                     >
                         <SelectTrigger>

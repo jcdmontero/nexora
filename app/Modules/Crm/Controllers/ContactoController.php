@@ -9,6 +9,13 @@ use Illuminate\Http\Request;
 
 class ContactoController extends Controller
 {
+    protected $contactoService;
+
+    public function __construct(\App\Modules\Crm\Services\ContactoService $contactoService)
+    {
+        $this->contactoService = $contactoService;
+    }
+
     public function store(Request $request, Cliente $cliente)
     {
         $validated = $request->validate([
@@ -19,12 +26,7 @@ class ContactoController extends Controller
             'is_principal' => 'boolean',
         ]);
 
-        if (!empty($validated['is_principal'])) {
-            // Desmarcar otros contactos como principales
-            $cliente->contactos()->update(['is_principal' => false]);
-        }
-
-        $cliente->contactos()->create($validated);
+        $this->contactoService->crearContacto($cliente, $validated);
 
         return back()->with('success', 'Contacto agregado exitosamente.');
     }
@@ -39,19 +41,14 @@ class ContactoController extends Controller
             'is_principal' => 'boolean',
         ]);
 
-        if (!empty($validated['is_principal'])) {
-            // Desmarcar otros
-            $contacto->cliente->contactos()->where('id', '!=', $contacto->id)->update(['is_principal' => false]);
-        }
-
-        $contacto->update($validated);
+        $this->contactoService->actualizarContacto($contacto, $validated);
 
         return back()->with('success', 'Contacto actualizado.');
     }
 
     public function destroy(Contacto $contacto)
     {
-        $contacto->delete();
+        $this->contactoService->eliminarContacto($contacto);
 
         return back()->with('success', 'Contacto eliminado.');
     }

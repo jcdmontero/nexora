@@ -32,7 +32,7 @@ class MulticajaTest extends TestCase
             'code' => 'cash',
             'name' => 'Tesorería',
             'class' => 'Cash',
-            'version' => '1.0.0',
+            'version' => '2.0.0',
         ]);
         TenantModule::create([
             'tenant_id' => $this->tenant->id,

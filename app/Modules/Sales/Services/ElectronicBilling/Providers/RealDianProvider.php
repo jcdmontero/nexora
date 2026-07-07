@@ -3,6 +3,8 @@
 namespace App\Modules\Sales\Services\ElectronicBilling\Providers;
 
 use App\Modules\Sales\Services\ElectronicBilling\DianProviderInterface;
+use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use RuntimeException;

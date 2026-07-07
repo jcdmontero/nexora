@@ -5,7 +5,6 @@ namespace App\Modules\Accounting\Controllers;
 use App\Http\Controllers\Controller;
 use App\Modules\Accounting\Services\CierreAnualService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 
 class CierreAnualController extends Controller
@@ -36,10 +35,10 @@ class CierreAnualController extends Controller
         ]);
 
         $anio = (int) $validated['anio'];
-        $tenantId = auth()->user()->tenant_id;
+        $tenantId = tenantId();
         $userId = auth()->id();
 
-        \App\Jobs\CerrarAnioContableJob::dispatch($anio, $tenantId, $userId)
+        \App\Modules\Accounting\Jobs\CerrarAnioContableJob::dispatch($anio, $tenantId, $userId)
             ->onQueue('accounting');
 
         return back()->with('success', "Cierre anual del año {$anio} enviado a cola de procesamiento. Se notificará al finalizar.");

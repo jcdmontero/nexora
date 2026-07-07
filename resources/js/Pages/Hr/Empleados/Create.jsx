@@ -10,7 +10,7 @@ import { ArrowLeft, IdCard, Save, UserPlus, ChevronDown } from 'lucide-react'
 
 const selectClass = 'flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50'
 
-export default function CreateEmpleado({ sedes, roles }) {
+export default function CreateEmpleado({ sedes, roles, departamentos }) {
   const { data, setData, post, processing, errors } = useForm({
     documento: '',
     nombres: '',
@@ -18,6 +18,10 @@ export default function CreateEmpleado({ sedes, roles }) {
     email: '',
     telefono: '',
     sede_id: '',
+    cargo_id: '',
+    tipo_contrato: 'INDEFINIDO',
+    salario_base: '',
+    fecha_inicio_contrato: '',
     crear_usuario: false,
     user_email: '',
     user_password: '',
@@ -85,6 +89,49 @@ export default function CreateEmpleado({ sedes, roles }) {
         </Card>
 
 
+
+        {/* Contrato Inicial */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Contrato Inicial</CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="cargo_id">Cargo *</Label>
+              <select id="cargo_id" name="cargo_id" value={data.cargo_id} onChange={(e) => setData('cargo_id', e.target.value)} className={selectClass}>
+                <option value="">Seleccionar cargo…</option>
+                {departamentos?.map((dep) => (
+                  <optgroup key={dep.id} label={dep.nombre}>
+                    {dep.cargos?.map((c) => (
+                      <option key={c.id} value={c.id}>{c.nombre}</option>
+                    ))}
+                  </optgroup>
+                ))}
+              </select>
+              {errors.cargo_id && <p className="text-xs text-destructive">{errors.cargo_id}</p>}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="tipo_contrato">Tipo de Contrato *</Label>
+              <select id="tipo_contrato" name="tipo_contrato" value={data.tipo_contrato} onChange={(e) => setData('tipo_contrato', e.target.value)} className={selectClass}>
+                <option value="INDEFINIDO">Término Indefinido</option>
+                <option value="FIJO">Término Fijo</option>
+                <option value="PRESTACION_SERVICIOS">Prestación de Servicios</option>
+                <option value="APRENDIZAJE">Aprendizaje</option>
+              </select>
+              {errors.tipo_contrato && <p className="text-xs text-destructive">{errors.tipo_contrato}</p>}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="salario_base">Salario Base *</Label>
+              <Input id="salario_base" name="salario_base" type="number" min="0" value={data.salario_base} onChange={(e) => setData('salario_base', e.target.value)} placeholder="0.00" />
+              {errors.salario_base && <p className="text-xs text-destructive">{errors.salario_base}</p>}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="fecha_inicio_contrato">Fecha de Inicio *</Label>
+              <Input id="fecha_inicio_contrato" name="fecha_inicio_contrato" type="date" value={data.fecha_inicio_contrato} onChange={(e) => setData('fecha_inicio_contrato', e.target.value)} />
+              {errors.fecha_inicio_contrato && <p className="text-xs text-destructive">{errors.fecha_inicio_contrato}</p>}
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Usuario de sistema */}
         <Card>

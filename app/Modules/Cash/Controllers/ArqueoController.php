@@ -25,7 +25,7 @@ class ArqueoController extends Controller
             ->orderBy('orden')
             ->get(['id', 'tipo', 'valor']);
 
-        return Inertia::render('Cash/Arqueo', [
+        return Inertia::render('Modules/Cash/Arqueo', [
             'sesion' => $sesion,
             'denominaciones' => $denominaciones,
         ]);

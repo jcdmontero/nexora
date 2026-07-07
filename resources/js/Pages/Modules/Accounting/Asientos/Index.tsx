@@ -7,7 +7,7 @@ import { Card } from '@/Components/ui/card'
 import { Badge } from '@/Components/ui/badge'
 import { Input } from '@/Components/ui/input'
 import { Button } from '@/Components/ui/button'
-import { BookOpen, Plus, Search, FileText } from 'lucide-react'
+import { BookOpen, Plus, Search } from 'lucide-react'
 import { usePermissions } from '@/Hooks/usePermissions'
 
 // ── Types ──
@@ -144,18 +144,6 @@ export default function AsientosIndex({ asientos, filters }: AsientosIndexProps)
           </Badge>
         )
       },
-    },
-    {
-      key: 'acciones',
-      header: '',
-      className: 'w-[80px]',
-      alignEnd: true,
-      hideOnMobile: false,
-      cell: (_row: Asiento) => (
-        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground">
-          <FileText className="h-4 w-4" />
-        </Button>
-      ),
     },
   ]
 

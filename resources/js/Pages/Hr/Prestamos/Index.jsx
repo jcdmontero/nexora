@@ -289,9 +289,9 @@ export default function PrestamosIndex({ prestamos, empleados = [], filters }) {
                     )}
                   </div>
 
-                  {/* Observaciones */}
+                  {/* Observaciones (descripcion) */}
                   <div className="space-y-1.5">
-                    <Label htmlFor="descripcion">Observaciones</Label>
+                    <Label htmlFor="descripcion">Descripción</Label>
                     <Textarea
                       id="descripcion"
                       placeholder="Motivo del préstamo, condiciones, etc."
@@ -422,9 +422,13 @@ export default function PrestamosIndex({ prestamos, empleados = [], filters }) {
                               </table>
                             </div>
                           ) : (
-                            <p className="text-sm text-muted-foreground">
-                              No hay información de cuotas disponible.
-                            </p>
+                            <div className="py-4">
+                              <EmptyState
+                                icon={DollarSign}
+                                title="Sin cuotas"
+                                description="No hay información de cuotas disponible para este préstamo."
+                              />
+                            </div>
                           )}
                         </div>
                       ),

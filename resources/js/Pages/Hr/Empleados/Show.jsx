@@ -6,6 +6,7 @@ import { Badge } from '@/Components/ui/badge'
 import { Button } from '@/Components/ui/button'
 import { Input } from '@/Components/ui/input'
 import { Label } from '@/Components/ui/label'
+import { EmptyState } from '@/Components/ui/empty-state'
 import { ArrowLeft, UserCircle2, Mail, Phone, MapPin, FileSignature, CalendarDays, DollarSign, Building2, Briefcase, Edit, Wrench } from 'lucide-react'
 
 const selectClass = 'flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50'
@@ -17,7 +18,7 @@ const TIPOS_CONTRATO = {
   'prestacion_servicios': 'Prestación Servicios',
 }
 
-export default function EmpleadosShow({ empleado, sedes }) {
+export default function EmpleadosShow({ empleado, sedes, cargos = [] }) {
   const [activeTab, setActiveTab] = useState('contratos')
   const [showNewContract, setShowNewContract] = useState(false)
 
@@ -151,7 +152,11 @@ export default function EmpleadosShow({ empleado, sedes }) {
                               <Label htmlFor="nc-cargo" className="text-xs">Cargo</Label>
                               <select id="nc-cargo" value={cData.cargo_id} onChange={(e) => setCData('cargo_id', e.target.value)} className={selectClass} required>
                                 <option value="">Seleccionar…</option>
-                                {sedes && <option disabled>—</option> /* placeholder */ }
+                                {cargos.map((c) => (
+                                  <option key={c.id} value={c.id}>
+                                    {c.nombre}{c.departamento ? ` (${c.departamento.nombre})` : ''}
+                                  </option>
+                                ))}
                               </select>
                             </div>
                             <div className="space-y-1">
@@ -182,7 +187,13 @@ export default function EmpleadosShow({ empleado, sedes }) {
                       )}
 
                         {contratos.length === 0 ? (
-                            <div className="py-8 text-center text-slate-500 text-sm">No hay contratos registrados.</div>
+                            <div className="py-8">
+                                <EmptyState
+                                    icon={FileSignature}
+                                    title="No hay contratos"
+                                    description="No se han registrado contratos para este empleado."
+                                />
+                            </div>
                         ) : (
                             <div className="divide-y">
                                 {contratos.map(c => (
@@ -221,10 +232,14 @@ export default function EmpleadosShow({ empleado, sedes }) {
                     <CardHeader className="border-b bg-slate-50/50">
                         <CardTitle className="text-md">Registro de Asistencias (Últimos 30 días)</CardTitle>
                     </CardHeader>
-                    <CardContent className="p-6 text-center text-slate-500">
-                        <CalendarDays className="h-12 w-12 mx-auto text-slate-200 mb-3" />
-                        <p>No se encontraron registros de asistencia recientes.</p>
-                        <p className="text-xs text-slate-400 mt-1">El control de entrada/salida está inactivo para este empleado.</p>
+                    <CardContent className="p-6">
+                        <div className="py-8">
+                            <EmptyState
+                                icon={CalendarDays}
+                                title="Sin asistencias"
+                                description="No se encontraron registros de asistencia recientes. El control de entrada/salida está inactivo para este empleado."
+                            />
+                        </div>
                     </CardContent>
                 </Card>
             )}

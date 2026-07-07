@@ -4,8 +4,11 @@ import ClienteForm from './ClienteForm'
 import { Button } from '@/Components/ui/button'
 import { ArrowLeft, Save, Info, User, Building2, Mail, Phone } from 'lucide-react'
 
+import { useState } from 'react'
+import { z } from 'zod'
+
 export default function ClienteEdit({ cliente }) {
-  const { data, setData, put, processing, errors } = useForm({
+  const { data, setData, put, processing, errors, clearErrors } = useForm({
     tipo: cliente.tipo,
     tipo_documento: cliente.tipo_documento || '',
     numero_documento: cliente.numero_documento || '',
@@ -21,13 +24,48 @@ export default function ClienteEdit({ cliente }) {
     direccion: cliente.direccion || '',
     ciudad: cliente.ciudad || '',
     notas: cliente.notas || '',
+    regimen_tributario: cliente.regimen_tributario || 'simplificado',
+    porcentaje_retencion_fuente: cliente.porcentaje_retencion_fuente ?? 0,
+    porcentaje_retencion_iva: cliente.porcentaje_retencion_iva ?? 0,
+    porcentaje_retencion_ica: cliente.porcentaje_retencion_ica ?? 0,
     activo: cliente.activo ?? true,
     portal_active: cliente.portal_active || false,
-    password: '',
+    // Password oculto en edición (M-05)
+  })
+
+  const [clientErrors, setClientErrors] = useState({})
+
+  const clienteSchema = z.object({
+    numero_documento: z.string().min(1, 'El número de documento es obligatorio'),
+    email: z.string().email('Ingresa un correo válido').optional().or(z.literal('')),
+  }).superRefine((data, ctx) => {
+    if (data.tipo === 'juridico' && (!data.razon_social || data.razon_social.length < 2)) {
+      ctx.addIssue({ path: ['razon_social'], message: 'La razón social es obligatoria' })
+    }
+    if (data.tipo === 'natural') {
+      if (!data.nombres || data.nombres.trim().length === 0) {
+        ctx.addIssue({ path: ['nombres'], message: 'Los nombres son obligatorios' })
+      }
+      if (!data.apellidos || data.apellidos.trim().length === 0) {
+        ctx.addIssue({ path: ['apellidos'], message: 'Los apellidos son obligatorios' })
+      }
+    }
   })
 
   const submit = (e) => {
     e.preventDefault()
+    setClientErrors({})
+
+    const result = clienteSchema.safeParse(data)
+    if (!result.success) {
+      const formattedErrors = {}
+      result.error.issues.forEach(issue => {
+        formattedErrors[issue.path[0]] = issue.message
+      })
+      setClientErrors(formattedErrors)
+      return
+    }
+
     put(route('crm.clientes.update', cliente.id))
   }
 
@@ -67,7 +105,7 @@ export default function ClienteEdit({ cliente }) {
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
           {/* Formulario */}
           <div className="space-y-6 lg:col-span-2">
-            <ClienteForm data={data} setData={setData} errors={errors} />
+            <ClienteForm data={data} setData={setData} errors={{ ...errors, ...clientErrors }} isEdit={true} />
           </div>
 
           {/* Panel lateral: resumen */}

@@ -35,7 +35,8 @@ class ContabilidadService
         $totalDebito = round(array_sum(array_map(fn ($linea) => (float) ($linea['debito'] ?? 0), $lineas)), 2);
         $totalCredito = round(array_sum(array_map(fn ($linea) => (float) ($linea['credito'] ?? 0), $lineas)), 2);
 
-        if (round($totalDebito - $totalCredito, 2) !== 0.0) {
+        // M-02: Tolerancia epsilon para aritmética monetaria con punto flotante
+        if (abs($totalDebito - $totalCredito) > 0.01) {
             throw new \Exception("Asiento descuadrado (Debitos: {$totalDebito} / Creditos: {$totalCredito}).");
         }
 
@@ -99,6 +100,7 @@ class ContabilidadService
             ->where('modulo_origen', $modulo)
             ->where('referencia_type', $referenciaType)
             ->where('referencia_id', $referenciaId)
+            ->where('estado', '!=', 'reversado')
             ->first();
 
         if (!$asientoOriginal) {
@@ -163,7 +165,11 @@ class ContabilidadService
             throw new \Exception('Una linea no puede tener debito y credito al mismo tiempo.');
         }
 
-        $cuenta = CuentaContable::find($linea['cuenta_contable_id']);
+        $cuentaQuery = CuentaContable::where('id', $linea['cuenta_contable_id']);
+        if (tenantId()) {
+            $cuentaQuery->where('tenant_id', tenantId());
+        }
+        $cuenta = $cuentaQuery->first();
         if (!$cuenta) {
             throw new \Exception('La cuenta contable seleccionada no existe para esta empresa.');
         }
@@ -228,13 +234,30 @@ class ContabilidadService
     private function siguienteNumero(Carbon $fecha): string
     {
         $prefix = 'COM-' . $fecha->format('Ym') . '-';
-        // lockForUpdate evita que transacciones concurrentes generen el mismo número
-        $ultimo = AsientoContable::where('numero', 'like', $prefix . '%')
-            ->lockForUpdate()
-            ->orderByDesc('numero')
-            ->value('numero');
+        // C-05: Usar una tabla de secuencias dedicada para evitar race conditions.
+        // Si no existe la fila del mes, la crea; luego incrementa atomiquement.
+        $tenantId = tenantId();
+        $anio = (int) $fecha->format('Y');
+        $mes = (int) $fecha->format('m');
 
-        $secuencia = $ultimo ? ((int) substr($ultimo, -6)) + 1 : 1;
+        DB::statement('
+            INSERT INTO accounting_secuencias (tenant_id, anio, mes, secuencia)
+            VALUES (?, ?, ?, 1)
+            ON CONFLICT (tenant_id, anio, mes) DO NOTHING
+        ', [$tenantId, $anio, $mes]);
+
+        $secuencia = DB::table('accounting_secuencias')
+            ->where('tenant_id', $tenantId)
+            ->where('anio', $anio)
+            ->where('mes', $mes)
+            ->lockForUpdate()
+            ->value('secuencia');
+
+        DB::table('accounting_secuencias')
+            ->where('tenant_id', $tenantId)
+            ->where('anio', $anio)
+            ->where('mes', $mes)
+            ->increment('secuencia');
 
         return $prefix . str_pad((string) $secuencia, 6, '0', STR_PAD_LEFT);
     }

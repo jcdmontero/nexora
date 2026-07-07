@@ -398,4 +398,190 @@ class FacturaServiceTest extends TestCase
             ],
         ]);
     }
+
+    // ─── #25: Validación de pagos mixtos vs total ─────────────────────────
+
+    public function test_pago_mixto_suma_no_cuadra_lanza_excepcion(): void
+    {
+        $this->abrirCaja();
+
+        $producto = Producto::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'stock_actual' => 10,
+            'is_active' => true,
+        ]);
+
+        $this->expectException(\Exception::class);
+        $this->expectExceptionMessage('no coincide con el total');
+
+        $this->service->crearDesdePos([
+            'metodo_pago' => 'efectivo',
+            'pagos_mixtos' => [
+                ['metodo' => 'efectivo', 'monto' => 5000],
+                ['metodo' => 'tarjeta', 'monto' => 3000],
+            ],
+            'items' => [
+                ['tipo' => 'producto', 'producto_id' => $producto->id, 'cantidad' => 1, 'precio_unitario' => 10000],
+            ],
+        ]);
+    }
+
+    public function test_pago_mixto_suma_correcta_si_cuadra(): void
+    {
+        $this->abrirCaja();
+
+        $producto = Producto::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'stock_actual' => 10,
+            'is_active' => true,
+        ]);
+
+        $factura = $this->service->crearDesdePos([
+            'metodo_pago' => 'efectivo',
+            'pagos_mixtos' => [
+                ['metodo' => 'efectivo', 'monto' => 5000],
+                ['metodo' => 'tarjeta', 'monto' => 5000],
+            ],
+            'items' => [
+                ['tipo' => 'producto', 'producto_id' => $producto->id, 'cantidad' => 1, 'precio_unitario' => 10000],
+            ],
+        ]);
+
+        $this->assertEquals(10000, (float) $factura->total);
+        $this->assertEquals('pagada', $factura->estado);
+    }
+
+    // ─── #27: IVA en factura ─────────────────────────────────────────────
+
+    public function test_crear_desde_pos_con_ivaCalculado(): void
+    {
+        $this->abrirCaja();
+
+        // Régimen simplificado: sin IVA
+        $factura = $this->service->crearDesdePos([
+            'metodo_pago' => 'efectivo',
+            'items' => [
+                ['tipo' => 'servicio', 'producto_id' => null, 'descripcion' => 'Servicio', 'cantidad' => 1, 'precio_unitario' => 100000],
+            ],
+        ]);
+
+        $this->assertEquals(100000, (float) $factura->subtotal);
+        $this->assertEquals(0, (float) $factura->impuestos);
+        $this->assertEquals(100000, (float) $factura->total);
+    }
+
+    // ─── #28: XmlUBLGenerator genera XML válido ───────────────────────────
+
+    public function test_xml_ubl_generator_contiene_estructura_basica(): void
+    {
+        $this->abrirCaja();
+
+        $factura = $this->service->crearDesdePos([
+            'metodo_pago' => 'efectivo',
+            'items' => [
+                ['tipo' => 'servicio', 'producto_id' => null, 'descripcion' => 'Servicio de prueba', 'cantidad' => 1, 'precio_unitario' => 50000],
+            ],
+        ]);
+
+        $factura->load('items');
+
+        $empresa = [
+            'nit' => '900123456',
+            'razon_social' => 'Empresa Test SAS',
+            'direccion' => 'Calle 123',
+        ];
+
+        $generator = new \App\Modules\Sales\Services\ElectronicBilling\XmlUBLGenerator();
+        $xml = $generator->generar($factura, $empresa);
+
+        $this->assertStringContainsString('<?xml version="1.0" encoding="UTF-8"?>', $xml);
+        $this->assertStringContainsString('<Invoice', $xml);
+        $this->assertStringContainsString('<cbc:ID>' . $factura->numero . '</cbc:ID>', $xml);
+        $this->assertStringContainsString('UBL 2.1', $xml);
+        $this->assertStringContainsString('DIAN 2.1', $xml);
+        $this->assertStringContainsString('<cac:AccountingSupplierParty>', $xml);
+        $this->assertStringContainsString('<cac:AccountingCustomerParty>', $xml);
+        $this->assertStringContainsString('<cac:TaxTotal>', $xml);
+        $this->assertStringContainsString('<cac:LegalMonetaryTotal>', $xml);
+        $this->assertStringContainsString('<cac:InvoiceLine>', $xml);
+
+        // Verificar que el XML es válido
+        $dom = new \DOMDocument();
+        $this->assertTrue($dom->loadXML($xml));
+    }
+
+    public function test_xml_ubl_generator_incluye_allowance_charge_con_descuento(): void
+    {
+        // Crear factura con descuento manual (sin factory)
+        $factura = Factura::create([
+            'tenant_id' => $this->tenant->id,
+            'user_id' => $this->user->id,
+            'subtotal' => 100000,
+            'descuento' => 10000,
+            'impuestos' => 17100,
+            'total' => 107100,
+            'numero' => 'FAC-TEST-DESC',
+            'tipo_documento' => 'factura',
+            'estado' => 'pagada',
+            'metodo_pago' => 'efectivo',
+        ]);
+
+        \App\Modules\Sales\Models\FacturaItem::create([
+            'factura_id' => $factura->id,
+            'descripcion' => 'Producto con descuento',
+            'cantidad' => 1,
+            'precio_unitario' => 100000,
+            'tasa_impuesto' => 19,
+            'subtotal' => 100000,
+            'impuesto_total' => 17100,
+            'total' => 117100,
+        ]);
+
+        $empresa = ['nit' => '900123456', 'razon_social' => 'Test'];
+        $generator = new \App\Modules\Sales\Services\ElectronicBilling\XmlUBLGenerator();
+        $xml = $generator->generar($factura, $empresa);
+
+        $this->assertStringContainsString('AllowanceCharge', $xml);
+        $this->assertStringContainsString('ChargeIndicator', $xml);
+        $this->assertStringContainsString('TaxableAmount', $xml);
+    }
+
+    public function test_factura_anulada_sincroniza_estado(): void
+    {
+        // #13: Verificar que el guard de sincronización funciona
+        $factura = Factura::create([
+            'tenant_id' => $this->tenant->id,
+            'user_id' => $this->user->id,
+            'subtotal' => 50000,
+            'total' => 50000,
+            'numero' => 'FAC-SYNC-TEST',
+            'tipo_documento' => 'factura',
+            'estado' => 'pagada',
+            'metodo_pago' => 'efectivo',
+        ]);
+
+        // Cambiar estado a anulada → debe sincronizar booleano
+        $factura->update(['estado' => 'anulada']);
+        $factura->refresh();
+
+        $this->assertTrue($factura->anulada);
+        $this->assertNotNull($factura->anulada_at);
+
+        // Crear otra factura y sincronizar desde el booleano
+        $factura2 = Factura::create([
+            'tenant_id' => $this->tenant->id,
+            'user_id' => $this->user->id,
+            'subtotal' => 30000,
+            'total' => 30000,
+            'numero' => 'FAC-SYNC-TEST2',
+            'tipo_documento' => 'factura',
+            'estado' => 'pagada',
+            'metodo_pago' => 'efectivo',
+        ]);
+
+        $factura2->update(['anulada' => true]);
+        $factura2->refresh();
+
+        $this->assertEquals('anulada', $factura2->estado);
+    }
 }

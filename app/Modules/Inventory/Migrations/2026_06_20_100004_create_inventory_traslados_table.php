@@ -15,7 +15,7 @@ return new class extends Migration
             $table->foreignId('bodega_destino_id')->constrained('inventory_bodegas');
             $table->string('numero', 50);
             $table->date('fecha');
-            $table->string('estado', 20)->default('completado'); // borrador, transito, completado
+            $table->string('estado', 20)->default('borrador'); // borrador, transito, completado
             $table->text('notas')->nullable();
             $table->timestamps();
             $table->softDeletes();

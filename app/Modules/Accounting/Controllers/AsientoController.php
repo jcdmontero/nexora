@@ -63,7 +63,7 @@ class AsientoController extends Controller
 
     public function store(Request $request, ContabilidadService $service)
     {
-        $tenantId = auth()->user()->tenant_id;
+        $tenantId = tenantId();
 
         $validated = $request->validate([
             'fecha' => 'required|date',
@@ -76,7 +76,7 @@ class AsientoController extends Controller
             'tercero_nombre' => 'nullable|string|max:180',
             'referencia_id' => 'nullable|string',
             'referencia_type' => 'nullable|string',
-            'lineas' => 'required|array|min:2',
+            'lineas' => 'required|array|min:2|max:100',
             'lineas.*.cuenta_contable_id' => [
                 'required',
                 Rule::exists('cuentas_contables', 'id')->where('tenant_id', $tenantId),
@@ -113,6 +113,16 @@ class AsientoController extends Controller
             ], $validated['lineas']);
 
             return redirect()->route('accounting.asientos.index')->with('success', 'Asiento contable registrado correctamente.');
+        } catch (\Illuminate\Database\QueryException $e) {
+            \Log::error('Error de BD al registrar asiento', [
+                'error' => $e->getMessage(),
+                'sqlstate' => $e->getCode(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            $mensaje = str_starts_with((string) $e->getCode(), '23')
+                ? 'Error de integridad de datos. Verifique que no haya duplicados o conflictos.'
+                : 'Error al guardar el asiento. Verifique que los datos sean correctos e intente nuevamente.';
+            return back()->with('error', $mensaje);
         } catch (\Exception $e) {
             return back()->with('error', $e->getMessage());
         }

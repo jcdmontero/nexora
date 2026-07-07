@@ -7,6 +7,7 @@ use App\Modules\Cash\Models\Caja;
 use App\Modules\Cash\Models\Transferencia;
 use App\Modules\Cash\Services\CajaService;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
 class TransferenciaController extends Controller
@@ -17,14 +18,14 @@ class TransferenciaController extends Controller
 
     public function index(Request $request)
     {
-        $cajas = Caja::orderBy('nombre')->get(['id', 'nombre', 'activa']);
+        $cajas = Caja::where('activa', true)->orderBy('nombre')->get(['id', 'nombre']);
 
         $transferencias = Transferencia::with(['cajaOrigen', 'cajaDestino', 'usuario'])
             ->orderBy('id', 'desc')
             ->paginate(15)
             ->withQueryString();
 
-        return Inertia::render('Cash/Transferencias/Index', [
+        return Inertia::render('Modules/Cash/Transferencias/Index', [
             'cajas' => $cajas,
             'transferencias' => $transferencias,
         ]);
@@ -33,8 +34,8 @@ class TransferenciaController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'caja_origen_id' => 'required|exists:cash_cajas,id|different:caja_destino_id',
-            'caja_destino_id' => 'required|exists:cash_cajas,id',
+            'caja_origen_id' => ['required', Rule::exists('cash_cajas', 'id')->where('tenant_id', app('current_tenant')->id)->where('activa', true), 'different:caja_destino_id'],
+            'caja_destino_id' => ['required', Rule::exists('cash_cajas', 'id')->where('tenant_id', app('current_tenant')->id)->where('activa', true)],
             'monto' => 'required|numeric|min:0.01',
             'concepto' => 'nullable|string|max:255',
         ]);

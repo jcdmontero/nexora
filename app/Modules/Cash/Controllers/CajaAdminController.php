@@ -15,7 +15,7 @@ class CajaAdminController extends Controller
 
         $cajas = Caja::with(['sede', 'sesionActual.usuario'])
             ->when($search, function ($query, $search) {
-                $query->where('nombre', 'ilike', "%{$search}%");
+                $query->whereRaw('LOWER(nombre) LIKE ?', ['%' . strtolower($search) . '%']);
             })
             ->orderBy('nombre')
             ->paginate(15)
@@ -23,7 +23,7 @@ class CajaAdminController extends Controller
 
         $sedes = \App\Core\Models\Sede::orderBy('nombre')->get(['id', 'nombre']);
 
-        return Inertia::render('Cash/Cajas/Index', [
+        return Inertia::render('Modules/Cash/Cajas/Index', [
             'cajas' => $cajas,
             'sedes' => $sedes,
             'filters' => $request->only(['search']),
@@ -63,7 +63,14 @@ class CajaAdminController extends Controller
             return back()->with('error', 'No puedes eliminar una caja con un turno abierto.');
         }
 
-        if ($caja->sesiones()->exists()) {
+        $tieneTransferencias = \App\Modules\Cash\Models\Transferencia::where('caja_origen_id', $caja->id)
+            ->orWhere('caja_destino_id', $caja->id)
+            ->exists();
+
+        if ($caja->sesiones()->exists() || $tieneTransferencias) {
+            if (!$caja->activa) {
+                return back()->with('error', 'La caja ya está desactivada y no puede ser eliminada por tener historial.');
+            }
             // En lugar de borrar, se desactiva para preservar el histórico.
             $caja->update(['activa' => false]);
             return back()->with('success', 'La caja tiene historial y fue desactivada en lugar de eliminada.');

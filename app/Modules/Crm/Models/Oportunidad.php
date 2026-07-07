@@ -4,18 +4,18 @@ namespace App\Modules\Crm\Models;
 
 use App\Core\Concerns\BelongsToTenant;
 use App\Core\Services\Auditable;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Oportunidad extends Model
 {
-    use BelongsToTenant, Auditable, SoftDeletes;
+    use HasFactory, BelongsToTenant, Auditable, SoftDeletes;
 
     protected $table = 'crm_oportunidades';
 
     protected $fillable = [
-        'tenant_id',
-        'cliente_id',
+        'tenant_id','cliente_id',
         'titulo',
         'valor_estimado',
         'etapa',

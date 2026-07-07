@@ -29,7 +29,7 @@ class TicketController extends Controller
             ->where('tenant_id', $tenantId)
             ->where('tipo', $tipo)
             ->when($search, function ($query, $search) {
-                $query->where('id', 'ilike', "%{$search}%")
+                $query->where('id', $search)
                       ->orWhere('asunto', 'ilike', "%{$search}%")
                       ->orWhere('equipo_descripcion', 'ilike', "%{$search}%")
                       ->orWhereHas('cliente', function($q) use ($search) {

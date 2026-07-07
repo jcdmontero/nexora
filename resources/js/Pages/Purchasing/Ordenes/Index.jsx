@@ -1,45 +1,36 @@
-import React, { useState } from 'react';
+import React from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link } from '@inertiajs/react';
 import { Button } from '@/Components/ui/button';
-import { Plus, ShoppingCart, Eye, Edit, Trash2, CheckCircle2 } from 'lucide-react';
+import { Plus, ShoppingCart, Eye, Edit, Trash2 } from 'lucide-react';
 import { DataTable } from '@/Components/ui/data-table';
 import { Badge } from '@/Components/ui/badge';
 import EmptyState from '@/Components/ui/empty-state';
 import { TableSkeleton } from '@/Components/ui/skeleton';
+import { ConfirmDialog } from '@/Components/ui/confirm-dialog';
 import { usePermissions } from '@/Hooks/usePermissions';
 
 export default function Index({ ordenes }) {
     const { can } = usePermissions();
-    const [isDeleting, setIsDeleting] = useState(false);
     const loading = ordenes == null;
-
-    const handleDelete = (id) => {
-        if (confirm('¿Está seguro de eliminar esta orden?')) {
-            setIsDeleting(true);
-            router.delete(route('purchasing.ordenes.destroy', id), {
-                onFinish: () => setIsDeleting(false),
-            });
-        }
-    };
 
     const columns = [
         {
             header: 'Número',
-            accessorKey: 'numero',
+            key: 'numero',
             cell: (row) => <span className="font-medium">{row.numero}</span>,
         },
         {
             header: 'Proveedor',
-            accessorKey: 'proveedor',
+            key: 'proveedor',
         },
         {
             header: 'Fecha Emisión',
-            accessorKey: 'fecha_emision',
+            key: 'fecha_emision',
         },
         {
             header: 'Estado',
-            accessorKey: 'estado',
+            key: 'estado',
             cell: (row) => {
                 const colors = {
                     'borrador': 'bg-gray-100 text-gray-800',
@@ -56,11 +47,11 @@ export default function Index({ ordenes }) {
         },
         {
             header: 'Total',
-            accessorKey: 'total',
+            key: 'total',
             cell: (row) => `$${row.total}`,
         },
         {
-            id: 'actions',
+            key: 'actions',
             alignEnd: true,
             cell: (row) => (
                 <div className="flex justify-end gap-2">
@@ -79,14 +70,16 @@ export default function Index({ ordenes }) {
                     )}
 
                     {row.estado === 'borrador' && can('purchasing:delete') && (
-                        <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            onClick={() => handleDelete(row.id)}
-                            disabled={isDeleting}
-                        >
-                            <Trash2 className="h-4 w-4 text-red-500" />
-                        </Button>
+                        <ConfirmDialog
+                            trigger={
+                                <Button variant="ghost" size="icon">
+                                    <Trash2 className="h-4 w-4 text-red-500" />
+                                </Button>
+                            }
+                            title="¿Eliminar esta orden?"
+                            description="Se eliminará la orden de compra y todos sus detalles. Esta acción no se puede deshacer."
+                            deleteUrl={route('purchasing.ordenes.destroy', row.id)}
+                        />
                     )}
                 </div>
             )
@@ -116,7 +109,7 @@ export default function Index({ ordenes }) {
 
                     {loading ? (
                         <TableSkeleton rows={6} cols={5} />
-                    ) : !ordenes || ordenes.length === 0 ? (
+                    ) : !ordenes || (ordenes.data?.length ?? ordenes.length) === 0 ? (
                         <EmptyState
                             icon={ShoppingCart}
                             title="No hay órdenes de compra"
@@ -126,9 +119,9 @@ export default function Index({ ordenes }) {
                         />
                     ) : (
                         <div className="bg-white p-6 shadow-sm sm:rounded-lg border">
-                            <DataTable 
-                                columns={columns} 
-                                data={ordenes} 
+                            <DataTable
+                                columns={columns}
+                                data={ordenes.data}
                                 searchPlaceholder="Buscar por número..."
                                 searchColumn="numero"
                             />

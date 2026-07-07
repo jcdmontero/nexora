@@ -3,18 +3,25 @@ namespace App\Modules\Crm\Controllers;
 
 use App\Modules\Crm\Models\Cliente;
 use Illuminate\Http\Request;
-use Illuminate\Routing\Controller;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
-class ClienteController extends Controller
+class ClienteController extends \App\Http\Controllers\Controller
 {
+    protected $clienteService;
+
+    public function __construct(\App\Modules\Crm\Services\ClienteService $clienteService)
+    {
+        $this->clienteService = $clienteService;
+    }
+
     public function index()
     {
         return Inertia::render('Crm/Clientes/Index', [
             'clientes' => Inertia::defer(fn () => Cliente::withCount('oportunidades')
                 ->orderBy('created_at', 'desc')
-                ->get()
-                ->map(fn ($c) => [
+                ->paginate(15)
+                ->through(fn ($c) => [
                     'id' => $c->id,
                     'tipo' => $c->tipo,
                     'nombre' => $c->nombre_completo,
@@ -36,10 +43,7 @@ class ClienteController extends Controller
     public function store(Request $request)
     {
         $data = $this->validateData($request);
-        if (!empty($data['password'])) {
-            $data['password'] = bcrypt($data['password']);
-        }
-        Cliente::create($data);
+        $this->clienteService->crearCliente($data);
 
         return redirect()->route('crm.clientes.index')
             ->with('success', 'Cliente creado correctamente.');
@@ -47,12 +51,18 @@ class ClienteController extends Controller
 
     public function show(Cliente $cliente)
     {
-        $cliente->load(['contactos', 'oportunidades' => function ($query) {
-            $query->orderBy('created_at', 'desc');
-        }]);
+        $cliente->load(['contactos']);
+
+        $oportunidades = $cliente->oportunidades()
+            ->orderBy('created_at', 'desc')
+            ->paginate(10);
 
         return Inertia::render('Crm/Clientes/Show', [
-            'cliente' => $cliente,
+            'cliente' => array_merge($cliente->toArray(), [
+                'nombre_completo' => $cliente->nombre_completo,
+                'documento' => $cliente->documento,
+            ]),
+            'oportunidades' => $oportunidades,
         ]);
     }
 
@@ -63,6 +73,8 @@ class ClienteController extends Controller
                 'id', 'tipo', 'tipo_documento', 'numero_documento', 'nombres', 'apellidos',
                 'razon_social', 'nit', 'nombre_contacto', 'telefono_contacto', 'cargo_contacto',
                 'email', 'telefono', 'direccion', 'ciudad', 'notas', 'activo', 'portal_active',
+                'regimen_tributario', 'porcentaje_retencion_fuente', 'porcentaje_retencion_iva',
+                'porcentaje_retencion_ica',
             ]),
         ]);
     }
@@ -70,12 +82,7 @@ class ClienteController extends Controller
     public function update(Request $request, Cliente $cliente)
     {
         $data = $this->validateData($request);
-        if (!empty($data['password'])) {
-            $data['password'] = bcrypt($data['password']);
-        } else {
-            unset($data['password']);
-        }
-        $cliente->update($data);
+        $this->clienteService->actualizarCliente($cliente, $data);
 
         return redirect()->route('crm.clientes.index')
             ->with('success', 'Cliente actualizado.');
@@ -83,18 +90,20 @@ class ClienteController extends Controller
 
     public function destroy(Cliente $cliente)
     {
-        if ($cliente->oportunidades()->count() > 0) {
-            return back()->with('error', 'No se puede eliminar el cliente porque tiene oportunidades asociadas.');
+        try {
+            $this->clienteService->eliminarCliente($cliente);
+            return redirect()->route('crm.clientes.index')
+                ->with('success', 'Cliente eliminado.');
+        } catch (\Exception $e) {
+            return back()->with('error', $e->getMessage());
         }
-
-        $cliente->delete();
-
-        return redirect()->route('crm.clientes.index')
-            ->with('success', 'Cliente eliminado.');
     }
 
     private function validateData(Request $request): array
     {
+        $tenantId = app('current_tenant')->id;
+        $clienteId = $request->route('cliente')?->id;
+
         return $request->validate([
             'tipo' => ['required', 'in:natural,juridico'],
             'regimen_tributario' => ['nullable', 'in:simplificado,comun'],
@@ -102,11 +111,21 @@ class ClienteController extends Controller
             'porcentaje_retencion_iva' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'porcentaje_retencion_ica' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'tipo_documento' => ['nullable', 'string', 'max:20'],
-            'numero_documento' => ['nullable', 'string', 'max:40'],
+            'numero_documento' => [
+                'nullable', 'string', 'max:40',
+                Rule::unique('crm_clientes', 'numero_documento')
+                    ->where('tenant_id', $tenantId)
+                    ->ignore($clienteId),
+            ],
             'nombres' => ['required_if:tipo,natural', 'nullable', 'string', 'max:120'],
             'apellidos' => ['nullable', 'string', 'max:120'],
             'razon_social' => ['required_if:tipo,juridico', 'nullable', 'string', 'max:200'],
-            'nit' => ['nullable', 'string', 'max:40'],
+            'nit' => [
+                'nullable', 'string', 'max:40',
+                Rule::unique('crm_clientes', 'nit')
+                    ->where('tenant_id', $tenantId)
+                    ->ignore($clienteId),
+            ],
             'nombre_contacto' => ['nullable', 'string', 'max:120'],
             'telefono_contacto' => ['nullable', 'string', 'max:30'],
             'cargo_contacto' => ['nullable', 'string', 'max:100'],

@@ -1,16 +1,26 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Head, usePage, Link, router } from '@inertiajs/react'
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import { useToast } from '@/Components/toasts/ToastProvider'
-import { useTheme } from '@/Hooks/useTheme'
-import { routeExistsSafe } from '@/lib/utils'
+import { routeExistsSafe, cn } from '@/lib/utils'
 import { KPISkeleton, ChartSkeleton, WidgetSkeleton } from '@/Widgets/WidgetSkeleton'
-import '@/../css/dashboard.css'
+import { Card, CardHeader, CardTitle, CardContent } from '@/Components/ui/card'
+import { StatCard } from '@/Components/ui/stat-card'
+import { getAccent, chartColors, type AccentColor } from '@/lib/accent'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/Components/ui/dialog'
+import { Button } from '@/Components/ui/button'
+import { Input } from '@/Components/ui/input'
+import { Label } from '@/Components/ui/label'
+import { EmptyState } from '@/Components/ui/empty-state'
+import {
+  TrendingUp, Receipt, Package, Users, AlertTriangle, Activity,
+  ArrowRight, LayoutDashboard, Book, Wallet, ShoppingCart, BarChart3,
+  Wrench, User, Bell, ChevronRight, ClipboardList, Plus, Check, BellRing,
+  UserPlus, Shield, Settings, type LucideIcon,
+} from 'lucide-react'
 
 interface DashboardProps {
-  auth: { user: { name: string; email: string } }
-  tenantName?: string
   stats?: Record<string, number>
   recentActivity?: Array<{ description: string; created_at?: string }>
   activitySeries?: Array<{ fecha: string; total: number }>
@@ -21,15 +31,96 @@ interface DashboardProps {
   alertsSummary?: {
     stock_bajo?: Array<{ nombre: string; stock_actual: number; stock_minimo: number }>
     facturas_por_vencer?: Array<{ numero: string; total: number; cliente: string; dias_restantes: number }>
-    cuentas_por_pagar?: unknown[]
-    servicios_pendientes?: unknown[]
+    cuentas_por_pagar?: Array<{ id: number; numero: string; total: number; proveedor: string; estado: string; dias_desde_creacion: number }>
+    servicios_pendientes?: Array<{ id: number; numero_orden: string; estado: string; cliente: string; fecha: string; dias: number }>
     cajas_abiertas?: Array<{ caja: string; cajero: string; saldo_actual: number; horas_abierta: number }>
   }
 }
 
+const quickIconMap: Record<string, LucideIcon> = {
+  'user-plus': UserPlus,
+  wallet: Wallet,
+  users: Users,
+  'shield-lock': Shield,
+  settings: Settings,
+  Package,
+  Wrench,
+  ClipboardList,
+  Truck: Package,
+  Calculator: Receipt,
+  IdCard: User,
+  ShoppingCart,
+}
+
+function getModuleMeta(section: string): { icon: LucideIcon; accent: AccentColor } {
+  const lbl = section.toLowerCase()
+  if (lbl.includes('conta')) return { icon: Book, accent: 'indigo' }
+  if (lbl.includes('tesor') || lbl.includes('caja')) return { icon: Wallet, accent: 'emerald' }
+  if (lbl.includes('crm')) return { icon: Users, accent: 'violet' }
+  if (lbl.includes('inv')) return { icon: Package, accent: 'amber' }
+  if (lbl.includes('compra')) return { icon: ShoppingCart, accent: 'rose' }
+  if (lbl.includes('venta')) return { icon: BarChart3, accent: 'emerald' }
+  if (lbl.includes('serv')) return { icon: Wrench, accent: 'sky' }
+  if (lbl.includes('recursos') || lbl.includes('hr')) return { icon: User, accent: 'sky' }
+  if (lbl.includes('nómina') || lbl.includes('payroll')) return { icon: Receipt, accent: 'emerald' }
+  if (lbl.includes('notif')) return { icon: Bell, accent: 'amber' }
+  return { icon: LayoutDashboard, accent: 'indigo' }
+}
+
+function quickBtnClasses(color: string): string {
+  const base =
+    'inline-flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-medium border transition-colors no-underline cursor-pointer'
+  switch (color) {
+    case 'emerald':
+      return cn(
+        base,
+        'bg-emerald-50 dark:bg-emerald-500/10',
+        'border-emerald-200 dark:border-emerald-500/20',
+        'text-emerald-600 dark:text-emerald-400',
+        'hover:bg-emerald-100 dark:hover:bg-emerald-500/20',
+        'hover:border-emerald-300 dark:hover:border-emerald-500/30',
+      )
+    case 'indigo':
+      return cn(
+        base,
+        'bg-indigo-50 dark:bg-indigo-500/10',
+        'border-indigo-200 dark:border-indigo-500/20',
+        'text-indigo-600 dark:text-indigo-400',
+        'hover:bg-indigo-100 dark:hover:bg-indigo-500/20',
+        'hover:border-indigo-300 dark:hover:border-indigo-500/30',
+      )
+    case 'pro':
+      return cn(
+        base,
+        'bg-violet-50 dark:bg-violet-500/10',
+        'border-violet-200 dark:border-violet-500/20',
+        'text-violet-600 dark:text-violet-400',
+        'hover:bg-violet-100 dark:hover:bg-violet-500/20',
+        'hover:border-violet-300 dark:hover:border-violet-500/30',
+      )
+    default:
+      return cn(base, 'bg-muted border-border text-foreground', 'hover:bg-accent hover:text-accent-foreground')
+  }
+}
+
+// Etiquetas para estados de servicio
+const estadoServicioLabel: Record<string, string> = {
+  recibido: 'Recibido',
+  diagnosticado: 'Diagnosticado',
+  en_proceso: 'En proceso',
+}
+
+// Etiquetas para estados de compra
+const estadoCompraLabel: Record<string, string> = {
+  pendiente: 'Pendiente',
+  enviada: 'Enviada',
+  parcial: 'Parcial',
+  aprobada: 'Aprobada',
+}
+
 export default function Dashboard() {
   const { props } = usePage()
-  const { auth, stats = {}, alertsSummary } = props as DashboardProps
+  const { stats = {}, alertsSummary } = props as DashboardProps
   const moduleMenus = Array.isArray(props.moduleMenus) ? props.moduleMenus : []
   const recentActivity = Array.isArray(props.recentActivity) ? props.recentActivity : null
   const activitySeries = Array.isArray(props.activitySeries) ? props.activitySeries : null
@@ -37,15 +128,17 @@ export default function Dashboard() {
   const quickAccess = Array.isArray(props.quickAccess) ? props.quickAccess : null
   const personalTasks = Array.isArray(props.personalTasks) ? props.personalTasks : null
 
-  const isLoadingDeferred = recentActivity === null || activitySeries === null || pendingTasks === null || quickAccess === null
-  
-  const { theme } = useTheme()
+  const isLoadingDeferred =
+    recentActivity === null || activitySeries === null || pendingTasks === null || quickAccess === null
+
   const { toast } = useToast()
+
+  const indigoText = getAccent('indigo').text
 
   const fmtMoney = (n: number) => {
     if (!n) return '$ 0'
     if (n >= 1_000_000) return '$ ' + (n / 1_000_000).toFixed(1) + 'M'
-    if (n >= 1_000)     return '$ ' + (n / 1_000).toFixed(0) + 'k'
+    if (n >= 1_000) return '$ ' + (n / 1_000).toFixed(0) + 'k'
     return '$ ' + n.toLocaleString('es-CO')
   }
 
@@ -55,77 +148,51 @@ export default function Dashboard() {
   const [newTaskDate, setNewTaskDate] = useState('')
   const [isSaving, setIsSaving] = useState(false)
 
-  // Manejo de eventos de teclado y foco para el modal (A11y)
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        setShowTaskModal(false)
-      }
-    }
-    if (showTaskModal) {
-      window.addEventListener('keydown', handleKeyDown)
-    }
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown)
-    }
-  }, [showTaskModal])
-
   const handleSaveTask = () => {
     if (newTaskActividad.trim() && !isSaving) {
       setIsSaving(true)
-      router.post(route('core.tasks.store'), {
-        titulo: newTaskActividad,
-        departamento: newTaskDepto || 'General',
-        fecha_limite: newTaskDate || null,
-      }, {
-        onSuccess: () => {
-          setNewTaskActividad('')
-          setNewTaskDepto('')
-          setNewTaskDate('')
-          setShowTaskModal(false)
-          toast('Tarea guardada', 'success')
+      router.post(
+        route('core.tasks.store'),
+        { titulo: newTaskActividad, departamento: newTaskDepto || 'General', fecha_limite: newTaskDate || null },
+        {
+          onSuccess: () => {
+            setNewTaskActividad('')
+            setNewTaskDepto('')
+            setNewTaskDate('')
+            setShowTaskModal(false)
+            toast('Tarea guardada', 'success')
+          },
+          onFinish: () => setIsSaving(false),
         },
-        onFinish: () => {
-          setIsSaving(false)
-        }
-      })
+      )
     }
   }
 
   const toggleTask = (taskToToggle: { id: number; isLocal: boolean; estado?: string }) => {
     if (!taskToToggle.isLocal) {
-       toast('Esta es una tarea del sistema. Ve al módulo correspondiente para resolverla.', 'info')
-       return
+      toast('Esta es una tarea del sistema. Ve al módulo correspondiente para resolverla.', 'info')
+      return
     }
     const isDone = taskToToggle.estado !== 'completada'
-    router.put(route('core.tasks.update', taskToToggle.id), {
-      estado: isDone ? 'completada' : 'pendiente'
-    }, {
-      preserveScroll: true
-    })
+    router.put(route('core.tasks.update', taskToToggle.id), { estado: isDone ? 'completada' : 'pendiente' }, { preserveScroll: true })
   }
 
   const cycleTaskState = (task: { id: number; isLocal: boolean; estado?: string }) => {
     if (!task.isLocal) return
     const states = ['pendiente', 'en_progreso', 'completada']
     const currentState = task.estado || 'pendiente'
-    const nextIdx = (states.indexOf(currentState) + 1) % states.length
-    const newState = states[nextIdx]
-    
-    router.put(route('core.tasks.update', task.id), {
-      estado: newState
-    }, {
-      preserveScroll: true
-    })
+    router.put(route('core.tasks.update', task.id), { estado: states[(states.indexOf(currentState) + 1) % states.length] }, { preserveScroll: true })
   }
 
-  const qAccess = (quickAccess && quickAccess.length > 0) ? quickAccess : [
-    { label: 'Nuevo usuario', route: 'core.users.create', icon: 'user-plus', color: 'indigo' },
-    { label: 'Abrir Caja', route: 'cash.caja.index', icon: 'wallet', color: 'emerald' },
-    { label: 'Ver usuarios', route: 'core.users.index', icon: 'users', color: 'emerald' },
-    { label: 'Roles y Permisos', route: 'core.roles.index', icon: 'shield-lock', color: 'pro' },
-    { label: 'Configuración', route: 'core.tenant.edit', icon: 'settings', color: 'default' },
-  ]
+  const qAccess = quickAccess?.length
+    ? quickAccess
+    : [
+        { label: 'Nuevo usuario', route: 'core.users.create', icon: 'user-plus', color: 'indigo' },
+        { label: 'Abrir Caja', route: 'cash.caja.index', icon: 'wallet', color: 'emerald' },
+        { label: 'Ver usuarios', route: 'core.users.index', icon: 'users', color: 'emerald' },
+        { label: 'Roles y Permisos', route: 'core.roles.index', icon: 'shield-lock', color: 'pro' },
+        { label: 'Configuración', route: 'core.tenant.edit', icon: 'settings', color: 'default' },
+      ]
 
   const getModuleRoute = (section: string): string => {
     const lbl = section.toLowerCase()
@@ -141,7 +208,7 @@ export default function Dashboard() {
     if (lbl.includes('notif')) return 'notifications.index'
     return ''
   }
-  
+
   const personalTasksArr = personalTasks ?? []
   const allTasks = [
     ...(pendingTasks ?? []).map((t, idx) => ({
@@ -152,8 +219,8 @@ export default function Dashboard() {
       done: false,
       isLocal: false,
       fecha_limite: undefined,
-      estado: 'pendiente'
-    })), 
+      estado: 'pendiente',
+    })),
     ...personalTasksArr.map((t) => ({
       keyId: `personal-${t.id}`,
       id: t.id,
@@ -162,43 +229,18 @@ export default function Dashboard() {
       done: t.estado === 'completada',
       isLocal: true,
       fecha_limite: t.fecha_limite,
-      estado: t.estado
-    }))
+      estado: t.estado,
+    })),
   ]
-
-  const getBtnClass = (color: string) => {
-    if (color === 'emerald') return 'quick-btn success'
-    if (color === 'indigo') return 'quick-btn accent'
-    if (color === 'amber' || color === 'warning') return 'quick-btn warn'
-    if (color === 'pro') return 'quick-btn pro'
-    return 'quick-btn'
-  }
-
-  const getIcon = (iconName: string) => {
-    const map: Record<string, string> = {
-      'UserPlus': 'user-plus',
-      'Package': 'package',
-      'Wrench': 'tool',
-      'ClipboardList': 'clipboard-list',
-      'Truck': 'truck',
-      'Calculator': 'calculator',
-      'IdCard': 'id',
-      'Wallet': 'wallet',
-      'ShoppingCart': 'shopping-cart'
-    }
-    return map[iconName] || iconName || 'arrow-right'
-  }
 
   const stock = Array.isArray(alertsSummary?.stock_bajo) ? alertsSummary.stock_bajo : []
   const facturas = Array.isArray(alertsSummary?.facturas_por_vencer) ? alertsSummary.facturas_por_vencer : []
+  const cxp = Array.isArray(alertsSummary?.cuentas_por_pagar) ? alertsSummary.cuentas_por_pagar : []
+  const servicios = Array.isArray(alertsSummary?.servicios_pendientes) ? alertsSummary.servicios_pendientes : []
   const cajas = Array.isArray(alertsSummary?.cajas_abiertas) ? alertsSummary.cajas_abiertas : []
 
-  // Datos del gráfico (Recharts)
-  const chartData = activitySeries.length > 0 
-    ? activitySeries.map((s) => ({
-        fecha: s.fecha.substring(5, 10),
-        total: s.total
-      }))
+  const chartData = (activitySeries?.length ?? 0) > 0
+    ? activitySeries.map((s) => ({ fecha: s.fecha.substring(5, 10), total: s.total }))
     : [
         { fecha: 'Lun', total: 4 },
         { fecha: 'Mar', total: 7 },
@@ -209,372 +251,495 @@ export default function Dashboard() {
         { fecha: 'Dom', total: 6 },
       ]
 
+  // Verifica si la ruta de auditoría existe para los botones "Ver detalles/todo"
+  const auditExists = routeExistsSafe('core.audit.index')
+
   return (
     <AuthenticatedLayout>
-      <Head title="Dashboard">
-        <link 
-          rel="stylesheet" 
-          href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css" 
-          integrity="sha384-hs5SINUk7GPohxRis+rS7grpSWEbtOIJ3sRoseBKg3CDPIKpG55RfSenbvA6ALOt" 
-          crossOrigin="anonymous" 
-        />
-      </Head>
+      <Head title="Dashboard" />
 
-      <div className="custom-dash-container" data-theme={theme}>
-        {/* Quick Bar */}
-        <div className="quick-bar">
-          <span className="quick-label">Acceso rápido</span>
-          <div className="quick-divider"></div>
-          
+      <div className="space-y-5">
+        {/* ── Quick Access Bar ── */}
+        <div className="flex items-center gap-2.5 p-3.5 bg-card border border-border rounded-xl flex-wrap">
+          <span className="text-xs text-muted-foreground whitespace-nowrap mr-1">Acceso rápido</span>
+          <div className="w-px h-7 bg-border mx-1" />
           {qAccess.map((item) => {
-            const hasRoute = item.route && routeExistsSafe(item.route);
-            const href = hasRoute ? route(item.route!) : '#';
+            const Icon = quickIconMap[item.icon] ?? ArrowRight
+            const hasRoute = item.route && routeExistsSafe(item.route)
+            const href = hasRoute ? route(item.route!) : '#'
             return (
-              <Link 
-                key={item.label} 
-                href={href} 
-                className={getBtnClass(item.color)} 
+              <Link
+                key={item.label}
+                href={href}
+                className={quickBtnClasses(item.color)}
                 onClick={(e) => {
                   if (!hasRoute) {
-                    e.preventDefault();
-                    toast(`El acceso a "${item.label}" no está disponible en este momento`, 'warning');
-                  } else {
-                    toast(`Abriendo ${item.label}`, 'info');
+                    e.preventDefault()
+                    toast(`El acceso a "${item.label}" no está disponible en este momento`, 'warning')
                   }
                 }}
               >
-                <i className={`ti ti-${getIcon(item.icon)}`}></i> {item.label}
+                <Icon className="h-4 w-4" />
+                {item.label}
               </Link>
-            );
+            )
           })}
-          
-          <button 
-            type="button" 
-            className="quick-more" 
-            onClick={() => toast('Mostrando más accesos rápidos', 'info')}
-            style={{ background: 'none', border: 'none', font: 'inherit', color: 'inherit', display: 'flex', alignItems: 'center', gap: '6px' }}
-          >
-            <i className="ti ti-dots" style={{ fontSize: 14 }}></i> Más
-          </button>
         </div>
 
-        {/* KPIs */}
+        {/* ── KPIs ── */}
         {isLoadingDeferred ? (
           <KPISkeleton />
         ) : (
-        <section className="kpi-row">
-          <div className="kpi-card">
-            <div className="kpi-label">
-              <i className="ti ti-trending-up" style={{ fontSize: 13, color: 'var(--text-success)' }}></i> Ventas del mes
-            </div>
-            <div className="kpi-value">{fmtMoney(stats.ventas_mes || 0)}</div>
-            <div className="delta up">
-              <i className="ti ti-arrow-up" style={{ fontSize: 11 }}></i> +12.4% vs mes anterior
-            </div>
+          <div className="grid grid-cols-4 max-lg:grid-cols-2 max-sm:grid-cols-1 gap-3">
+            <StatCard label="Ventas del mes" value={fmtMoney(stats.ventas_mes || 0)} icon={TrendingUp} hint="vs mes anterior" accent="emerald" index={0} />
+            <StatCard label="Órdenes activas" value={stats.ordenes_en_proceso || 0} icon={ClipboardList} hint={`${stats.ordenes_hoy || 0} nuevas hoy`} accent="indigo" index={1} />
+            <StatCard label="Stock bajo" value={stats.productos_bajo_stock || 0} icon={AlertTriangle} hint="Revisión necesaria" accent="amber" index={2} />
+            <StatCard label="Clientes activos" value={stats.clientes || 0} icon={Users} hint="Registrados en CRM" accent="violet" index={3} />
           </div>
-          <div className="kpi-card">
-            <div className="kpi-label">
-              <i className="ti ti-receipt" style={{ fontSize: 13, color: 'var(--text-accent)' }}></i> Órdenes activas
-            </div>
-            <div className="kpi-value">{stats.ordenes_en_proceso || 0}</div>
-            <div className="delta up">
-              <i className="ti ti-arrow-up" style={{ fontSize: 11 }}></i> +{stats.ordenes_hoy || 0} nuevas hoy
-            </div>
-          </div>
-          <div className="kpi-card">
-            <div className="kpi-label">
-              <i className="ti ti-box" style={{ fontSize: 13, color: 'var(--text-warning)' }}></i> Stock bajo
-            </div>
-            <div className="kpi-value">{stats.productos_bajo_stock || 0}</div>
-            <div className="delta warn">
-              <i className="ti ti-alert-triangle" style={{ fontSize: 11 }}></i> Revisión necesaria
-            </div>
-          </div>
-          <div className="kpi-card">
-            <div className="kpi-label">
-              <i className="ti ti-users" style={{ fontSize: 13, color: 'var(--text-pro)' }}></i> Clientes activos
-            </div>
-            <div className="kpi-value">{stats.clientes || 0}</div>
-            <div className="delta up">
-              <i className="ti ti-arrow-up" style={{ fontSize: 11 }}></i> Registrados en CRM
-            </div>
-          </div>
-        </section>
         )}
 
-        {/* Chart + Modules */}
-        <div className="grid-2">
+        {/* ── Chart + Modules ── */}
+        <div className="grid grid-cols-[1fr_340px] max-lg:grid-cols-1 gap-4">
           {isLoadingDeferred ? (
             <ChartSkeleton />
           ) : (
-          <div className="card">
-            <div className="card-header">
-              <div className="card-title"><i className="ti ti-chart-line"></i> Actividad de la semana</div>
-              <button 
-                type="button"
-                className="card-action" 
-                onClick={() => toast('Cargando detalles de actividad semanal...', 'info')}
-                style={{ background: 'none', border: 'none', font: 'inherit', color: 'var(--text-accent)', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}
-              >
-                Ver detalles <i className="ti ti-arrow-right" style={{ fontSize: 12 }}></i>
-              </button>
-            </div>
-            <div className="chart-wrap">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={theme === 'dark' ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)'} />
-                  <XAxis dataKey="fecha" tickLine={false} axisLine={false} tick={{ fill: '#898781', fontSize: 12 }} />
-                  <YAxis tickLine={false} axisLine={false} tick={{ fill: '#898781', fontSize: 12 }} allowDecimals={false} />
-                  <Tooltip
-                    contentStyle={{
-                      borderRadius: '8px',
-                      border: '1px solid var(--border)',
-                      background: 'var(--surface-2)',
-                      color: 'var(--text-primary)'
-                    }}
-                  />
-                  <Line type="monotone" dataKey="total" stroke="#2a78d6" strokeWidth={2} dot={{ r: 4, fill: '#2a78d6' }} activeDot={{ r: 6 }} />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Activity className={cn('h-4 w-4', indigoText)} />
+                  Actividad de la semana
+                </CardTitle>
+                {auditExists ? (
+                  <Link
+                    href={route('core.audit.index')}
+                    className={cn('col-start-2 row-span-2 row-start-1 self-start justify-self-end text-xs flex items-center gap-1 no-underline hover:opacity-75', indigoText)}
+                    aria-label="Ver registro completo de actividad semanal"
+                  >
+                    Ver detalles
+                    <ArrowRight className="h-3 w-3" />
+                  </Link>
+                ) : (
+                  <span className="col-start-2 row-span-2 row-start-1 self-start justify-self-end" />
+                )}
+              </CardHeader>
+              <CardContent>
+                <div className="h-[250px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" />
+                      <XAxis dataKey="fecha" tickLine={false} axisLine={false} tick={{ fill: 'var(--muted-foreground)', fontSize: 12 }} />
+                      <YAxis tickLine={false} axisLine={false} tick={{ fill: 'var(--muted-foreground)', fontSize: 12 }} allowDecimals={false} />
+                      <Tooltip
+                        contentStyle={{
+                          borderRadius: '8px',
+                          border: '1px solid var(--border)',
+                          background: 'var(--card)',
+                          color: 'var(--card-foreground)',
+                        }}
+                      />
+                      <Line type="monotone" dataKey="total" stroke={chartColors.indigo} strokeWidth={2} dot={{ r: 4, fill: chartColors.indigo }} activeDot={{ r: 6 }} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
           )}
 
-          <div className="card">
-            <div className="card-header">
-              <div className="card-title"><i className="ti ti-apps"></i> Módulos activos</div>
-            </div>
-            <div className="modules-grid">
-              {moduleMenus.length === 0 && (
-                <div className="text-sm text-muted-foreground p-2">Sin módulos activos.</div>
-              )}
-              {moduleMenus.map((mod) => {
-                const lbl = (mod.section || '').toLowerCase()
-                let icon = 'ti-apps'
-                let bg = 'var(--bg-accent)'
-                let tc = 'var(--text-accent)'
-                if (lbl.includes('conta')) { icon = 'ti-book'; bg = 'var(--bg-accent)'; tc = 'var(--text-accent)' }
-                if (lbl.includes('tesor') || lbl.includes('caja')) { icon = 'ti-cash'; bg = 'var(--bg-success)'; tc = 'var(--text-success)' }
-                if (lbl.includes('crm')) { icon = 'ti-users'; bg = 'var(--bg-pro)'; tc = 'var(--text-pro)' }
-                if (lbl.includes('inv')) { icon = 'ti-box'; bg = 'var(--bg-warning)'; tc = 'var(--text-warning)' }
-                if (lbl.includes('compra')) { icon = 'ti-shopping-cart'; bg = 'var(--bg-danger)'; tc = 'var(--text-danger)' }
-                if (lbl.includes('venta')) { icon = 'ti-chart-bar'; bg = 'var(--bg-success)'; tc = 'var(--text-success)' }
-                if (lbl.includes('serv')) { icon = 'ti-tool'; bg = 'var(--bg-accent)'; tc = 'var(--text-accent)' }
-                if (lbl.includes('recursos') || lbl.includes('hr')) { icon = 'ti-user'; bg = 'var(--bg-accent)'; tc = 'var(--text-accent)' }
-                if (lbl.includes('nómina') || lbl.includes('payroll')) { icon = 'ti-receipt'; bg = 'var(--bg-success)'; tc = 'var(--text-success)' }
-                if (lbl.includes('notif')) { icon = 'ti-bell'; bg = 'var(--bg-warning)'; tc = 'var(--text-warning)' }
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <LayoutDashboard className={cn('h-4 w-4', indigoText)} />
+                Módulos activos
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 max-sm:grid-cols-1 gap-2">
+                {moduleMenus.length === 0 && (
+                  <EmptyState
+                    icon={LayoutDashboard}
+                    title="Sin módulos activos"
+                    description="No tienes módulos habilitados. Contacta al administrador para activarlos."
+                    className="py-8 col-span-full"
+                  />
+                )}
+                {moduleMenus.map((mod) => {
+                  const { icon: ModIcon, accent } = getModuleMeta(mod.section)
+                  const a = getAccent(accent)
+                  const routeName = getModuleRoute(mod.section)
+                  const hasRoute = routeName && routeExistsSafe(routeName)
+                  const href = hasRoute ? route(routeName) : '#'
 
-                const routeName = getModuleRoute(mod.section);
-                const hasRoute = routeName && routeExistsSafe(routeName);
-                const href = hasRoute ? route(routeName) : '#';
-
-                return (
-                  <Link 
-                    key={mod.section} 
-                    href={href}
-                    className="mod-item" 
-                    onClick={(e) => {
-                      if (!hasRoute) {
-                        e.preventDefault();
-                        toast(`El módulo ${mod.section} no tiene una ruta principal configurada en este momento`, 'warning');
-                      } else {
-                        toast(`Abriendo ${mod.section}`, 'info');
-                      }
-                    }}
-                    style={{ border: '0.5px solid var(--border)', textAlign: 'left', font: 'inherit', width: '100%', textDecoration: 'none' }}
-                  >
-                    <div className="mod-icon" style={{ background: bg }}>
-                      <i className={`ti ${icon}`} style={{ color: tc }}></i>
-                    </div>
-                    <div style={{ minWidth: 0, flex: 1 }}>
-                      <div className="mod-name" title={mod.section}>{mod.section}</div>
-                      <div className="mod-count">Activo</div>
-                    </div>
-                    <i className="ti ti-chevron-right mod-arrow"></i>
-                  </Link>
-                )
-              })}
-            </div>
-          </div>
+                  return (
+                    <Link
+                      key={mod.section}
+                      href={href}
+                      className={cn(
+                        'flex items-center gap-2.5 p-2.5 rounded-lg border no-underline transition-colors min-w-0',
+                        a.border,
+                        a.hoverBg,
+                        a.hover,
+                      )}
+                      onClick={(e) => {
+                        if (!hasRoute) {
+                          e.preventDefault()
+                          toast(`El módulo ${mod.section} no tiene una ruta principal configurada en este momento`, 'warning')
+                        }
+                      }}
+                    >
+                      <div className={cn('flex h-8 w-8 shrink-0 items-center justify-center rounded-lg', a[50])}>
+                        <ModIcon className={cn('h-4 w-4', a.text)} />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-xs font-medium text-foreground truncate" title={mod.section}>
+                          {mod.section}
+                        </div>
+                        <div className="text-[11px] text-muted-foreground">Activo</div>
+                      </div>
+                      <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                    </Link>
+                  )
+                })}
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
-        {/* Activity + Tasks */}
+        {/* ── Activity + Tasks ── */}
         {isLoadingDeferred ? (
-          <div className="row-bottom">
+          <div className="grid grid-cols-2 max-lg:grid-cols-1 gap-4">
             <WidgetSkeleton lines={5} />
             <WidgetSkeleton lines={5} />
           </div>
         ) : (
-        <div className="row-bottom">
-          <div className="card">
-            <div className="card-header">
-              <div className="card-title"><i className="ti ti-activity"></i> Actividad reciente</div>
-              <button 
-                type="button"
-                className="card-action" 
-                onClick={() => toast('Cargando el registro completo de actividad...', 'info')}
-                style={{ background: 'none', border: 'none', font: 'inherit', color: 'var(--text-accent)', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}
-              >
-                Ver todo <i className="ti ti-arrow-right" style={{ fontSize: 12 }}></i>
-              </button>
-            </div>
-            <div>
-              {recentActivity.length === 0 && (
-                <div className="text-sm text-muted-foreground py-4" style={{ color: 'var(--text-muted)', fontSize: 13 }}>Sin actividad reciente.</div>
-              )}
-              {recentActivity.slice(0,5).map((act, idx) => (
-                <div key={idx} className="act-item">
-                  <div className="act-dot" style={{ background: 'var(--fill-success)' }}></div>
-                  <div>
-                    <div className="act-text"><strong>{act.description}</strong></div>
-                    <div className="act-time">{act.created_at || 'Recientemente'}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+          <div className="grid grid-cols-2 max-lg:grid-cols-1 gap-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Activity className={cn('h-4 w-4', indigoText)} />
+                  Actividad reciente
+                </CardTitle>
+                {auditExists ? (
+                  <Link
+                    href={route('core.audit.index')}
+                    className={cn('col-start-2 row-span-2 row-start-1 self-start justify-self-end text-xs flex items-center gap-1 no-underline hover:opacity-75', indigoText)}
+                    aria-label="Ver registro completo de actividad"
+                  >
+                    Ver todo
+                    <ArrowRight className="h-3 w-3" />
+                  </Link>
+                ) : (
+                  <span className="col-start-2 row-span-2 row-start-1 self-start justify-self-end" />
+                )}
+              </CardHeader>
+              <CardContent>
+                {recentActivity.length === 0 ? (
+                  <EmptyState
+                    icon={Activity}
+                    title="Sin actividad reciente"
+                    description="Aún no hay registros de actividad. Cuando realices acciones en el sistema, aparecerán aquí."
+                    className="py-8"
+                  />
+                ) : (
+                  recentActivity.slice(0, 5).map((act, idx) => (
+                    <div key={`${act.description}-${idx}`} className="flex items-start gap-3 py-2.5 border-b border-border last:border-b-0">
+                      <div className="w-2 h-2 rounded-full mt-1.5 shrink-0 bg-emerald-500" />
+                      <div>
+                        <div className="text-sm text-foreground leading-tight">
+                          <strong className="font-medium">{act.description}</strong>
+                        </div>
+                        <div className="text-[11px] text-muted-foreground mt-0.5">{act.created_at || 'Recientemente'}</div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </CardContent>
+            </Card>
 
-          <div className="card">
-            <div className="card-header">
-              <div className="card-title"><i className="ti ti-checklist"></i> Tareas pendientes</div>
-              <button className="card-action" onClick={() => setShowTaskModal(true)} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}>
-                <i className="ti ti-plus" style={{ fontSize: 12 }}></i> Agregar
-              </button>
-            </div>
-            <div>
-              {allTasks.length === 0 && (
-                <div className="text-sm text-muted-foreground py-4" style={{ color: 'var(--text-muted)', fontSize: 13 }}>No hay tareas pendientes.</div>
-              )}
-              {allTasks.slice(0,5).map((task) => (
-                <div key={task.keyId} className="task-item">
-                  <button 
-                    className={`chk ${task.done ? 'done' : ''}`} 
-                    onClick={() => toggleTask(task)} 
-                    style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                    role="checkbox"
-                    aria-checked={task.done}
-                    aria-label={`Marcar tarea "${task.title}" como ${task.done ? 'pendiente' : 'completada'}`}
-                  >
-                    {task.done && <i className="ti ti-check" style={{ fontSize: 10, color: 'white' }}></i>}
-                  </button>
-                  <span className={`task-label ${task.done ? 'done' : ''}`}>
-                    {task.title}
-                    {task.isLocal && task.depto && <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginLeft: '6px', fontWeight: 400 }}>— {task.depto}</span>}
-                    {task.isLocal && task.fecha_limite && <span style={{ fontSize: '11px', color: new Date(task.fecha_limite) < new Date() ? 'var(--text-danger)' : 'var(--text-muted)', marginLeft: '6px', fontWeight: 400 }}>— Vence: {new Date(task.fecha_limite).toLocaleDateString('es-CO')}</span>}
-                  </span>
-                  <button 
-                    className={`tag ${task.isLocal ? (task.estado === 'en_progreso' ? 't-c' : (task.done ? 't-v' : 't-i')) : 't-v'}`} 
-                    onClick={() => cycleTaskState(task)}
-                    style={{ cursor: task.isLocal ? 'pointer' : 'default', userSelect: 'none', border: 'none', font: 'inherit' }}
-                    disabled={!task.isLocal}
-                  >
-                    {!task.isLocal ? 'Sistema' : (
-                      task.estado === 'en_progreso' ? 'En progreso' :
-                      task.done ? 'Completada' : 'Pendiente'
-                    )}
-                  </button>
-                </div>
-              ))}
-              <Link href={route('core.tasks.index')} style={{ display: 'block', textAlign: 'center', fontSize: '13px', padding: '10px 0', borderTop: '0.5px solid var(--border)', color: 'var(--text-accent)', textDecoration: 'none', fontWeight: 500 }}>
-                Abrir Tablero Kanban <i className="ti ti-arrow-right"></i>
-              </Link>
-            </div>
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <ClipboardList className={cn('h-4 w-4', indigoText)} />
+                  Tareas pendientes
+                </CardTitle>
+                <button
+                  className={cn('col-start-2 row-span-2 row-start-1 self-start justify-self-end text-xs flex items-center gap-1 bg-transparent border-none p-0 cursor-pointer hover:opacity-75', indigoText)}
+                  onClick={() => setShowTaskModal(true)}
+                  aria-label="Agregar nueva tarea personal"
+                >
+                  <Plus className="h-3 w-3" />
+                  Agregar
+                </button>
+              </CardHeader>
+              <CardContent>
+                {allTasks.length === 0 ? (
+                  <EmptyState
+                    icon={ClipboardList}
+                    title="No hay tareas pendientes"
+                    description="Estás al día. Crea una nueva tarea cuando lo necesites."
+                    className="py-8"
+                  />
+                ) : (
+                  allTasks.slice(0, 5).map((task) => (
+                    <div key={task.keyId} className="flex items-center gap-2.5 py-2.5 border-b border-border last:border-b-0">
+                      <button
+                        className={cn(
+                          'flex h-4 w-4 shrink-0 items-center justify-center rounded border-2 transition-colors',
+                          task.done ? 'bg-emerald-500 border-emerald-500' : 'border-foreground/20 hover:border-foreground/40',
+                        )}
+                        onClick={() => toggleTask(task)}
+                        role="checkbox"
+                        aria-checked={task.done}
+                        aria-label={`Marcar tarea "${task.title}" como ${task.done ? 'pendiente' : 'completada'}`}
+                      >
+                        {task.done && <Check className="h-2.5 w-2.5 text-white" />}
+                      </button>
+                      <span className={cn('text-sm flex-1', task.done && 'text-muted-foreground line-through')}>
+                        {task.title}
+                        {task.isLocal && task.depto && (
+                          <span className="text-[11px] text-muted-foreground ml-1.5 font-normal">— {task.depto}</span>
+                        )}
+                        {task.isLocal && task.fecha_limite && (
+                          <span
+                            className={cn(
+                              'text-[11px] ml-1.5 font-normal',
+                              new Date(task.fecha_limite) < new Date()
+                                ? 'text-rose-500 dark:text-rose-400'
+                                : 'text-muted-foreground',
+                            )}
+                          >
+                            — Vence: {new Date(task.fecha_limite).toLocaleDateString('es-CO')}
+                          </span>
+                        )}
+                      </span>
+                      <button
+                        className={cn(
+                          'text-[11px] px-2 py-0.5 rounded-full border font-medium transition-colors shrink-0',
+                          !task.isLocal &&
+                            'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20',
+                          task.isLocal &&
+                            task.estado === 'en_progreso' &&
+                            'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-200 dark:border-indigo-500/20',
+                          task.isLocal &&
+                            task.done &&
+                            'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20',
+                          task.isLocal &&
+                            !task.done &&
+                            task.estado !== 'en_progreso' &&
+                            'bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-500/20',
+                        )}
+                        onClick={() => cycleTaskState(task)}
+                        disabled={!task.isLocal}
+                        aria-label={
+                          !task.isLocal
+                            ? 'Tarea del sistema'
+                            : task.estado === 'en_progreso'
+                              ? `Cambiar estado de "${task.title}" a completada`
+                              : task.done
+                                ? `Cambiar estado de "${task.title}" a pendiente`
+                                : `Cambiar estado de "${task.title}" a en progreso`
+                        }
+                      >
+                        {!task.isLocal
+                          ? 'Sistema'
+                          : task.estado === 'en_progreso'
+                            ? 'En progreso'
+                            : task.done
+                              ? 'Completada'
+                              : 'Pendiente'}
+                      </button>
+                    </div>
+                  ))
+                )}
+                <Link
+                  href={route('core.tasks.index')}
+                  className={cn('block text-center text-xs no-underline font-medium py-2.5 border-t border-border mt-1 hover:opacity-75', indigoText)}
+                >
+                  Abrir Tablero Kanban <ArrowRight className="inline h-3 w-3" />
+                </Link>
+              </CardContent>
+            </Card>
           </div>
-        </div>
         )}
 
-        {/* Alerts Section */}
-        <div className="row-bottom" style={{ marginTop: '16px' }}>
-          <div className="card" style={{ gridColumn: '1 / -1' }}>
-            <div className="card-header">
-              <div className="card-title">
-                <i className="ti ti-bell-ringing"></i> Centro de Alertas
-              </div>
-            </div>
-            
-            <div className="grid-2" style={{ gap: '16px', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))' }}>
-              <div style={{ border: '0.5px solid var(--border)', borderRadius: '8px', padding: '12px' }}>
-                <div style={{ fontSize: '13px', fontWeight: 500, marginBottom: '8px', color: 'var(--text-warning)' }}><i className="ti ti-box"></i> Stock Bajo ({stock.length})</div>
-                {stock.length === 0 ? <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Todo en orden.</div> : (
-                  stock.slice(0, 3).map((s, i) => (
-                    <div key={i} className="act-item" style={{ padding: '6px 0', border: 'none' }}>
-                      <div className="act-dot" style={{ background: 'var(--fill-warning)' }}></div>
-                      <div>
-                        <div className="act-text"><strong>{s.nombre}</strong> <span className="pill pill-w">Crítico</span></div>
-                        <div className="act-time">Stock: {s.stock_actual} / {s.stock_minimo}</div>
+        {/* ── Alerts ── */}
+        <div>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <BellRing className={cn('h-4 w-4', indigoText)} />
+                Centro de Alertas
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-4">
+                {/* Stock bajo */}
+                <div className="border border-border rounded-lg p-3">
+                  <div className="text-xs font-medium mb-2 text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
+                    <Package className="h-3.5 w-3.5" />
+                    Stock Bajo ({stock.length})
+                  </div>
+                  {stock.length === 0 ? (
+                    <div className="text-xs text-muted-foreground">Todo en orden.</div>
+                  ) : (
+                    stock.slice(0, 3).map((s, i) => (
+                      <div key={`${s.nombre}-${i}`} className="flex items-start gap-3 py-1.5 border-b border-border last:border-b-0">
+                        <div className="w-2 h-2 rounded-full mt-1 shrink-0 bg-amber-500" />
+                        <div>
+                          <div className="text-xs text-foreground leading-tight">
+                            <strong className="font-medium">{s.nombre}</strong>{' '}
+                            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 font-medium">
+                              Crítico
+                            </span>
+                          </div>
+                          <div className="text-[11px] text-muted-foreground mt-0.5">
+                            Stock: {s.stock_actual} / {s.stock_minimo}
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  ))
-                )}
-              </div>
+                    ))
+                  )}
+                </div>
 
-              <div style={{ border: '0.5px solid var(--border)', borderRadius: '8px', padding: '12px' }}>
-                <div style={{ fontSize: '13px', fontWeight: 500, marginBottom: '8px', color: 'var(--text-danger)' }}><i className="ti ti-receipt"></i> Facturas por Vencer ({facturas.length})</div>
-                {facturas.length === 0 ? <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Sin facturas próximas a vencer.</div> : (
-                  facturas.slice(0, 3).map((f, i) => (
-                    <div key={i} className="act-item" style={{ padding: '6px 0', border: 'none' }}>
-                      <div className="act-dot" style={{ background: 'var(--fill-danger)' }}></div>
-                      <div>
-                        <div className="act-text"><strong>{f.numero}</strong> <span className="pill pill-d">Vence en {f.dias_restantes}d</span></div>
-                        <div className="act-time">{f.cliente} — {fmtMoney(f.total)}</div>
+                {/* Facturas por vencer */}
+                <div className="border border-border rounded-lg p-3">
+                  <div className="text-xs font-medium mb-2 text-rose-600 dark:text-rose-400 flex items-center gap-1.5">
+                    <Receipt className="h-3.5 w-3.5" />
+                    Facturas por Vencer ({facturas.length})
+                  </div>
+                  {facturas.length === 0 ? (
+                    <div className="text-xs text-muted-foreground">Sin facturas próximas a vencer.</div>
+                  ) : (
+                    facturas.slice(0, 3).map((f, i) => (
+                      <div key={`${f.numero}-${i}`} className="flex items-start gap-3 py-1.5 border-b border-border last:border-b-0">
+                        <div className="w-2 h-2 rounded-full mt-1 shrink-0 bg-rose-500" />
+                        <div>
+                          <div className="text-xs text-foreground leading-tight">
+                            <strong className="font-medium">{f.numero}</strong>{' '}
+                            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 font-medium">
+                              Vence en {f.dias_restantes}d
+                            </span>
+                          </div>
+                          <div className="text-[11px] text-muted-foreground mt-0.5">
+                            {f.cliente} — {fmtMoney(f.total)}
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  ))
-                )}
-              </div>
+                    ))
+                  )}
+                </div>
 
-              <div style={{ border: '0.5px solid var(--border)', borderRadius: '8px', padding: '12px' }}>
-                <div style={{ fontSize: '13px', fontWeight: 500, marginBottom: '8px', color: 'var(--text-success)' }}><i className="ti ti-cash"></i> Cajas Abiertas ({cajas.length})</div>
-                {cajas.length === 0 ? <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Todas las cajas cerradas.</div> : (
-                  cajas.slice(0, 3).map((c, i) => (
-                    <div key={i} className="act-item" style={{ padding: '6px 0', border: 'none' }}>
-                      <div className="act-dot" style={{ background: 'var(--fill-success)' }}></div>
-                      <div>
-                        <div className="act-text"><strong>{c.caja}</strong> <span className="pill pill-s">{c.horas_abierta}h abierta</span></div>
-                        <div className="act-time">{c.cajero} — {fmtMoney(c.saldo_actual)}</div>
+                {/* Cuentas por pagar */}
+                <div className="border border-border rounded-lg p-3">
+                  <div className="text-xs font-medium mb-2 text-rose-600 dark:text-rose-400 flex items-center gap-1.5">
+                    <ShoppingCart className="h-3.5 w-3.5" />
+                    Cuentas por Pagar ({cxp.length})
+                  </div>
+                  {cxp.length === 0 ? (
+                    <div className="text-xs text-muted-foreground">Sin cuentas pendientes.</div>
+                  ) : (
+                    cxp.slice(0, 3).map((c, i) => (
+                      <div key={`${c.numero}-${i}`} className="flex items-start gap-3 py-1.5 border-b border-border last:border-b-0">
+                        <div className="w-2 h-2 rounded-full mt-1 shrink-0 bg-rose-500" />
+                        <div>
+                          <div className="text-xs text-foreground leading-tight">
+                            <strong className="font-medium">{c.numero}</strong>{' '}
+                            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 font-medium">
+                              {estadoCompraLabel[c.estado] || c.estado}
+                            </span>
+                          </div>
+                          <div className="text-[11px] text-muted-foreground mt-0.5">
+                            {c.proveedor} — {fmtMoney(c.total)} · {c.dias_desde_creacion}d
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  ))
-                )}
+                    ))
+                  )}
+                </div>
+
+                {/* Servicios pendientes */}
+                <div className="border border-border rounded-lg p-3">
+                  <div className="text-xs font-medium mb-2 text-sky-600 dark:text-sky-400 flex items-center gap-1.5">
+                    <Wrench className="h-3.5 w-3.5" />
+                    Servicios Pendientes ({servicios.length})
+                  </div>
+                  {servicios.length === 0 ? (
+                    <div className="text-xs text-muted-foreground">Sin servicios pendientes.</div>
+                  ) : (
+                    servicios.slice(0, 3).map((s, i) => (
+                      <div key={`${s.numero_orden}-${i}`} className="flex items-start gap-3 py-1.5 border-b border-border last:border-b-0">
+                        <div className="w-2 h-2 rounded-full mt-1 shrink-0 bg-sky-500" />
+                        <div>
+                          <div className="text-xs text-foreground leading-tight">
+                            <strong className="font-medium">{s.numero_orden}</strong>{' '}
+                            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-sky-50 dark:bg-sky-500/10 text-sky-600 dark:text-sky-400 font-medium">
+                              {estadoServicioLabel[s.estado] || s.estado}
+                            </span>
+                          </div>
+                          <div className="text-[11px] text-muted-foreground mt-0.5">
+                            {s.cliente} · {s.dias}d pendiente
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                {/* Cajas abiertas */}
+                <div className="border border-border rounded-lg p-3">
+                  <div className="text-xs font-medium mb-2 text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
+                    <Wallet className="h-3.5 w-3.5" />
+                    Cajas Abiertas ({cajas.length})
+                  </div>
+                  {cajas.length === 0 ? (
+                    <div className="text-xs text-muted-foreground">Todas las cajas cerradas.</div>
+                  ) : (
+                    cajas.slice(0, 3).map((c, i) => (
+                      <div key={`${c.caja}-${i}`} className="flex items-start gap-3 py-1.5 border-b border-border last:border-b-0">
+                        <div className="w-2 h-2 rounded-full mt-1 shrink-0 bg-emerald-500" />
+                        <div>
+                          <div className="text-xs text-foreground leading-tight">
+                            <strong className="font-medium">{c.caja}</strong>{' '}
+                            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-medium">
+                              {c.horas_abierta}h abierta
+                            </span>
+                          </div>
+                          <div className="text-[11px] text-muted-foreground mt-0.5">
+                            {c.cajero} — {fmtMoney(c.saldo_actual)}
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
               </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         </div>
 
-        {/* Task Modal Overlay */}
-        {showTaskModal && (
-          <div 
-            style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(2px)' }}
-            onClick={() => setShowTaskModal(false)}
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="modal-title"
-          >
-            <div 
-              style={{ backgroundColor: 'var(--surface-2)', borderRadius: '12px', padding: '24px', width: '100%', maxWidth: '400px', boxShadow: '0 10px 25px rgba(0,0,0,0.1)' }}
-              onClick={e => e.stopPropagation()}
-            >
-              <h3 id="modal-title" style={{ marginTop: 0, marginBottom: '20px', fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)' }}>Nueva Tarea Personal</h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <div>
-                  <label id="label-actividad" style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '6px', color: 'var(--text-secondary)' }}>Actividad / Nombre</label>
-                  <input 
-                    type="text" 
+        {/* ── Task Modal ── */}
+        <Dialog open={showTaskModal} onOpenChange={setShowTaskModal}>
+          <DialogContent className="sm:max-w-md">
+            <form onSubmit={(e) => { e.preventDefault(); handleSaveTask() }}>
+              <DialogHeader>
+                <DialogTitle>Nueva Tarea Personal</DialogTitle>
+                <DialogDescription>Crea una tarea para organizar tu trabajo diario.</DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="space-y-2">
+                  <Label className="text-xs font-semibold">Actividad / Nombre</Label>
+                  <Input
                     value={newTaskActividad}
-                    onChange={e => setNewTaskActividad(e.target.value)}
+                    onChange={(e) => setNewTaskActividad(e.target.value)}
                     placeholder="Ej: Revisar cierre de mes"
-                    aria-labelledby="label-actividad"
-                    style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--border-strong)', backgroundColor: 'var(--surface-0)', color: 'var(--text-primary)', fontSize: '14px', outline: 'none' }}
                     autoFocus
                   />
                 </div>
-                <div>
-                  <label id="label-depto" style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '6px', color: 'var(--text-secondary)' }}>Departamento</label>
-                  <select 
+                <div className="space-y-2">
+                  <Label className="text-xs font-semibold">Departamento</Label>
+                  <select
+                    className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 py-1 text-sm transition-colors outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
                     value={newTaskDepto}
-                    onChange={e => setNewTaskDepto(e.target.value)}
-                    aria-labelledby="label-depto"
-                    style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--border-strong)', backgroundColor: 'var(--surface-0)', color: 'var(--text-primary)', fontSize: '14px', outline: 'none' }}
+                    onChange={(e) => setNewTaskDepto(e.target.value)}
                   >
                     <option value="">Selecciona un departamento...</option>
                     <option value="Ventas">Ventas</option>
@@ -585,40 +750,27 @@ export default function Dashboard() {
                     <option value="General">General</option>
                   </select>
                 </div>
-                <div>
-                  <label id="label-date" style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '6px', color: 'var(--text-secondary)' }}>Fecha Límite (Opcional)</label>
-                  <input 
-                    type="datetime-local" 
+                <div className="space-y-2">
+                  <Label className="text-xs font-semibold">Fecha Límite (Opcional)</Label>
+                  <Input
+                    type="datetime-local"
                     value={newTaskDate}
-                    onChange={e => setNewTaskDate(e.target.value)}
-                    aria-labelledby="label-date"
-                    style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--border-strong)', backgroundColor: 'var(--surface-0)', color: 'var(--text-primary)', fontSize: '14px', outline: 'none' }}
+                    onChange={(e) => setNewTaskDate(e.target.value)}
                   />
                 </div>
               </div>
-              <div style={{ marginTop: '24px', display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
-                <button 
-                  onClick={() => setShowTaskModal(false)}
-                  style={{ padding: '8px 16px', borderRadius: '6px', border: '1px solid var(--border-strong)', backgroundColor: 'transparent', color: 'var(--text-primary)', cursor: 'pointer', fontSize: '13px', fontWeight: 500 }}
-                  type="button"
-                >
+              <DialogFooter className="gap-2 sm:gap-0">
+                <Button type="button" variant="outline" onClick={() => setShowTaskModal(false)}>
                   Cancelar
-                </button>
-                <button 
-                  onClick={handleSaveTask}
-                  disabled={isSaving || !newTaskActividad.trim()}
-                  style={{ padding: '8px 16px', borderRadius: '6px', border: 'none', backgroundColor: 'var(--text-primary)', color: 'var(--surface-2)', cursor: (isSaving || !newTaskActividad.trim()) ? 'not-allowed' : 'pointer', opacity: (isSaving || !newTaskActividad.trim()) ? 0.6 : 1, fontSize: '13px', fontWeight: 500 }}
-                  type="button"
-                >
+                </Button>
+                <Button type="submit" disabled={isSaving || !newTaskActividad.trim()}>
                   {isSaving ? 'Guardando...' : 'Guardar Tarea'}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
       </div>
     </AuthenticatedLayout>
   )
 }
-

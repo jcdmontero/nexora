@@ -20,6 +20,7 @@ return new class extends Migration
             $table->boolean('is_principal')->default(false);
             
             $table->timestamps();
+            $table->softDeletes();
         });
 
         Schema::create('crm_oportunidades', function (Blueprint $table) {
@@ -39,6 +40,10 @@ return new class extends Migration
             $table->text('notas')->nullable();
             
             $table->timestamps();
+            $table->softDeletes();
+
+            $table->index(['tenant_id', 'etapa']);
+            $table->index('cliente_id');
         });
     }
 

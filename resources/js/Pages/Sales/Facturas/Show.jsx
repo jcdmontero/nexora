@@ -33,6 +33,14 @@ function EstadoBadge({ estado }) {
       </span>
     )
   }
+  if (estado === 'anulada') {
+    return (
+      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-red-50 text-red-700 ring-1 ring-red-600/20 dark:bg-red-950/30 dark:text-red-400 dark:ring-red-400/20 print:px-1.5 print:py-0.5 print:text-[7pt]">
+        <span className="w-1.5 h-1.5 rounded-full bg-red-500 print:hidden-deco" />
+        Anulada
+      </span>
+    )
+  }
   return (
     <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 ring-1 ring-amber-600/20 dark:bg-amber-950/30 dark:text-amber-400 dark:ring-amber-400/20 print:px-1.5 print:py-0.5 print:text-[7pt]">
       <span className="w-1.5 h-1.5 rounded-full bg-amber-500 print:hidden-deco" />
@@ -42,93 +50,6 @@ function EstadoBadge({ estado }) {
 }
 
 /* ─── Ticket térmico (80mm) ─── */
-function TicketTermico({ factura }) {
-  const items = factura.items ?? []
-  const cliente = factura.cliente
-  const empresa = factura.tenant?.name ?? 'Nexora'
-
-  return (
-    <div className="ticket-print">
-      <div className="ticket-content">
-        <div className="text-center mb-3">
-          <h3 className="text-sm font-bold uppercase tracking-wider">{empresa}</h3>
-          {factura.tenant?.email && (
-            <p className="text-[10px] text-muted-foreground">{factura.tenant.email}</p>
-          )}
-        </div>
-
-        <div className="border-t border-b border-dashed border-muted-foreground/30 py-2 mb-2 text-[10px]">
-          <div className="flex justify-between">
-            <span className="font-bold tracking-tight">FACTURA #{factura.numero}</span>
-            <span>{new Date(factura.created_at).toLocaleDateString('es-CO')}</span>
-          </div>
-          <div className="mt-1">
-            <span className="font-semibold">Cliente: </span>
-            {cliente
-              ? `${cliente.nombres ?? ''} ${cliente.apellidos ?? ''}${cliente.razon_social ? ` (${cliente.razon_social})` : ''}`
-              : 'Consumidor Final'}
-          </div>
-          {cliente?.documento && <div><span className="font-semibold">Doc: </span>{cliente.documento}</div>}
-          {cliente?.telefono && <div><span className="font-semibold">Tel: </span>{cliente.telefono}</div>}
-        </div>
-
-        <table className="w-full text-[10px]">
-          <thead>
-            <tr className="border-b border-dashed border-muted-foreground/30">
-              <th className="text-left w-[15%] pb-1">Cant</th>
-              <th className="text-left w-[50%] pb-1">Descripción</th>
-              <th className="text-right w-[35%] pb-1">Total</th>
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((item, idx) => (
-              <tr key={idx} className="border-b border-dotted border-muted-foreground/20">
-                <td className="py-1">{Number(item.cantidad)}</td>
-                <td className="py-1 truncate max-w-[120px]">{item.descripcion}</td>
-                <td className="py-1 text-right">{formatoCOP(Number(item.total))}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-
-        <div className="border-t border-dashed border-muted-foreground/30 mt-2 pt-2 space-y-1 text-[10px]">
-          <div className="flex justify-between">
-            <span>Subtotal</span>
-            <span>{formatoCOP(Number(factura.subtotal))}</span>
-          </div>
-          {Number(factura.descuento) > 0 && (
-            <div className="flex justify-between text-red-600">
-              <span>Descuento</span>
-              <span>-{formatoCOP(Number(factura.descuento))}</span>
-            </div>
-          )}
-          {Number(factura.impuestos) > 0 && (
-            <div className="flex justify-between">
-              <span>Impuestos</span>
-              <span>{formatoCOP(Number(factura.impuestos))}</span>
-            </div>
-          )}
-          <div className="flex justify-between text-sm font-bold border-t border-muted-foreground/30 pt-2 mt-1">
-            <span>TOTAL</span>
-            <span>{formatoCOP(Number(factura.total))}</span>
-          </div>
-          {factura.metodo_pago && (
-            <div className="flex justify-between text-[9px] text-muted-foreground pt-1">
-              <span>Pago: {factura.metodo_pago}</span>
-            </div>
-          )}
-        </div>
-
-        <div className="text-center text-[9px] text-muted-foreground mt-4 pt-3 border-t border-dashed border-muted-foreground/30">
-          <p className="font-semibold text-[10px]">¡Gracias por su preferencia!</p>
-          <p className="mt-1">Este documento es un comprobante de pago.</p>
-          <p className="mt-1 text-[8px] opacity-60">Generado por Nexora</p>
-        </div>
-      </div>
-      <style>{`.ticket-print { display: none; }`}</style>
-    </div>
-  )
-}
 
 /* ─── Info row para detalles ─── */
 function InfoRow({ icon: Icon, label, value, className }) {
@@ -214,7 +135,7 @@ export default function FacturaShow({ factura, desglose }) {
     setPrintingTicket(true)
     const win = window.open('', '_blank', 'width=380,height=600,menubar=no,toolbar=no,scrollbars=yes')
     if (!win) {
-      alert('Permite ventanas emergentes para imprimir el ticket.')
+      addToast({ title: 'Error', description: 'Permite ventanas emergentes para imprimir el ticket.', type: 'error' })
       setPrintingTicket(false)
       return
     }
@@ -282,8 +203,6 @@ export default function FacturaShow({ factura, desglose }) {
 
   return (
     <>
-      <TicketTermico factura={factura} />
-
       {/* ─── Print Styles (todo en UNA página A4) ─── */}
       <style>{`
         @media print {

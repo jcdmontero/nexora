@@ -2,17 +2,20 @@
 
 namespace App\Modules\Hr\Models;
 
+use App\Core\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Contrato extends Model
 {
+    use BelongsToTenant;
     protected $table = 'hr_contratos';
     protected $fillable = [
+        'tenant_id',
         'empleado_id',
         'cargo_id',
-        'tipo_contrato',
         'cargo',
+        'tipo_contrato',
         'salario_base',
         'fecha_inicio',
         'fecha_fin',

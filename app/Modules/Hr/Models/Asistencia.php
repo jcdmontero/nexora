@@ -2,13 +2,23 @@
 
 namespace App\Modules\Hr\Models;
 
+use App\Core\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Asistencia extends Model
 {
+    use BelongsToTenant;
     protected $table = 'hr_asistencias';
-    protected $guarded = ['id'];
+    protected $fillable = [
+        'tenant_id',
+        'empleado_id',
+        'fecha',
+        'tipo',
+        'hora_entrada',
+        'hora_salida',
+        'notas',
+    ];
 
     protected $casts = [
         'fecha' => 'date',

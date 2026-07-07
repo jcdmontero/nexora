@@ -7,13 +7,18 @@ use App\Modules\Cash\Models\ReciboCaja;
 use App\Modules\ServiceDesk\Models\OrdenReparacion;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class ReciboController extends Controller
 {
+    public function __construct(
+        private \App\Modules\Cash\Services\ReciboService $reciboService,
+    ) {}
+
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'orden_id' => ['required', 'exists:sd_ordenes,id'],
+            'orden_id' => ['required', Rule::exists('sd_ordenes', 'id')->where('tenant_id', app('current_tenant')->id)],
             'monto' => ['required', 'numeric', 'min:0.01'],
             'metodo_pago' => ['required', 'in:efectivo,tarjeta,transferencia'],
             'notas' => ['nullable', 'string', 'max:500'],
@@ -22,8 +27,7 @@ class ReciboController extends Controller
         $orden = OrdenReparacion::findOrFail($validated['orden_id']);
 
         try {
-            $reciboService = app(\App\Modules\Cash\Services\ReciboService::class);
-            $recibo = $reciboService->registrarAbono(
+            $recibo = $this->reciboService->registrarAbono(
                 $orden,
                 (float) $validated['monto'],
                 $validated['metodo_pago'],
@@ -43,7 +47,7 @@ class ReciboController extends Controller
     {
         $recibo->load(['sesion.caja', 'usuario', 'cliente', 'referencia']);
 
-        return inertia('Cash/Recibos/Show', [
+        return inertia('Modules/Cash/Recibos/Show', [
             'recibo' => [
                 'id' => $recibo->id,
                 'numero' => $recibo->numero_formateado,
@@ -89,8 +93,7 @@ class ReciboController extends Controller
         }
 
         try {
-            $reciboService = app(\App\Modules\Cash\Services\ReciboService::class);
-            $reciboService->anularRecibo($recibo);
+            $this->reciboService->anularRecibo($recibo);
 
             return back()->with(
                 'success',

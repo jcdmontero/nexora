@@ -5,8 +5,10 @@ namespace App\Modules\Notifications\Controllers;
 use App\Http\Controllers\Controller;
 use App\Modules\Notifications\Models\ChatConversacion;
 use App\Modules\Notifications\Models\ChatMensaje;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class ChatController extends Controller
 {
@@ -38,7 +40,7 @@ class ChatController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'user_id' => 'required|integer|exists:users,id',
+            'user_id' => ['required', 'integer', Rule::exists('users', 'id')->where('tenant_id', $request->user()->tenant_id)],
         ]);
 
         $userId = $request->user()->id;

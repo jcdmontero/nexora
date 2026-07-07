@@ -37,13 +37,12 @@ class CashProvisioner
         $tenantId = $tenant->id;
 
         // ─── Denominaciones COP ───
-        $orden = 0;
-        foreach (self::DENOMINACIONES_COP as $denom) {
-            Denominacion::firstOrCreate(
+        foreach (self::DENOMINACIONES_COP as $orden => $denom) {
+            Denominacion::updateOrCreate(
                 ['tenant_id' => $tenantId, 'valor' => $denom['valor']],
                 [
                     'tipo' => $denom['tipo'],
-                    'orden' => $orden++,
+                    'orden' => $orden,
                     'activo' => true,
                 ]
             );

@@ -179,10 +179,12 @@ class ModuleActivator
 
         // Expandir el objetivo incluyendo dependencias (orden: dependencias primero)
         $target = [];
-        $expand = function (string $code) use (&$expand, &$target, $deps) {
-            if (in_array($code, $target, true) || !array_key_exists($code, $deps)) {
+        $visited = [];
+        $expand = function (string $code) use (&$expand, &$target, &$visited, $deps) {
+            if (in_array($code, $target, true) || !array_key_exists($code, $deps) || in_array($code, $visited, true)) {
                 return;
             }
+            $visited[] = $code;
             foreach ($deps[$code] as $dep) {
                 $expand($dep);
             }

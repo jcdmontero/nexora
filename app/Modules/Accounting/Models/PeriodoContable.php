@@ -13,8 +13,7 @@ class PeriodoContable extends Model
     protected $table = 'periodos_contables';
 
     protected $fillable = [
-        'tenant_id',
-        'anio',
+        'tenant_id','anio',
         'mes',
         'fecha_inicio',
         'fecha_fin',

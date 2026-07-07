@@ -13,8 +13,7 @@ class CuentaPorPagar extends Model
     protected $table = 'cuentas_por_pagar';
 
     protected $fillable = [
-        'tenant_id',
-        'acreedor_id',
+        'tenant_id','acreedor_id',
         'acreedor_type',
         'documento_origen_id',
         'documento_origen_type',

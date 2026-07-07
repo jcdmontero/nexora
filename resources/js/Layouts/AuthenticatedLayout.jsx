@@ -4,7 +4,6 @@ import { HelpCircle, Sun, Moon } from 'lucide-react'
 import { Sidebar } from '@/Components/Sidebar/Sidebar'
 import { GlobalSearch } from '@/Components/GlobalSearch'
 import { UserDropdown } from '@/Components/UserDropdown'
-import { HeaderContextualAction } from '@/Components/HeaderContextualAction'
 import { NetworkStatusBar } from '@/Components/NetworkStatusBar'
 import { NotificationBell } from '@/Components/notifications/NotificationBell'
 import { ChatWidget } from '@/Components/chat/ChatWidget'
@@ -53,9 +52,6 @@ export default function AuthenticatedLayout({ children }) {
                 )
               })}
             </nav>
-
-            {/* Acción contextual según la sección activa */}
-            <HeaderContextualAction />
 
             {/* Global Search */}
             <div className="flex items-center mx-auto md:flex-1 md:max-w-xl">

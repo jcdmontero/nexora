@@ -178,6 +178,12 @@ class FacturaService
             $saldoPagado = max(0, $total - ($orden->abono_inicial ?? 0));
             if ($saldoPagado > 0 && !$esCredito) {
                 if (!empty($pagosMixtos)) {
+                    $sumaPagos = array_sum(array_map(fn ($p) => (float) ($p['monto'] ?? 0), $pagosMixtos));
+                    if (round($sumaPagos, 2) !== round($saldoPagado, 2)) {
+                        throw new \Exception(
+                            "La suma de los pagos mixtos (\${$sumaPagos}) no coincide con el saldo a pagar (\${$saldoPagado})."
+                        );
+                    }
                     // Un movimiento de caja por cada método de pago mixto.
                     foreach ($pagosMixtos as $pago) {
                         $montoPago = (float) ($pago['monto'] ?? 0);
@@ -313,6 +319,12 @@ class FacturaService
             if ($estado === 'pagada' && $sesion) {
                 $pagosMixtos = $data['pagos_mixtos'] ?? [];
                 if (!empty($pagosMixtos)) {
+                    $sumaPagos = array_sum(array_map(fn ($p) => (float) ($p['monto'] ?? 0), $pagosMixtos));
+                    if (round($sumaPagos, 2) !== round($total, 2)) {
+                        throw new \Exception(
+                            "La suma de los pagos mixtos (\${$sumaPagos}) no coincide con el total de la factura (\${$total})."
+                        );
+                    }
                     foreach ($pagosMixtos as $pago) {
                         $montoPago = (float) ($pago['monto'] ?? 0);
                         if ($montoPago > 0) {
@@ -380,6 +392,15 @@ class FacturaService
                 throw new \Exception("La resolución de facturación {$resolucion->numero_resolucion} ha excedido su rango máximo.");
             }
 
+            // Verificar que la resolución esté vigente (dentro del rango de fechas)
+            $ahora = now();
+            if ($resolucion->fecha_desde && $ahora->lt($resolucion->fecha_desde)) {
+                throw new \Exception("La resolución {$resolucion->numero_resolucion} aún no está vigente (fecha desde: {$resolucion->fecha_desde->format('Y-m-d')}).");
+            }
+            if ($resolucion->fecha_hasta && $ahora->gt($resolucion->fecha_hasta)) {
+                throw new \Exception("La resolución {$resolucion->numero_resolucion} ha expirado (fecha hasta: {$resolucion->fecha_hasta->format('Y-m-d')}).");
+            }
+
             $resolucion->update([
                 'consecutivo_actual' => $nuevoConsecutivo
             ]);
@@ -420,6 +441,11 @@ class FacturaService
     private function registrarContabilidad(Factura $factura, int $tenantId, array $pagosMixtos = []): void
     {
         if (!class_exists(ContabilidadService::class)) {
+            return;
+        }
+
+        // No contabilizar facturas anuladas
+        if ($factura->anulada) {
             return;
         }
 
@@ -756,6 +782,11 @@ class FacturaService
                         $mov->metodo_pago,
                         "REVERSIÓN ANULACIÓN Factura {$factura->numero}: {$motivo}",
                         $factura
+                    );
+                } else {
+                    Log::warning(
+                        "Reversión de caja omitida para factura {$factura->numero}: " .
+                        "sesión #{$mov->sesion_id} ya cerrada (movimiento original: \${$mov->monto} {$mov->metodo_pago})."
                     );
                 }
             }

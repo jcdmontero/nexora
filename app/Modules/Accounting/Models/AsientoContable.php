@@ -14,8 +14,7 @@ class AsientoContable extends Model
     protected $table = 'asientos_contables';
 
     protected $fillable = [
-        'tenant_id',
-        'periodo_contable_id',
+        'tenant_id','periodo_contable_id',
         'fecha',
         'numero',
         'concepto',
@@ -62,6 +61,16 @@ class AsientoContable extends Model
     public function reversos()
     {
         return $this->hasMany(self::class, 'reverso_de_id');
+    }
+
+    public function getTotalDebitosAttribute()
+    {
+        return $this->lineas()->sum('debito');
+    }
+
+    public function getTotalCreditosAttribute()
+    {
+        return $this->lineas()->sum('credito');
     }
 
     public function referencia()

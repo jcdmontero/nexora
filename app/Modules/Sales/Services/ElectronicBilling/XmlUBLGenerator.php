@@ -34,7 +34,7 @@ readonly class XmlUBLGenerator
         $this->validarDatosRequeridos($factura, $empresa);
 
         $resolucion = Resolucion::where('tenant_id', $factura->tenant_id)
-            ->where('tipo_documento', 'factura')
+            ->where('tipo_documento', $factura->tipo_documento ?? 'factura')
             ->where('is_active', true)
             ->first();
 
@@ -82,7 +82,7 @@ readonly class XmlUBLGenerator
                 $this->createElement($xml, 'cbc:EndDate', $resolucion->fecha_hasta->format('Y-m-d')),
             ]));
 
-            $invoice->appendChild($this->createElement($xml, 'cbc:DocumentSố', $resolucion->numero_resolucion));
+            $invoice->appendChild($this->createElement($xml, 'cbc:DocumentStatusCode', $resolucion->numero_resolucion));
         }
 
         // ── Supplier (Empresa / Emisor) ──
@@ -105,8 +105,17 @@ readonly class XmlUBLGenerator
         $invoice->appendChild($this->buildPaymentMeans($xml, $factura, $empresa));
 
         // ── Tax Total ──
-        $taxTotal = $this->buildTaxTotal($xml, $items);
+        $taxTotal = $this->buildTaxTotal($xml, $items, $factura);
         $invoice->appendChild($taxTotal);
+
+        // ── AllowanceCharge (descuento) ──
+        if ($factura->descuento > 0) {
+            $allowanceCharge = $xml->createElement('cac:AllowanceCharge');
+            $allowanceCharge->appendChild($this->createElement($xml, 'cbc:ChargeIndicator', 'false'));
+            $allowanceCharge->appendChild($this->createElement($xml, 'cbc:Amount', $this->formatDecimal($factura->descuento))->setAttribute('currencyID', 'COP'));
+            $allowanceCharge->appendChild($this->createElement($xml, 'cbc:BaseAmount', $this->formatDecimal($factura->subtotal))->setAttribute('currencyID', 'COP'));
+            $invoice->appendChild($allowanceCharge);
+        }
 
         // ── Legal Monetary Total ──
         $monetaryTotal = $this->buildLegalMonetaryTotal($xml, $factura);
@@ -237,20 +246,21 @@ readonly class XmlUBLGenerator
     //  Tax Total
     // ──────────────────────────────────────────────
 
-    private function buildTaxTotal(\DOMDocument $xml, \Illuminate\Database\Eloquent\Collection $items): \DOMElement
+    private function buildTaxTotal(\DOMDocument $xml, \Illuminate\Database\Eloquent\Collection $items, Factura $factura): \DOMElement
     {
         $taxTotal = $xml->createElement('cac:TaxTotal');
 
-        // Sumar total de IVA de todos los ítems
-        $totalIva = $items->sum('impuesto_total');
+        // Usar el IVA calculado a nivel de factura (ya incluye descuento) en vez de sumar items
+        $totalIva = (float) $factura->impuestos;
 
         $taxAmount = $this->createElement($xml, 'cbc:TaxAmount', $this->formatDecimal($totalIva));
         $taxAmount->setAttribute('currencyID', 'COP');
         $taxTotal->appendChild($taxAmount);
 
-        // TaxSubtotal for IVA
+        // TaxSubtotal for IVA — base gravable = subtotal - descuento
         $taxSubtotal = $xml->createElement('cac:TaxSubtotal');
-        $taxableAmount = $this->createElement($xml, 'cbc:TaxableAmount', $this->formatDecimal($items->sum('subtotal')));
+        $baseGravable = max(0, (float) $factura->subtotal - (float) $factura->descuento);
+        $taxableAmount = $this->createElement($xml, 'cbc:TaxableAmount', $this->formatDecimal($baseGravable));
         $taxableAmount->setAttribute('currencyID', 'COP');
         $taxSubtotal->appendChild($taxableAmount);
 
@@ -258,7 +268,7 @@ readonly class XmlUBLGenerator
         $subTaxAmount->setAttribute('currencyID', 'COP');
         $taxSubtotal->appendChild($subTaxAmount);
 
-        // Determine IVA rate from first item that has tax
+        // Determinar tasa de IVA del primer ítem con impuesto
         $ivaRate = $items->firstWhere('tasa_impuesto', '>', 0)?->tasa_impuesto ?? 19.00;
 
         $taxCategory = $xml->createElement('cac:TaxCategory');

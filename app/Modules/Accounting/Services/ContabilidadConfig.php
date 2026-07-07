@@ -105,6 +105,18 @@ class ContabilidadConfig
         return self::get('cta_ingreso_ventas', '4135', $tenantId);
     }
 
+    // ─── Umbrales Tributarios ───
+
+    /**
+     * A-11: Umbral mínimo de retención en la fuente (Art. 376 E.T.).
+     * Equivalente a 1 UVT del año fiscal vigente.
+     * Se actualiza anualmente desde Configuracion, no hardcodeado.
+     */
+    public static function umbralRetencionFuente(?int $tenantId = null): float
+    {
+        return (float) self::get('umbral_retencion_fuente', '107000', $tenantId);
+    }
+
     /**
      * Retorna el código de cuenta para un método de pago según el régimen.
      */

@@ -10,6 +10,7 @@ use App\Modules\Hr\Models\Empleado;
 use App\Modules\Hr\Models\Contrato;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
@@ -73,6 +74,12 @@ class EmpleadoController extends Controller
             'telefono' => 'nullable|string|max:50',
             'sede_id' => 'required|exists:core_sedes,id',
 
+            // Contrato
+            'cargo_id' => 'required|exists:hr_cargos,id',
+            'tipo_contrato' => 'required|string|max:50',
+            'salario_base' => 'required|numeric|min:0',
+            'fecha_inicio_contrato' => 'required|date',
+
             // Opcional: crear usuario de sistema
             'crear_usuario' => 'boolean',
             'user_email' => 'nullable|email|max:150',
@@ -80,58 +87,83 @@ class EmpleadoController extends Controller
             'user_role' => 'nullable|string|exists:roles,name',
         ]);
 
-        // Crear empleado
-        $empleado = Empleado::create([
-            'tenant_id' => $tenantId,
-            'sede_id' => $data['sede_id'],
-            'documento' => $data['documento'],
-            'nombres' => $data['nombres'],
-            'apellidos' => $data['apellidos'],
-            'email' => $data['email'],
-            'telefono' => $data['telefono'],
-            'estado' => true,
-        ]);
-
-        // Crear usuario de sistema si se solicitó
-        if ($data['crear_usuario'] ?? false) {
-            // Solo usuarios con permiso de crear usuarios pueden crear cuentas de sistema
-            if (!auth()->user()->can('users:create')) {
-                return back()->with('error', 'No tienes permiso para crear usuarios de sistema.');
-            }
-
-            $userEmail = $data['user_email'] ?? $data['email'];
-            if (empty($userEmail)) {
-                return back()->with('error', 'Debes proporcionar un email para el usuario de sistema.');
-            }
-
-            $userPassword = $data['user_password'] ?? str()->random(12);
-
-            // Validar que el email no exista ya
-            if (User::where('email', $userEmail)->exists()) {
-                return back()->with('error', 'El email del usuario ya está registrado.');
-            }
-
-            $user = User::create([
-                'name' => "{$data['nombres']} {$data['apellidos']}",
-                'email' => $userEmail,
-                'password' => Hash::make($userPassword),
+        DB::transaction(function () use ($data, $tenantId) {
+            // Crear empleado
+            $empleado = Empleado::create([
                 'tenant_id' => $tenantId,
-                'is_active' => true,
-                'email_verified_at' => now(),
+                'sede_id' => $data['sede_id'],
+                'documento' => $data['documento'],
+                'nombres' => $data['nombres'],
+                'apellidos' => $data['apellidos'],
+                'email' => $data['email'],
+                'telefono' => $data['telefono'],
+                'estado' => true,
             ]);
 
-            // Asignar rol
-            if (!empty($data['user_role'])) {
-                $registrar = app(PermissionRegistrar::class);
-                $previous = $registrar->getPermissionsTeamId();
-                $registrar->setPermissionsTeamId($tenantId);
-                $user->assignRole($data['user_role']);
-                $registrar->setPermissionsTeamId($previous);
+            // Obtener el nombre del cargo
+            $cargo = \App\Modules\Hr\Models\Cargo::find($data['cargo_id']);
+
+            // Crear contrato
+            Contrato::create([
+                'tenant_id' => $tenantId,
+                'empleado_id' => $empleado->id,
+                'cargo_id' => $data['cargo_id'],
+                'cargo' => $cargo ? $cargo->nombre : '',
+                'tipo_contrato' => $data['tipo_contrato'],
+                'salario_base' => $data['salario_base'],
+                'fecha_inicio' => $data['fecha_inicio_contrato'],
+                'estado' => true,
+            ]);
+
+            // Crear usuario de sistema si se solicitó
+            if ($data['crear_usuario'] ?? false) {
+                if (!auth()->user()->can('users:create')) {
+                    throw new \Exception('No tienes permiso para crear usuarios de sistema.');
+                }
+
+                $userEmail = $data['user_email'] ?? $data['email'];
+                if (empty($userEmail)) {
+                    throw new \Exception('Debes proporcionar un email para el usuario de sistema.');
+                }
+
+                $userPassword = $data['user_password'] ?? str()->random(12);
+
+                if (User::where('email', $userEmail)->exists()) {
+                    throw new \Exception('El email del usuario ya está registrado.');
+                }
+
+                $user = User::create([
+                    'name' => "{$data['nombres']} {$data['apellidos']}",
+                    'email' => $userEmail,
+                    'password' => Hash::make($userPassword),
+                    'tenant_id' => $tenantId,
+                    'is_active' => true,
+                    'email_verified_at' => now(),
+                ]);
+
+                if (!empty($data['user_role'])) {
+                    $role = Role::where('team_id', $tenantId)->where('name', $data['user_role'])->first();
+                    if (!$role) {
+                        throw new \Exception('El rol no pertenece al equipo actual.');
+                    }
+                    $registrar = app(PermissionRegistrar::class);
+                    $previous = $registrar->getPermissionsTeamId();
+                    $registrar->setPermissionsTeamId($tenantId);
+                    $user->assignRole($data['user_role']);
+                    $registrar->setPermissionsTeamId($previous);
+                }
+
+                $empleado->update(['user_id' => $user->id]);
             }
 
-            // Vincular usuario al empleado
-            $empleado->update(['user_id' => $user->id]);
-        }
+            // Guardar el ID para el redirect (necesitamos el empleado fuera del transaction callback)
+            // Usamos una referencia para retornarlo
+        });
+
+        // Recuperar el último empleado creado para redirect
+        $empleado = Empleado::where('tenant_id', $tenantId)
+            ->where('documento', $data['documento'])
+            ->first();
 
         return redirect()->route('hr.empleados.show', $empleado->id)
             ->with('success', 'Empleado creado exitosamente.');
@@ -142,6 +174,8 @@ class EmpleadoController extends Controller
         if ($empleado->tenant_id !== auth()->user()->tenant_id) {
             abort(403);
         }
+
+        $tenantId = auth()->user()->tenant_id;
 
         $empleado->load([
             'contratos' => function ($q) {
@@ -154,9 +188,16 @@ class EmpleadoController extends Controller
             'user',
         ]);
 
+        $cargos = Cargo::with('departamento')
+            ->where('tenant_id', $tenantId)
+            ->where('activo', true)
+            ->orderBy('nombre')
+            ->get(['id', 'nombre', 'departamento_id', 'es_productivo']);
+
         return Inertia::render('Hr/Empleados/Show', [
             'empleado' => $empleado,
-            'sedes' => Sede::where('tenant_id', auth()->user()->tenant_id)->get(['id', 'nombre']),
+            'sedes' => Sede::where('tenant_id', $tenantId)->get(['id', 'nombre']),
+            'cargos' => $cargos,
         ]);
     }
 

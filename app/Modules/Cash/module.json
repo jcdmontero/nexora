@@ -5,7 +5,7 @@
     "description": "Multicaja: apertura y cierre de turnos, arqueo con denominaciones, transferencias entre cajas, movimientos y reporte consolidado.",
     "icon": "Wallet",
     "core": false,
-    "dependencies": [],
+    "dependencies": ["sales", "accounting", "crm", "purchasing", "service-desk"],
     "permissions": [
         "cash:view",
         "cash:create",
@@ -23,8 +23,8 @@
                 { "label": "Mi Turno", "route": "cash.caja.index", "permission": "cash:view" },
                 { "label": "Cajas", "route": "cash.cajas.index", "permission": "cash:view" },
                 { "label": "Movimientos", "route": "cash.movimientos.index", "permission": "cash:view" },
-                { "label": "Recaudos", "route": "cash.recaudos.index", "permission": "accounting:view" },
-                { "label": "Pago Proveedores", "route": "cash.pagos-proveedores.index", "permission": "accounting:view" },
+                { "label": "Recaudos", "route": "cash.recaudos.index", "permission": "cash:receipts" },
+                { "label": "Pago Proveedores", "route": "cash.pagos-proveedores.index", "permission": "cash:receipts" },
                 { "label": "Transferencias", "route": "cash.transferencias.index", "permission": "cash:transfer" },
                 { "label": "Reporte Consolidado", "route": "cash.reporte.consolidado", "permission": "cash:view" }
             ]

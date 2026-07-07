@@ -57,7 +57,7 @@ export default function OrdenForm({ orden = null, proveedores = [], productos = 
         // Calculate subtotal
         const qty = parseFloat(newDetalles[index]['cantidad']) || 0;
         const price = parseFloat(newDetalles[index]['precio_unitario']) || 0;
-        newDetalles[index]['subtotal'] = (qty * price).toFixed(2);
+        newDetalles[index]['subtotal'] = parseFloat((qty * price).toFixed(2));
 
         setData('detalles', newDetalles);
     };

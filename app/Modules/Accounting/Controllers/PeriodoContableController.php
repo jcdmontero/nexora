@@ -24,50 +24,67 @@ class PeriodoContableController extends Controller
 
     public function close(PeriodoContable $periodo)
     {
-        if ($periodo->estado === 'cerrado') {
-            return back()->with('error', 'El periodo ya se encuentra cerrado.');
-        }
+        if ($periodo->tenant_id !== tenantId()) abort(403);
 
-        // Para evitar huecos, validamos que no haya periodos anteriores ABIERTOS.
-        $anterioresAbiertos = PeriodoContable::query()
-            ->where('estado', 'abierto')
-            ->where(function ($q) use ($periodo) {
-                $q->where('anio', '<', $periodo->anio)
-                  ->orWhere(function ($q2) use ($periodo) {
-                      $q2->where('anio', $periodo->anio)
-                         ->where('mes', '<', $periodo->mes);
-                  });
-            })
-            ->exists();
+        return \Illuminate\Support\Facades\DB::transaction(function () use ($periodo) {
+            // Re-consultar con bloqueo pesimista para evitar condiciones de carrera
+            $lockedPeriodo = PeriodoContable::where('id', $periodo->id)->lockForUpdate()->first();
 
-        if ($anterioresAbiertos) {
-            return back()->with('error', 'Existen periodos anteriores que aún están abiertos. Deben cerrarse en orden cronológico.');
-        }
+            if ($lockedPeriodo->estado === 'cerrado') {
+                return back()->with('error', 'El periodo ya se encuentra cerrado.');
+            }
 
-        // Verificar integridad débito = crédito en todos los asientos del periodo.
-        $asientosDesbalanceados = AsientoContable::query()
-            ->where('periodo_contable_id', $periodo->id)
-            ->where('estado', '!=', 'reversado')
-            ->whereRaw('(SELECT COALESCE(SUM(debito), 0) FROM asiento_lineas WHERE asiento_lineas.asiento_contable_id = asientos_contables.id) != '
-                . '(SELECT COALESCE(SUM(credito), 0) FROM asiento_lineas WHERE asiento_lineas.asiento_contable_id = asientos_contables.id)')
-            ->pluck('numero');
+            // Para evitar huecos, validamos que no haya periodos anteriores ABIERTOS.
+            $anterioresAbiertos = PeriodoContable::query()
+                ->where('estado', 'abierto')
+                ->where(function ($q) use ($lockedPeriodo) {
+                    $q->where('anio', '<', $lockedPeriodo->anio)
+                      ->orWhere(function ($q2) use ($lockedPeriodo) {
+                          $q2->where('anio', $lockedPeriodo->anio)
+                             ->where('mes', '<', $lockedPeriodo->mes);
+                      });
+                })
+                ->exists();
 
-        if ($asientosDesbalanceados->isNotEmpty()) {
-            $numeros = $asientosDesbalanceados->implode(', ');
-            return back()->with('error', "No se puede cerrar el periodo. Los siguientes asientos tienen débito distinto del crédito: {$numeros}.");
-        }
+            if ($anterioresAbiertos) {
+                return back()->with('error', 'Existen periodos anteriores que aún están abiertos. Deben cerrarse en orden cronológico.');
+            }
 
-        $periodo->update([
-            'estado' => 'cerrado',
-            'cerrado_at' => now(),
-            'cerrado_por' => auth()->id(),
-        ]);
+            // Verificar integridad débito = crédito en todos los asientos del periodo.
+            $asientosDesbalanceados = AsientoContable::query()
+                ->where('periodo_contable_id', $lockedPeriodo->id)
+                ->where('estado', '!=', 'reversado')
+                ->whereRaw('(SELECT COALESCE(SUM(debito), 0) FROM asiento_lineas WHERE asiento_lineas.asiento_contable_id = asientos_contables.id) != '
+                    . '(SELECT COALESCE(SUM(credito), 0) FROM asiento_lineas WHERE asiento_lineas.asiento_contable_id = asientos_contables.id)')
+                ->pluck('numero');
 
-        return back()->with('success', "Periodo {$periodo->anio}-{$periodo->mes} cerrado exitosamente.");
+            if ($asientosDesbalanceados->isNotEmpty()) {
+                $numeros = $asientosDesbalanceados->implode(', ');
+                return back()->with('error', "No se puede cerrar el periodo. Los siguientes asientos tienen débito distinto del crédito: {$numeros}.");
+            }
+
+            $lockedPeriodo->update([
+                'estado' => 'cerrado',
+                'cerrado_at' => now(),
+                'cerrado_por' => auth()->id(),
+            ]);
+
+            return back()->with('success', "Periodo {$lockedPeriodo->anio}-{$lockedPeriodo->mes} cerrado exitosamente.");
+        });
     }
 
     public function reopen(PeriodoContable $periodo)
     {
+        // A-07: Verificar si el año ya tiene un cierre anual (sin reversar).
+        $cierreAnual = AsientoContable::query()
+            ->where('concepto', 'like', "CIERRE ANUAL {$periodo->anio}%")
+            ->where('estado', '!=', 'reversado')
+            ->exists();
+
+        if ($cierreAnual) {
+            return back()->with('error', "No se puede reabrir el periodo porque el año {$periodo->anio} ya tiene un cierre anual. Revierta primero el asiento de cierre anual.");
+        }
+
         // Solo puede reabrirse si es el ÚLTIMO periodo cerrado (no reabrir saltando periodos).
         $postCerrados = PeriodoContable::query()
             ->where('estado', 'cerrado')

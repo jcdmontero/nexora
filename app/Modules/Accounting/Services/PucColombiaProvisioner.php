@@ -7,9 +7,15 @@ use App\Modules\Accounting\Models\CuentaContable;
 
 class PucColombiaProvisioner
 {
-    public function provisionForTenant(Tenant $tenant): void
+    /**
+     * Retorna el catálogo completo de cuentas PUC Colombia para régimen común.
+     * Formato: [codigo, nombre, tipo, naturaleza, nivel, acepta_movimientos, requiere_tercero, requiere_centro_costo]
+     *
+     * Fuente única de verdad — RegimeProvisioner reutiliza este método.
+     */
+    public static function getCuentasComun(): array
     {
-        $cuentas = [
+        return [
             ['1000', 'Activo', 'activo', 'debito', 1, false, false, false],
             ['1105', 'Caja', 'activo', 'debito', 2, false, false, false],
             ['110505', 'Caja general', 'activo', 'debito', 3, true, false, false],
@@ -34,7 +40,7 @@ class PucColombiaProvisioner
             ['2370', 'Retenciones y aportes de nómina', 'pasivo', 'credito', 2, true, true, false],
             ['2408', 'Impuesto sobre las ventas por pagar', 'pasivo', 'credito', 2, true, true, false],
             ['240805', 'IVA generado', 'pasivo', 'credito', 3, true, true, false],
-            ['240810', 'IVA descontable', 'pasivo', 'debito', 3, true, true, false],
+            ['240810', 'IVA descontable', 'activo', 'debito', 3, true, true, false],
             ['2505', 'Salarios por pagar', 'pasivo', 'credito', 2, true, true, false],
             ['2610', 'Provisiones para obligaciones laborales', 'pasivo', 'credito', 2, true, false, false],
             ['2805', 'Anticipos recibidos de clientes', 'pasivo', 'credito', 2, true, true, false],
@@ -45,6 +51,8 @@ class PucColombiaProvisioner
             ['311505', 'Aportes sociales pagados', 'patrimonio', 'credito', 3, true, false, false],
             ['3605', 'Utilidad del ejercicio', 'patrimonio', 'credito', 2, true, false, false],
             ['360505', 'Utilidad del ejercicio', 'patrimonio', 'credito', 3, true, false, false],
+            ['3610', 'Utilidades Retenidas', 'patrimonio', 'credito', 2, true, false, false],
+            ['361005', 'Utilidades Retenidas', 'patrimonio', 'credito', 3, true, false, false],
             ['4000', 'Ingresos', 'ingreso', 'credito', 1, false, false, false],
             ['4135', 'Comercio al por mayor y al por menor', 'ingreso', 'credito', 2, true, false, false],
             ['4175', 'Devoluciones en ventas', 'ingreso', 'debito', 2, true, false, false],
@@ -56,6 +64,11 @@ class PucColombiaProvisioner
             ['6000', 'Costos de ventas', 'costo', 'debito', 1, false, false, false],
             ['6135', 'Comercio al por mayor y al por menor', 'costo', 'debito', 2, true, false, true],
         ];
+    }
+
+    public function provisionForTenant(Tenant $tenant): void
+    {
+        $cuentas = self::getCuentasComun();
 
         foreach ($cuentas as [$codigo, $nombre, $tipo, $naturaleza, $nivel, $acepta, $tercero, $centroCosto]) {
             CuentaContable::withoutGlobalScopes()->updateOrCreate(

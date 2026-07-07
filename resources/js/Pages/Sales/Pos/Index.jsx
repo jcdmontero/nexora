@@ -76,6 +76,11 @@ export default function PosIndex({ productos, clientes, sesionActiva, serviciosC
       setCart(prev => prev.map(i => {
           if (i.uniqueId === uniqueId) {
               const newQty = Math.max(1, i.qty + delta)
+              // Validar stock solo para productos (no servicios)
+              if (i.tipo === 'producto' && i.stock_actual != null && newQty > i.stock_actual) {
+                  flash(`Stock insuficiente para "${i.nombre}". Disponible: ${i.stock_actual}`, 'error')
+                  return i
+              }
               return { ...i, qty: newQty }
           }
           return i
@@ -92,7 +97,7 @@ export default function PosIndex({ productos, clientes, sesionActiva, serviciosC
       if (cart.length === 0) return
       
       if (!sesionActiva && data.metodo_pago !== 'credito') {
-          alert('Debes abrir un turno de caja primero para realizar cobros de contado.')
+          flash('Debes abrir un turno de caja primero para realizar cobros de contado.', 'error')
           return
       }
 
@@ -117,11 +122,11 @@ export default function PosIndex({ productos, clientes, sesionActiva, serviciosC
               data: {
                   ...data,
                   items: cart.map(i => ({
-                      id: i.id,
-                      nombre: i.nombre,
                       tipo: i.tipo,
-                      precio_venta: i.precio_venta,
-                      qty: i.qty,
+                      producto_id: i.tipo === 'producto' ? i.id : null,
+                      descripcion: i.nombre,
+                      cantidad: i.qty,
+                      precio_unitario: i.precio_venta,
                   })),
               },
           })
@@ -331,10 +336,10 @@ export default function PosIndex({ productos, clientes, sesionActiva, serviciosC
                       <div className="space-y-4">
                           <div className="space-y-2">
                               <Label>Cliente (Opcional)</Label>
-                              <Select value={data.cliente_id} onValueChange={v => setData('cliente_id', v)}>
+                              <Select value={data.cliente_id || '__none__'} onValueChange={v => setData('cliente_id', v === '__none__' ? '' : v)}>
                                   <SelectTrigger><SelectValue placeholder="Consumidor Final" /></SelectTrigger>
                                   <SelectContent>
-                                      <SelectItem value="">Consumidor Final</SelectItem>
+                                      <SelectItem value="__none__">Consumidor Final</SelectItem>
                                       {clientes.map(c => (
                                           <SelectItem key={c.id} value={c.id.toString()}>{c.nombres} {c.apellidos} {c.razon_social}</SelectItem>
                                       ))}

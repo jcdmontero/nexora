@@ -3,13 +3,16 @@
 namespace App\Modules\Cash\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Modules\Cash\Concerns\HasReciboLoader;
 use App\Modules\Cash\Models\CajaSesion;
 use App\Modules\Cash\Services\CajaService;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
 class CajaController extends Controller
 {
+    use HasReciboLoader;
     public function __construct(private CajaService $cajaService)
     {
     }
@@ -30,10 +33,13 @@ class CajaController extends Controller
 
         $movimientos = [];
         if ($sesionActiva) {
-            $movimientos = \App\Modules\Cash\Models\MovimientoCaja::where('sesion_id', $sesionActiva->id)
+            $movimientosPaginator = \App\Modules\Cash\Models\MovimientoCaja::where('sesion_id', $sesionActiva->id)
                 ->orderByDesc('created_at')
-                ->get()
-                ->map(fn ($m) => [
+                ->paginate(50);
+
+            $reciboMap = $this->loadRecibosParaMovimientos($movimientosPaginator->items());
+
+            $movimientosPaginator->getCollection()->transform(fn ($m) => [
                     'id' => $m->id,
                     'tipo' => $m->tipo,
                     'monto' => (float) $m->monto,
@@ -41,19 +47,32 @@ class CajaController extends Controller
                     'concepto' => $m->concepto,
                     'fecha' => $m->created_at->format('H:i'),
                     'referencia' => $m->referencia ? class_basename($m->referencia_type) : null,
-                    'recibo_id' => $m->recibo_id,
+                    'recibo_id' => $reciboMap[$m->referencia_type . '::' . $m->referencia_id . '::' . (float) $m->monto] ?? null,
                     'es_anulacion' => $m->es_anulacion,
                 ]);
 
-            // Forzar carga de totales para saldo_sistema
+            $movimientos = $movimientosPaginator;
+
+            // Forzar carga de totales para saldo_sistema y filtrar data sensible
             $sesionActiva->load([]);
+            $sesionActiva = [
+                'id' => $sesionActiva->id,
+                'caja' => [
+                    'nombre' => $sesionActiva->caja->nombre,
+                ],
+                'fecha_apertura' => $sesionActiva->fecha_apertura,
+                'saldo_inicial' => (float) $sesionActiva->saldo_inicial,
+                'ingresos_totales' => (float) $sesionActiva->ingresos_totales,
+                'egresos_totales' => (float) $sesionActiva->egresos_totales,
+                'diferencia' => (float) $sesionActiva->diferencia,
+            ];
         }
 
         $historial = CajaSesion::with(['caja.sede', 'usuario'])
             ->orderBy('id', 'desc')
             ->paginate(10);
 
-        return Inertia::render('Cash/Caja/Index', [
+        return Inertia::render('Modules/Cash/Caja/Index', [
             'sesionActiva' => $sesionActiva,
             'cajasDisponibles' => $cajasDisponibles,
             'movimientos' => $movimientos,
@@ -64,7 +83,7 @@ class CajaController extends Controller
     public function abrir(Request $request)
     {
         $validated = $request->validate([
-            'caja_id' => 'required|exists:cash_cajas,id',
+            'caja_id' => ['required', Rule::exists('cash_cajas', 'id')->where('tenant_id', app('current_tenant')->id)],
             'saldo_inicial' => 'required|numeric|min:0',
         ]);
 

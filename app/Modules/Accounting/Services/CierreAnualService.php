@@ -22,22 +22,38 @@ readonly class CierreAnualService
      */
     public function cerrarAnio(int $anio): array
     {
+        // C-02: Validar idempotencia — no cerrar dos veces el mismo año
+        $cierreExistente = AsientoContable::query()
+            ->where('concepto', 'like', "CIERRE ANUAL {$anio}%")
+            ->where('estado', '!=', 'reversado')
+            ->exists();
+
+        if ($cierreExistente) {
+            throw new \RuntimeException(
+                "El año {$anio} ya fue cerrado. No se puede ejecutar el cierre anual dos veces."
+            );
+        }
+
         $this->validarPeriodosCerrados($anio);
 
         $saldosIngresos = $this->calcularSaldosPorGrupo($anio, '4');
         $saldosGastos = $this->calcularSaldosPorGrupo($anio, '5');
         $saldosCostos = $this->calcularSaldosPorGrupo($anio, '6');
 
-        $totalIngresos = round($saldosIngresos->sum('saldo'), 2);
-        $totalGastos = round($saldosGastos->sum('saldo') + $saldosCostos->sum('saldo'), 2);
-        $utilidadNeta = round($totalIngresos - $totalGastos, 2);
-
         $lineas = $this->construirLineasCierre(
             $saldosIngresos,
             $saldosGastos,
             $saldosCostos,
-            $utilidadNeta,
         );
+
+        $totalDebito = round(collect($lineas)->sum('debito'), 2);
+        $totalCredito = round(collect($lineas)->sum('credito'), 2);
+
+        if (abs($totalDebito - $totalCredito) > 0.01) {
+            throw new \RuntimeException(
+                "El asiento de cierre anual no cuadra: débitos \${$totalDebito} vs créditos \${$totalCredito}."
+            );
+        }
 
         $asiento = DB::transaction(function () use ($anio, $lineas) {
             return $this->contabilidadService->registrarAsiento(
@@ -50,11 +66,14 @@ readonly class CierreAnualService
             );
         });
 
+        $lineasIngreso = collect($lineas)->filter(fn ($l) => $l['credito'] == 0);
+        $lineasGasto = collect($lineas)->filter(fn ($l) => $l['debito'] == 0 && $l['credito'] > 0);
+
         return [
             'asiento_numero' => $asiento->numero,
-            'total_ingresos' => $totalIngresos,
-            'total_gastos' => $totalGastos,
-            'utilidad_neta' => $utilidadNeta,
+            'total_ingresos' => $totalDebito,
+            'total_gastos' => $totalCredito - $lineasIngreso->sum('debito'),
+            'utilidad_neta' => round($totalDebito - ($totalCredito - $lineasIngreso->sum('debito')), 2),
             'lineas_ingresos' => $saldosIngresos->toArray(),
             'lineas_gastos' => $saldosGastos->toArray(),
             'lineas_costos' => $saldosCostos->toArray(),
@@ -72,12 +91,17 @@ readonly class CierreAnualService
             ->distinct()
             ->pluck('anio');
 
-        $aniosConCierre = AsientoContable::query()
+        $conceptosCierre = AsientoContable::query()
             ->where('concepto', 'like', 'CIERRE ANUAL %')
             ->where('estado', '!=', 'reversado')
-            ->selectRaw("CAST(SUBSTRING(concepto FROM 'CIERRE ANUAL ([0-9]+)') AS INTEGER) as anio")
-            ->distinct()
-            ->pluck('anio');
+            ->pluck('concepto');
+
+        $aniosConCierre = $conceptosCierre->map(function ($concepto) {
+            if (preg_match('/CIERRE ANUAL (\d+)/', $concepto, $matches)) {
+                return (int) $matches[1];
+            }
+            return null;
+        })->filter()->unique()->values();
 
         return $aniosConPeriodosCerrados
             ->diff($aniosConCierre)
@@ -126,9 +150,10 @@ readonly class CierreAnualService
         return AsientoContable::query()
             ->join('asiento_lineas', 'asientos_contables.id', '=', 'asiento_lineas.asiento_contable_id')
             ->join('cuentas_contables', 'asiento_lineas.cuenta_contable_id', '=', 'cuentas_contables.id')
+            ->where('asiento_lineas.tenant_id', app('current_tenant')->id)
+            ->where('cuentas_contables.tenant_id', app('current_tenant')->id)
             ->whereYear('asientos_contables.fecha', $anio)
-            ->where('asientos_contables.estado', '!=', 'reversado')
-            ->where('cuentas_contables.codigo', 'like', "{$grupo}%")
+                        ->where('cuentas_contables.codigo', 'like', "{$grupo}%")
             ->where('cuentas_contables.acepta_movimientos', true)
             ->select(
                 'cuentas_contables.id as cuenta_id',
@@ -165,77 +190,78 @@ readonly class CierreAnualService
             ]);
     }
 
-    /**
-     * Construye las líneas del asiento de cierre:
-     *  - Débito a cuentas de ingresos (para cerrarlas a cero)
-     *  - Crédito a cuentas de gastos y costos (para cerrarlas a cero)
-     *  - Crédito/débito a cuenta 3610 (Utilidades Retenidas) para cuadrar
-     */
     private function construirLineasCierre(
         \Illuminate\Support\Collection $saldosIngresos,
         \Illuminate\Support\Collection $saldosGastos,
         \Illuminate\Support\Collection $saldosCostos,
-        float $utilidadNeta,
     ): array {
         $lineas = [];
 
-        // Cerrar ingresos: débito por el saldo de cada cuenta (las ingresos son naturaleza crédito)
-        foreach ($saldosIngresos as $ingreso) {
-            $lineas[] = [
-                'cuenta_contable_id' => $ingreso['cuenta_id'],
-                'debito' => round(abs($ingreso['saldo']), 2),
-                'credito' => 0,
-                'descripcion' => "Cierre anual - ingreso {$ingreso['codigo']}",
-            ];
+        $todasLasCuentas = $saldosIngresos->concat($saldosGastos)->concat($saldosCostos);
+
+        // Cerrar todas las cuentas de resultados (Ingresos, Gastos, Costos)
+        foreach ($todasLasCuentas as $cuenta) {
+            $saldo = (float) $cuenta['saldo'];
+            
+            if (abs($saldo) < 0.005) {
+                continue;
+            }
+
+            // Si saldo es positivo, la cuenta tiene saldo acorde a su naturaleza.
+            // Si saldo es negativo, la cuenta tiene saldo contrario a su naturaleza.
+            $esSaldoDeudor = ($cuenta['naturaleza'] === 'debito' && $saldo > 0) || 
+                             ($cuenta['naturaleza'] === 'credito' && $saldo < 0);
+            
+            $monto = round(abs($saldo), 2);
+
+            if ($esSaldoDeudor) {
+                // Para cerrar una cuenta con saldo deudor (positivo de naturaleza débito, o negativo de naturaleza crédito), acreditamos
+                $lineas[] = [
+                    'cuenta_contable_id' => $cuenta['cuenta_id'],
+                    'debito' => 0,
+                    'credito' => $monto,
+                    'descripcion' => "Cierre anual - cierre de cuenta {$cuenta['codigo']}",
+                ];
+            } else {
+                // Para cerrar una cuenta con saldo acreedor (positivo de naturaleza crédito, o negativo de naturaleza débito), debitamos
+                $lineas[] = [
+                    'cuenta_contable_id' => $cuenta['cuenta_id'],
+                    'debito' => $monto,
+                    'credito' => 0,
+                    'descripcion' => "Cierre anual - cierre de cuenta {$cuenta['codigo']}",
+                ];
+            }
         }
 
-        // Cerrar gastos: crédito por el saldo de cada cuenta (los gastos son naturaleza débito)
-        foreach ($saldosGastos as $gasto) {
-            $lineas[] = [
-                'cuenta_contable_id' => $gasto['cuenta_id'],
-                'debito' => 0,
-                'credito' => round(abs($gasto['saldo']), 2),
-                'descripcion' => "Cierre anual - gasto {$gasto['codigo']}",
-            ];
-        }
+        // Utilidades Retenidas (cuenta 3610) — cuadrar con valores redondeados reales
+        $totalDebitos = round(collect($lineas)->sum('debito'), 2);
+        $totalCreditos = round(collect($lineas)->sum('credito'), 2);
 
-        // Cerrar costos: crédito por el saldo de cada cuenta
-        foreach ($saldosCostos as $costo) {
-            $lineas[] = [
-                'cuenta_contable_id' => $costo['cuenta_id'],
-                'debito' => 0,
-                'credito' => round(abs($costo['saldo']), 2),
-                'descripcion' => "Cierre anual - costo {$costo['codigo']}",
-            ];
-        }
-
-        // Utilidades Retenidas (cuenta 3610) para cuadrar el asiento
         $cuentaUtilidades = $this->contabilidadService->getCuenta('3610');
-
         if (!$cuentaUtilidades) {
             throw new \RuntimeException(
                 'La cuenta 3610 (Utilidades Retenidas) no existe en el plan de cuentas.'
             );
         }
 
-        if ($utilidadNeta > 0) {
-            // Utilidad: crédito a 3610 (aumenta patrimonio)
-            $lineas[] = [
-                'cuenta_contable_id' => $cuentaUtilidades->id,
-                'debito' => 0,
-                'credito' => $utilidadNeta,
-                'descripcion' => "Cierre anual - utilidad neta",
-            ];
-        } elseif ($utilidadNeta < 0) {
-            // Pérdida: débito a 3610 (disminuye patrimonio)
-            $lineas[] = [
-                'cuenta_contable_id' => $cuentaUtilidades->id,
-                'debito' => abs($utilidadNeta),
-                'credito' => 0,
-                'descripcion' => "Cierre anual - pérdida neta",
-            ];
+        $diferencia = round($totalDebitos - $totalCreditos, 2);
+        if (abs($diferencia) > 0.005) {
+            if ($diferencia > 0) {
+                $lineas[] = [
+                    'cuenta_contable_id' => $cuentaUtilidades->id,
+                    'debito' => 0,
+                    'credito' => $diferencia,
+                    'descripcion' => "Cierre anual - utilidad neta",
+                ];
+            } else {
+                $lineas[] = [
+                    'cuenta_contable_id' => $cuentaUtilidades->id,
+                    'debito' => abs($diferencia),
+                    'credito' => 0,
+                    'descripcion' => "Cierre anual - pérdida neta",
+                ];
+            }
         }
-        // Si utilidadNeta == 0, no se genera línea en 3610 (ya cuadra por ingresos = gastos)
 
         return $lineas;
     }
